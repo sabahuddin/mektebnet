@@ -6,5 +6,25 @@
   "dodatne": [
     "zima",
     "utakmica"
-  ]
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Ein Tag im Ramadan",
+      "uputa": "Lies die Geschichte und ziehe die Wörter auf die freien Stellen. Wenn alles ausgefüllt ist, klicke auf „Prüfen“.",
+      "tekst": "Der Monat, in dem die Muslime fasten, heißt {Ramadan}. Vor der Morgendämmerung stehen wir zum {Suhur} auf und dann essen und trinken wir.\n\nDen ganzen Tag fasten wir. Wenn die Sonne untergeht, wird zum {Maghrib} gerufen und dann macht der Fastende {Iftar}. In den Nächten des Ramadan wird auch {Tarawih} gebetet.\n\nAm Ende des Ramadan kommt {Eid}, ein Tag der Freude und der Besuche.",
+      "dodatne": [
+        "Winter",
+        "Spiel"
+      ]
+    },
+    "en": {
+      "naslov": "A day in Ramadan",
+      "uputa": "Read the story and drag the words onto the empty spaces. When you have filled them all in, click „Check“.",
+      "tekst": "The month in which Muslims fast is called {Ramadan}. Before dawn we get up for {suhoor} and then we eat and drink.\n\nWe fast all day. When the sun sets, the call to {Maghrib} is made and the fasting person has {iftar}. On the nights of Ramadan the {Tarawih} prayer is performed as well.\n\nAt the end of Ramadan comes {Eid}, a day of joy and of visits.",
+      "dodatne": [
+        "winter",
+        "match"
+      ]
+    }
+  }
 }

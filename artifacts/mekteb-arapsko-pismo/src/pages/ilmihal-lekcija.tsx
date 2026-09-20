@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest } from "@/lib/api";
+import { jeNasaVjezbaUrl, vjezbaSaJezikom } from "@/lib/nase-vjezbe";
 import { isLekcijaUnlocked } from "@/lib/lekcija-unlock";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
@@ -65,12 +66,10 @@ interface Prilog {
 /** Naša (interna) vježba — statički HTML s naše domene (osmosmjerka, popuni
  *  prazninu…). Za razliku od vanjskih embeda (LearningApps, Wordwall…), ova
  *  javlja kad je završena, pa dugme „Završi vježbu" otključavamo tek na tu
- *  poruku. Prefiksi prate foldere u public/vjezbe/. */
-const NASE_VJEZBE_PREFIKSI = ["/vjezbe/osmosmjerka/", "/vjezbe/popuni/"];
+ *  poruku. */
 function jeNasaVjezba(a: Prilog | null): boolean {
   if (!a || a.kind !== "embed") return false;
-  const url = String(a.externalUrl || a.url || "");
-  return NASE_VJEZBE_PREFIKSI.some(prefix => url.startsWith(prefix));
+  return jeNasaVjezbaUrl(a.externalUrl || a.url);
 }
 
 interface NasaVjezba {
@@ -1745,7 +1744,7 @@ function PriloziSection({
   // za radnje koje su STROGO admin-only (brisanje, edit), koristi `canDelete`.
   const isAdmin = canManage;
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const isGuestLike = !user || user?.role === "roditelj";
   const promptRegister = useRegisterPrompt();
   const [open, setOpen] = useState(true);
@@ -2980,7 +2979,7 @@ function PriloziSection({
                         {openEmbed && (openEmbed.externalUrl || openEmbed.url) && (
                           <iframe
                             ref={embedIframeRef}
-                            src={openEmbed.externalUrl || openEmbed.url}
+                            src={vjezbaSaJezikom(openEmbed.externalUrl || openEmbed.url, lang)}
                             title={openEmbed.originalName}
                             className="flex-1 w-full bg-white"
                             style={{ border: "none" }}

@@ -6,6 +6,7 @@ import {
   isValidTip,
   isValidVjezbaId,
   listSveVjezbe,
+  primijeniJezik,
   listVjezbe,
   obrisiVjezbu,
   slobodanId,
@@ -32,10 +33,13 @@ router.get("/podaci/:tip/:id", async (req: Request, res: Response) => {
       res.status(404).json({ error: "Vježba nije pronađena" });
       return;
     }
+    // Jezik dolazi kroz upit jer vježbu učitava iframe, koji ne može poslati
+    // `X-Lang` zaglavlje. Nema prijevoda za traženi jezik → ostaje bosanski.
+    const podaci = primijeniJezik(nadjeno.podaci, req.query.lang as string | undefined);
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
-    res.send(JSON.stringify(nadjeno.podaci));
+    res.send(JSON.stringify(podaci));
   } catch (error) {
     req.log.error({ error, tip, id }, "Čitanje sadržaja naše vježbe nije uspjelo");
     res.status(500).json({ error: "Greška pri učitavanju vježbe" });

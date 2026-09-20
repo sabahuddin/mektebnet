@@ -7,14 +7,127 @@
   "prikaz": "opisi",
   "dvoslovi": true,
   "rijeci": [
-    { "rijec": "ramazan",  "opis": "Mjesec u kojem muslimani poste." },
-    { "rijec": "post",     "opis": "Od zore do zalaska sunca ne jedemo i ne pijemo." },
-    { "rijec": "sehur",    "opis": "Obrok prije zore." },
-    { "rijec": "iftar",    "opis": "Obrok kojim se navečer prekida post." },
-    { "rijec": "akšam",    "opis": "Namaz uz koji se postač iftari." },
-    { "rijec": "teravija", "opis": "Namaz koji se klanja samo u ramazanskim noćima." },
-    { "rijec": "sadaka",   "opis": "Dobro djelo ili dar onome kome je potrebno." },
-    { "rijec": "Bajram",   "opis": "Praznik koji dolazi po završetku ramazana." },
-    { "rijec": "postač",   "opis": "Onaj koji posti." }
-  ]
+    {
+      "rijec": "ramazan",
+      "opis": "Mjesec u kojem muslimani poste."
+    },
+    {
+      "rijec": "post",
+      "opis": "Od zore do zalaska sunca ne jedemo i ne pijemo."
+    },
+    {
+      "rijec": "sehur",
+      "opis": "Obrok prije zore."
+    },
+    {
+      "rijec": "iftar",
+      "opis": "Obrok kojim se navečer prekida post."
+    },
+    {
+      "rijec": "akšam",
+      "opis": "Namaz uz koji se postač iftari."
+    },
+    {
+      "rijec": "teravija",
+      "opis": "Namaz koji se klanja samo u ramazanskim noćima."
+    },
+    {
+      "rijec": "sadaka",
+      "opis": "Dobro djelo ili dar onome kome je potrebno."
+    },
+    {
+      "rijec": "Bajram",
+      "opis": "Praznik koji dolazi po završetku ramazana."
+    },
+    {
+      "rijec": "postač",
+      "opis": "Onaj koji posti."
+    }
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Ramadan",
+      "uputa": "Lies die Beschreibung, errate das Wort und finde es dann im Gitter.",
+      "rijeci": [
+        {
+          "rijec": "Ramadan",
+          "opis": "Der Monat, in dem die Muslime fasten."
+        },
+        {
+          "rijec": "Fasten",
+          "opis": "Von der Morgendämmerung bis zum Sonnenuntergang essen und trinken wir nicht."
+        },
+        {
+          "rijec": "Suhur",
+          "opis": "Die Mahlzeit vor der Morgendämmerung."
+        },
+        {
+          "rijec": "Iftar",
+          "opis": "Die Mahlzeit, mit der abends das Fasten gebrochen wird."
+        },
+        {
+          "rijec": "Maghrib",
+          "opis": "Das Gebet, zu dem der Fastende Iftar macht."
+        },
+        {
+          "rijec": "Tarawih",
+          "opis": "Das Gebet, das nur in den Nächten des Ramadan verrichtet wird."
+        },
+        {
+          "rijec": "Sadaka",
+          "opis": "Eine gute Tat oder eine Gabe für den, der sie braucht."
+        },
+        {
+          "rijec": "Eid",
+          "opis": "Das Fest, das am Ende des Ramadan kommt."
+        },
+        {
+          "rijec": "Fastender",
+          "opis": "Der, der fastet."
+        }
+      ]
+    },
+    "en": {
+      "naslov": "Ramadan",
+      "uputa": "Read the description, guess the word, then find it in the grid.",
+      "rijeci": [
+        {
+          "rijec": "Ramadan",
+          "opis": "The month in which Muslims fast."
+        },
+        {
+          "rijec": "fasting",
+          "opis": "From dawn until sunset we do not eat or drink."
+        },
+        {
+          "rijec": "suhoor",
+          "opis": "The meal before dawn."
+        },
+        {
+          "rijec": "iftar",
+          "opis": "The meal that breaks the fast in the evening."
+        },
+        {
+          "rijec": "Maghrib",
+          "opis": "The prayer at which the fasting person has iftar."
+        },
+        {
+          "rijec": "Tarawih",
+          "opis": "The prayer performed only on the nights of Ramadan."
+        },
+        {
+          "rijec": "sadaqah",
+          "opis": "A good deed or a gift for someone in need."
+        },
+        {
+          "rijec": "Eid",
+          "opis": "The festival that comes at the end of Ramadan."
+        },
+        {
+          "rijec": "faster",
+          "opis": "The one who is fasting."
+        }
+      ]
+    }
+  }
 }

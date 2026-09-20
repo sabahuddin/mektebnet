@@ -78,8 +78,56 @@ export const NASE_VJEZBE_PREFIKSI = Object.values(TIPOVI_VJEZBI)
 const MAX_JSON_BYTES = 512 * 1024;
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
+type Podaci = Record<string, unknown>;
+
 /** Odakle dolazi sadržaj vježbe. */
 export type IzvorVjezbe = "ugradjena" | "vlastita";
+
+/** Jezici sučelja koji mogu imati prevedenu vježbu (isti spisak kao X-Lang). */
+export const JEZICI_VJEZBI = ["sq", "de", "en", "tr", "ar"] as const;
+
+/**
+ * Prijevod sadržaja vježbe stoji U SAMOM sadržaju, pod ključem `prijevodi`:
+ *
+ *   { "naslov": "Spoji pojam i objašnjenje", "parovi": [...],
+ *     "prijevodi": { "de": { "naslov": "…", "parovi": [...] } } }
+ *
+ * Time isti mehanizam pokriva i ugrađene vježbe (prijevod ide uz JSON
+ * datoteku) i vježbe koje admin napravi u panelu (prijevod ide uz `podaci`
+ * blob u bazi) — bez zasebne tabele i bez drugog puta kroz kod.
+ *
+ * Spaja se samo po vrhu: prijevod donosi cijele vrijednosti tekstualnih polja
+ * (naslov, uputa, parovi, stavke…), a postavke vježbe (`id`, `tezina`,
+ * `poredaj`, `prikaz`) uvijek ostaju iz bosanskog izvornika, da prijevod ne
+ * može promijeniti kako vježba radi.
+ */
+const POSTAVKE_IZ_IZVORNIKA = ["id", "tezina", "prikaz", "poredaj"] as const;
+
+export function primijeniJezik(podaci: Podaci, jezik: string | undefined | null): Podaci {
+  const { prijevodi, ...osnova } = podaci as Podaci & { prijevodi?: unknown };
+  const trazeni = String(jezik ?? "").toLowerCase().trim();
+  if (!trazeni || trazeni === "bs") return osnova;
+  if (!prijevodi || typeof prijevodi !== "object" || Array.isArray(prijevodi)) return osnova;
+  const prijevod = (prijevodi as Record<string, unknown>)[trazeni];
+  if (!prijevod || typeof prijevod !== "object" || Array.isArray(prijevod)) return osnova;
+  const spojeno: Podaci = { ...osnova, ...(prijevod as Podaci) };
+  for (const kljuc of POSTAVKE_IZ_IZVORNIKA) {
+    if (kljuc in osnova) spojeno[kljuc] = osnova[kljuc];
+    else delete spojeno[kljuc];
+  }
+  delete spojeno.prijevodi;
+  return spojeno;
+}
+
+/** Jezici za koje vježba ima prijevod (za admin spisak i testove). */
+export function jeziciPrijevoda(podaci: Podaci): string[] {
+  const prijevodi = (podaci as { prijevodi?: unknown }).prijevodi;
+  if (!prijevodi || typeof prijevodi !== "object" || Array.isArray(prijevodi)) return [];
+  return JEZICI_VJEZBI.filter((j) => {
+    const p = (prijevodi as Record<string, unknown>)[j];
+    return !!p && typeof p === "object" && !Array.isArray(p);
+  });
+}
 
 export interface VjezbaSazetak {
   tip: string;
@@ -162,13 +210,32 @@ function brojPraznina(tekst: string): number {
   return (tekst.match(/\{[^{}]+\}/g) ?? []).length;
 }
 
-type Podaci = Record<string, unknown>;
-
 /**
  * Provjera sadržaja prije upisa i prije prikaza u spisku. Vraća `null` kad je
- * sve u redu, inače poruku koju admin vidi.
+ * sve u redu, inače poruku koju admin vidi. Uz bosanski izvornik provjerava i
+ * svaki prijevod — prevedena vježba mora biti upotrebljiva isto kao izvornik
+ * (npr. razvrstavanje ne smije dobiti istu stavku u dvije kutije).
  */
 export function validirajPodatke(tip: string, podaci: unknown): string | null {
+  const greska = validirajOsnovu(tip, podaci);
+  if (greska) return greska;
+  const prijevodi = (podaci as Podaci).prijevodi;
+  if (prijevodi === undefined) return null;
+  if (!prijevodi || typeof prijevodi !== "object" || Array.isArray(prijevodi)) {
+    return "Prijevodi vježbe moraju biti mapa jezik → sadržaj.";
+  }
+  for (const jezik of Object.keys(prijevodi as Record<string, unknown>)) {
+    if (!(JEZICI_VJEZBI as readonly string[]).includes(jezik)) {
+      return `Nepoznat jezik prijevoda: ${jezik}.`;
+    }
+    const spojeno = primijeniJezik(podaci as Podaci, jezik);
+    const greskaPrijevoda = validirajOsnovu(tip, spojeno);
+    if (greskaPrijevoda) return `Prijevod (${jezik}): ${greskaPrijevoda}`;
+  }
+  return null;
+}
+
+function validirajOsnovu(tip: string, podaci: unknown): string | null {
   if (!isValidTip(tip)) return "Nepoznata vrsta vježbe.";
   if (!podaci || typeof podaci !== "object" || Array.isArray(podaci)) return "Sadržaj vježbe nije ispravan.";
   const p = podaci as Podaci;

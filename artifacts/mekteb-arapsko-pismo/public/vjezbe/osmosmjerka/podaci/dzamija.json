@@ -7,15 +7,139 @@
   "prikaz": "rijeci",
   "dvoslovi": true,
   "rijeci": [
-    { "rijec": "namaz",   "opis": "Molitva koju muslimani obavljaju pet puta dnevno." },
-    { "rijec": "abdest",  "opis": "Pranje kojim se pripremamo za namaz." },
-    { "rijec": "džamija", "opis": "Kuća u kojoj muslimani zajedno klanjaju." },
-    { "rijec": "munara",  "opis": "Visoki toranj uz džamiju s kojeg se uči ezan." },
-    { "rijec": "ezan",    "opis": "Poziv na namaz." },
-    { "rijec": "mihrab",  "opis": "Mjesto u džamiji na kojem stoji imam dok predvodi namaz." },
-    { "rijec": "imam",    "opis": "Predvodi džematlije u namazu." },
-    { "rijec": "džemat",  "opis": "Zajednica ljudi koji zajedno klanjaju." },
-    { "rijec": "Kur'an",  "opis": "Allahova knjiga objavljena Muhammedu, a.s." },
-    { "rijec": "mekteb",  "opis": "Mjesto gdje djeca uče o svojoj vjeri." }
-  ]
+    {
+      "rijec": "namaz",
+      "opis": "Molitva koju muslimani obavljaju pet puta dnevno."
+    },
+    {
+      "rijec": "abdest",
+      "opis": "Pranje kojim se pripremamo za namaz."
+    },
+    {
+      "rijec": "džamija",
+      "opis": "Kuća u kojoj muslimani zajedno klanjaju."
+    },
+    {
+      "rijec": "munara",
+      "opis": "Visoki toranj uz džamiju s kojeg se uči ezan."
+    },
+    {
+      "rijec": "ezan",
+      "opis": "Poziv na namaz."
+    },
+    {
+      "rijec": "mihrab",
+      "opis": "Mjesto u džamiji na kojem stoji imam dok predvodi namaz."
+    },
+    {
+      "rijec": "imam",
+      "opis": "Predvodi džematlije u namazu."
+    },
+    {
+      "rijec": "džemat",
+      "opis": "Zajednica ljudi koji zajedno klanjaju."
+    },
+    {
+      "rijec": "Kur'an",
+      "opis": "Allahova knjiga objavljena Muhammedu, a.s."
+    },
+    {
+      "rijec": "mekteb",
+      "opis": "Mjesto gdje djeca uče o svojoj vjeri."
+    }
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "In der Moschee und im Mekteb",
+      "uputa": "Finde die versteckten Wörter. Ziehe mit dem Finger über die Buchstaben oder tippe den ersten und dann den letzten Buchstaben an.",
+      "rijeci": [
+        {
+          "rijec": "Gebet",
+          "opis": "Das Gebet, das Muslime fünfmal am Tag verrichten."
+        },
+        {
+          "rijec": "Wudu",
+          "opis": "Die Waschung, mit der wir uns auf das Gebet vorbereiten."
+        },
+        {
+          "rijec": "Moschee",
+          "opis": "Das Haus, in dem Muslime gemeinsam beten."
+        },
+        {
+          "rijec": "Minarett",
+          "opis": "Der hohe Turm an der Moschee, von dem der Adhan gerufen wird."
+        },
+        {
+          "rijec": "Adhan",
+          "opis": "Der Ruf zum Gebet."
+        },
+        {
+          "rijec": "Mihrab",
+          "opis": "Die Stelle in der Moschee, an der der Imam beim Gebet steht."
+        },
+        {
+          "rijec": "Imam",
+          "opis": "Er führt die Gemeinde im Gebet an."
+        },
+        {
+          "rijec": "Dschemat",
+          "opis": "Die Gemeinschaft der Menschen, die zusammen beten."
+        },
+        {
+          "rijec": "Koran",
+          "opis": "Allahs Buch, das Muhammed (Friede sei mit ihm) offenbart wurde."
+        },
+        {
+          "rijec": "Mekteb",
+          "opis": "Der Ort, an dem Kinder über ihre Religion lernen."
+        }
+      ]
+    },
+    "en": {
+      "naslov": "In the mosque and the mekteb",
+      "uputa": "Find the hidden words. Drag your finger across the letters, or tap the first and then the last letter of the word.",
+      "rijeci": [
+        {
+          "rijec": "prayer",
+          "opis": "The prayer Muslims perform five times a day."
+        },
+        {
+          "rijec": "wudu",
+          "opis": "The washing that prepares us for prayer."
+        },
+        {
+          "rijec": "mosque",
+          "opis": "The house where Muslims pray together."
+        },
+        {
+          "rijec": "minaret",
+          "opis": "The tall tower beside the mosque from which the adhan is called."
+        },
+        {
+          "rijec": "adhan",
+          "opis": "The call to prayer."
+        },
+        {
+          "rijec": "mihrab",
+          "opis": "The place in the mosque where the imam stands while leading the prayer."
+        },
+        {
+          "rijec": "imam",
+          "opis": "He leads the congregation in prayer."
+        },
+        {
+          "rijec": "jamaat",
+          "opis": "The community of people who pray together."
+        },
+        {
+          "rijec": "Quran",
+          "opis": "Allah's book revealed to Muhammad (peace be upon him)."
+        },
+        {
+          "rijec": "mekteb",
+          "opis": "The place where children learn about their faith."
+        }
+      ]
+    }
+  }
 }

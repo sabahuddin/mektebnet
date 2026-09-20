@@ -3,9 +3,85 @@
   "naslov": "Upiši odgovor",
   "uputa": "Upiši odgovor u polje ispod pitanja. Kad odgovoriš na sva pitanja, klikni „Provjeri\".",
   "pitanja": [
-    { "pitanje": "Kako se zove poziv na namaz?", "odgovor": "ezan", "pomoc": "Uči se s munare." },
-    { "pitanje": "Kako se zove pranje koje uzimamo pred namaz?", "odgovor": "abdest" },
-    { "pitanje": "Koliko farz-namaza klanjamo svaki dan?", "odgovor": "pet", "prihvati": ["5"] },
-    { "pitanje": "Kako se zove toranj s kojeg se uči ezan?", "odgovor": "munara", "prihvati": ["minaret"] }
-  ]
+    {
+      "pitanje": "Kako se zove poziv na namaz?",
+      "odgovor": "ezan",
+      "pomoc": "Uči se s munare."
+    },
+    {
+      "pitanje": "Kako se zove pranje koje uzimamo pred namaz?",
+      "odgovor": "abdest"
+    },
+    {
+      "pitanje": "Koliko farz-namaza klanjamo svaki dan?",
+      "odgovor": "pet",
+      "prihvati": [
+        "5"
+      ]
+    },
+    {
+      "pitanje": "Kako se zove toranj s kojeg se uči ezan?",
+      "odgovor": "munara",
+      "prihvati": [
+        "minaret"
+      ]
+    }
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Schreibe die Antwort",
+      "uputa": "Schreibe die Antwort in das Feld unter der Frage. Wenn du alle Fragen beantwortet hast, klicke auf „Prüfen“.",
+      "pitanja": [
+        {
+          "pitanje": "Wie heißt der Ruf zum Gebet?",
+          "odgovor": "Adhan",
+          "pomoc": "Er wird vom Minarett gerufen."
+        },
+        {
+          "pitanje": "Wie heißt die Waschung, die wir vor dem Gebet nehmen?",
+          "odgovor": "Wudu"
+        },
+        {
+          "pitanje": "Wie viele Farz-Gebete beten wir jeden Tag?",
+          "odgovor": "fünf",
+          "prihvati": [
+            "5"
+          ]
+        },
+        {
+          "pitanje": "Wie heißt der Turm, von dem der Adhan gerufen wird?",
+          "odgovor": "Minarett",
+          "prihvati": [
+            "Minaret"
+          ]
+        }
+      ]
+    },
+    "en": {
+      "naslov": "Write the answer",
+      "uputa": "Write the answer in the box under the question. When you have answered them all, click „Check“.",
+      "pitanja": [
+        {
+          "pitanje": "What is the call to prayer called?",
+          "odgovor": "adhan",
+          "pomoc": "It is called from the minaret."
+        },
+        {
+          "pitanje": "What is the washing we make before prayer called?",
+          "odgovor": "wudu"
+        },
+        {
+          "pitanje": "How many fard prayers do we pray every day?",
+          "odgovor": "five",
+          "prihvati": [
+            "5"
+          ]
+        },
+        {
+          "pitanje": "What is the tower from which the adhan is called?",
+          "odgovor": "minaret"
+        }
+      ]
+    }
+  }
 }

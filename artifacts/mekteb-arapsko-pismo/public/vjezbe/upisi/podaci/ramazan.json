@@ -3,9 +3,81 @@
   "naslov": "Ramazan — upiši odgovor",
   "uputa": "Upiši odgovor u polje ispod pitanja, pa klikni „Provjeri\".",
   "pitanja": [
-    { "pitanje": "U kojem mjesecu muslimani poste?", "odgovor": "ramazan" },
-    { "pitanje": "Kako se zove obrok prije zore?", "odgovor": "sehur" },
-    { "pitanje": "Kako se zove obrok kojim se prekida post?", "odgovor": "iftar", "pomoc": "Jede se kad sunce zađe." },
-    { "pitanje": "Kako se zove bajram poslije ramazana?", "odgovor": "Ramazanski bajram", "prihvati": ["ramazanski bajram", "idul-fitr"] }
-  ]
+    {
+      "pitanje": "U kojem mjesecu muslimani poste?",
+      "odgovor": "ramazan"
+    },
+    {
+      "pitanje": "Kako se zove obrok prije zore?",
+      "odgovor": "sehur"
+    },
+    {
+      "pitanje": "Kako se zove obrok kojim se prekida post?",
+      "odgovor": "iftar",
+      "pomoc": "Jede se kad sunce zađe."
+    },
+    {
+      "pitanje": "Kako se zove bajram poslije ramazana?",
+      "odgovor": "Ramazanski bajram",
+      "prihvati": [
+        "ramazanski bajram",
+        "idul-fitr"
+      ]
+    }
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Ramadan — schreibe die Antwort",
+      "uputa": "Schreibe die Antwort in das Feld unter der Frage und klicke dann auf „Prüfen“.",
+      "pitanja": [
+        {
+          "pitanje": "In welchem Monat fasten die Muslime?",
+          "odgovor": "Ramadan"
+        },
+        {
+          "pitanje": "Wie heißt die Mahlzeit vor der Morgendämmerung?",
+          "odgovor": "Suhur"
+        },
+        {
+          "pitanje": "Wie heißt die Mahlzeit, mit der das Fasten gebrochen wird?",
+          "odgovor": "Iftar",
+          "pomoc": "Sie wird gegessen, wenn die Sonne untergeht."
+        },
+        {
+          "pitanje": "Wie heißt das Fest nach dem Ramadan?",
+          "odgovor": "Eid al-Fitr",
+          "prihvati": [
+            "Ramadanfest",
+            "Eid"
+          ]
+        }
+      ]
+    },
+    "en": {
+      "naslov": "Ramadan — write the answer",
+      "uputa": "Write the answer in the box under the question, then click „Check“.",
+      "pitanja": [
+        {
+          "pitanje": "In which month do Muslims fast?",
+          "odgovor": "Ramadan"
+        },
+        {
+          "pitanje": "What is the meal before dawn called?",
+          "odgovor": "suhoor"
+        },
+        {
+          "pitanje": "What is the meal that breaks the fast called?",
+          "odgovor": "iftar",
+          "pomoc": "It is eaten when the sun sets."
+        },
+        {
+          "pitanje": "What is the festival after Ramadan called?",
+          "odgovor": "Eid al-Fitr",
+          "prihvati": [
+            "Eid"
+          ]
+        }
+      ]
+    }
+  }
 }
