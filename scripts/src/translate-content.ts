@@ -151,7 +151,10 @@ function transkripcijaPravilo(targetName: string): string {
   if (!primjeri) {
     return "- Arapski tekst pisan latinicom (naziv sure ili dove, transkripcija ajeta) NE prevodi po značenju; zapiši ga u transkripciji uobičajenoj za ciljni jezik, a ako za taj jezik nemaš ustaljenu transkripciju, ostavi bosanski oblik.";
   }
-  return `- Arapski tekst pisan latinicom (naziv sure ili dove, transkripcija ajeta, arapsko vlastito ime) NE prevodi po značenju i NE ostavljaj u bosanskom obliku — prenesi ga u transkripciju ciljnog jezika: ${primjeri}.`;
+  return [
+    `- Arapski tekst pisan latinicom (naziv sure ili dove, transkripcija ajeta, arapsko vlastito ime) NE prevodi po značenju i NE ostavljaj u bosanskom obliku — prenesi ga u transkripciju ciljnog jezika: ${primjeri}.`,
+    "- Transkripciju izvedi IZ ARAPSKOG TEKSTA koji stoji uz nju u istom odlomku, a ne prepisivanjem bosanskih slova. Bosanska transkripcija sažima više arapskih glasova u jedno slovo (ث, س i ص su sve „s“; ذ, ز i ظ su sve „z“; ق i ك su „k“; ح i ه su „h“; ت i ط su „t“), pa se iz nje ne može pogoditi tačan oblik u ciljnom jeziku. Ako uz transkripciju NEMA arapskog teksta, radije ostavi bosanski oblik nego da nagađaš.",
+  ].join("\n");
 }
 
 const TEXT_SYS = (targetName: string) => `Ti si profesionalni prevodilac za islamsku edukativnu platformu za djecu (mekteb).
