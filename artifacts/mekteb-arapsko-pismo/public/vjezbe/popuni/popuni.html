@@ -343,10 +343,14 @@ body{
 }
 </script>
 
+<!-- Sučelje vježbe na jeziku djeteta (?lang=de). Vidi /vjezbe/jezik.js. -->
+<script src="/vjezbe/jezik.js"></script>
+
 <script>
 (function () {
   'use strict';
 
+  var T = window.MektebJezik.t;
   var $ = function (id) { return document.getElementById(id); };
   var el = {
     naslov: $('naslov'), uputa: $('uputa'), brojac: $('brojac'), sat: $('sat'),
@@ -423,9 +427,9 @@ body{
     dijelovi = razlomi(tekst);
     trazene = dijelovi.filter(function (d) { return d.vrsta === 'praznina'; }).map(function (d) { return d.sadrzaj; });
 
-    el.naslov.textContent = podaci.naslov || 'Popuni prazninu';
-    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + 'Popuni prazninu · Mekteb.net';
-    el.uputa.textContent = podaci.uputa || 'Prevuci riječ na prazno mjesto. Kad popuniš sve praznine, klikni „Provjeri".';
+    el.naslov.textContent = podaci.naslov || T('Popuni prazninu');
+    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + T('Popuni prazninu · Mekteb.net');
+    el.uputa.textContent = podaci.uputa || T('Prevuci riječ na prazno mjesto. Kad popuniš sve praznine, klikni „Provjeri".');
     el.uputa.hidden = !el.uputa.textContent;
   }
 
@@ -433,7 +437,7 @@ body{
   function novaIgra() {
     if (stanje && stanje.sat) clearInterval(stanje.sat);
     if (!trazene.length) {
-      greska('U podacima nema nijedne praznine. Riječ koja nedostaje piše se u vitičastim zagradama, npr. {abdest}.');
+      greska(T('U podacima nema nijedne praznine. Riječ koja nedostaje piše se u vitičastim zagradama, npr. {abdest}.'));
       return;
     }
 
@@ -491,7 +495,7 @@ body{
       dugme.type = 'button';
       dugme.className = 'praznina';
       dugme.dataset.i = i;
-      dugme.setAttribute('aria-label', 'Praznina ' + (i + 1) + ' od ' + trazene.length);
+      dugme.setAttribute('aria-label', T('Praznina %broj% od %ukupno%', { broj: i + 1, ukupno: trazene.length }));
       dugme.textContent = '?';
       pasus.appendChild(dugme);
       stanje.praznine.push({ el: dugme, tacna: false, zakljucana: false, ponudjena: null, rijec: d.sadrzaj });
@@ -522,7 +526,7 @@ body{
 
   function osvjeziBrojac() {
     var broj = popunjenih();
-    el.brojac.textContent = broj + ' od ' + trazene.length;
+    el.brojac.textContent = T('%broj% od %ukupno%', { broj: broj, ukupno: trazene.length });
     // Provjera ima smisla tek kad je sve popunjeno — dotad dijete slaže bez
     // ijedne crvene oznake.
     el.provjeri.disabled = stanje.gotovo || broj < trazene.length;
@@ -559,7 +563,7 @@ body{
     praznina.ponudjena = null;
     praznina.el.textContent = '?';
     praznina.el.classList.remove('popunjena', 'tacna', 'netacna');
-    praznina.el.setAttribute('aria-label', 'Praznina ' + (+praznina.el.dataset.i + 1) + ' od ' + trazene.length);
+    praznina.el.setAttribute('aria-label', T('Praznina %broj% od %ukupno%', { broj: +praznina.el.dataset.i + 1, ukupno: trazene.length }));
   }
 
   /**
@@ -584,18 +588,18 @@ body{
     praznina.el.textContent = ponudjena.rijec;
     praznina.el.classList.remove('tacna', 'netacna');
     praznina.el.classList.add('popunjena');
-    praznina.el.setAttribute('aria-label', 'Praznina ' + (+praznina.el.dataset.i + 1) + ': ' + ponudjena.rijec);
+    praznina.el.setAttribute('aria-label', T('Praznina %broj%: %rijec%', { broj: +praznina.el.dataset.i + 1, rijec: ponudjena.rijec }));
 
     oznaciIzabranu(null);
     nacrtajPonudu();
     osvjeziBrojac();
 
     if (popunjenih() === trazene.length) {
-      poruci('Sve praznine su popunjene. Klikni „Provjeri" da vidiš kako si uradio.');
-      reci('Sve je popunjeno. Klikni Provjeri.');
+      poruci(T('Sve praznine su popunjene. Klikni „Provjeri" da vidiš kako si uradio.'));
+      reci(T('Sve je popunjeno. Klikni Provjeri.'));
     } else {
-      poruci('Smješteno: ' + ponudjena.rijec + '. Ako se predomisliš, dodirni riječ u priči da je vratiš.');
-      reci('Smješteno. ' + ponudjena.rijec);
+      poruci(T('Smješteno: %rijec%. Ako se predomisliš, dodirni riječ u priči da je vratiš.', { rijec: ponudjena.rijec }));
+      reci(T('Smješteno. %rijec%', { rijec: ponudjena.rijec }));
     }
   }
 
@@ -648,10 +652,13 @@ body{
 
     var pogresnih = trazene.length - tacnih;
     zvuk('greska');
-    poruci('Tačno: ' + tacnih + ' od ' + trazene.length + '. ' +
-           (pogresnih === 1 ? 'Jedna riječ nije na svome mjestu — dodirni je da je vratiš, pa probaj ponovo.'
-                            : 'Riječi koje nisu na svome mjestu su označene — dodirni ih da ih vratiš, pa probaj ponovo.'), 'lose');
-    reci('Tačno ' + tacnih + ' od ' + trazene.length + '. Ispravi označene riječi.');
+    poruci(T('Tačno: %broj% od %ukupno%. %dodatak%', {
+      broj: tacnih, ukupno: trazene.length,
+      dodatak: pogresnih === 1
+        ? T('Jedna riječ nije na svome mjestu — dodirni je da je vratiš, pa probaj ponovo.')
+        : T('Riječi koje nisu na svome mjestu su označene — dodirni ih da ih vratiš, pa probaj ponovo.'),
+    }), 'lose');
+    reci(T('Tačno %broj% od %ukupno%. Ispravi označene riječi.', { broj: tacnih, ukupno: trazene.length }));
     // Pogrešne riječi se vrate u ponudu tek na dodir, da dijete vidi šta je bilo.
     el.provjeri.disabled = true;
   }
@@ -713,7 +720,7 @@ body{
     if (!vuce.pomjereno) {
       // Nije povučeno, nego dodirnuto: izaberi riječ, pa se dodirne praznina.
       oznaciIzabranu(stanje.izabrana === vuce.ponudjena.id ? null : vuce.ponudjena.id);
-      if (stanje.izabrana) poruci('Sada dodirni prazninu u koju ide riječ „' + vuce.ponudjena.rijec + '".');
+      if (stanje.izabrana) poruci(T('Sada dodirni prazninu u koju ide riječ „%rijec%".', { rijec: vuce.ponudjena.rijec }));
       else poruci('');
       return;
     }
@@ -731,7 +738,7 @@ body{
     var ponudjena = nadjiPonudjenu(dugme.dataset.id);
     if (!ponudjena || ponudjena.potrosena) return;
     oznaciIzabranu(stanje.izabrana === ponudjena.id ? null : ponudjena.id);
-    if (stanje.izabrana) poruci('Sada odaberi prazninu u koju ide riječ „' + ponudjena.rijec + '".');
+    if (stanje.izabrana) poruci(T('Sada odaberi prazninu u koju ide riječ „%rijec%".', { rijec: ponudjena.rijec }));
     else poruci('');
   });
 
@@ -751,11 +758,11 @@ body{
       isprazni(praznina);
       nacrtajPonudu();
       osvjeziBrojac();
-      poruci('Riječ „' + vracena + '" je vraćena među ponuđene.');
-      reci('Vraćeno. ' + vracena);
+      poruci(T('Riječ „%rijec%" je vraćena među ponuđene.', { rijec: vracena }));
+      reci(T('Vraćeno. %tekst%', { tekst: vracena }));
       return;
     }
-    poruci('Prvo odaberi riječ sa spiska, pa je smjesti ovdje.');
+    poruci(T('Prvo odaberi riječ sa spiska, pa je smjesti ovdje.'));
   });
 
   /* ---------- kraj ---------- */
@@ -769,17 +776,17 @@ body{
     el.provjeri.disabled = true;
     poruci('');
 
-    var opis = 'Vrijeme: ' + vrijeme(stanje.sekunde) + '.';
+    var opis = T('Vrijeme: %vrijeme%.', { vrijeme: vrijeme(stanje.sekunde) });
     if (stanje.izPrve !== null) {
       opis += stanje.izPrve === trazene.length
-        ? ' Iz prve sve tačno!'
-        : ' Iz prve tačno: ' + stanje.izPrve + ' od ' + trazene.length + '.';
+        ? T(' Iz prve sve tačno!')
+        : T(' Iz prve tačno: %broj% od %ukupno%.', { broj: stanje.izPrve, ukupno: trazene.length });
     }
     if (stanje.greske > 0) {
-      opis += stanje.greske === 1 ? ' Jedna riječ je bila na pogrešnom mjestu.'
-                                  : ' Riječi na pogrešnom mjestu: ' + stanje.greske + '.';
+      opis += stanje.greske === 1 ? T(' Jedna riječ je bila na pogrešnom mjestu.')
+                                  : T(' Riječi na pogrešnom mjestu: %broj%.', { broj: stanje.greske });
     }
-    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? ' Pomoć korištena jednom.' : ' Pomoć korištena ' + stanje.pomoc + ' puta.';
+    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? T(' Pomoć korištena jednom.') : T(' Pomoć korištena %broj% puta.', { broj: stanje.pomoc });
     el.krajOpis.textContent = opis;
     el.kraj.hidden = false;
     el.ponovo.focus({ preventScroll: true });
@@ -818,8 +825,8 @@ body{
         smjesti(kandidat, praznina);
         zakljucajTacnu(praznina);
         osvjeziBrojac();
-        poruci('Ovdje ide riječ „' + kandidat.rijec + '".', 'dobro');
-        reci('Pomoć. Ovdje ide ' + kandidat.rijec);
+        poruci(T('Ovdje ide riječ „%rijec%".', { rijec: kandidat.rijec }), 'dobro');
+        reci(T('Pomoć. Ovdje ide %rijec%', { rijec: kandidat.rijec }));
         if (popunjenih() === trazene.length) provjeri();
         return;
       }

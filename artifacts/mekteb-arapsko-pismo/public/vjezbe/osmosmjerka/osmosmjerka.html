@@ -399,10 +399,14 @@ body{
 }
 </script>
 
+<!-- Sučelje vježbe na jeziku djeteta (?lang=de). Vidi /vjezbe/jezik.js. -->
+<script src="/vjezbe/jezik.js"></script>
+
 <script>
 (function () {
   'use strict';
 
+  var T = window.MektebJezik.t;
   var BOJE = ['#F6A04D', '#4CC3BD', '#E4B429', '#EE8FA6', '#8CCB7E', '#A99BE0'];
   var SMJER8 = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]]; // [red, kolona]
   var SMJEROVI = {
@@ -410,8 +414,13 @@ body{
     srednje: [[0, 1], [1, 0], [1, 1], [-1, 1]],
     tesko: SMJER8
   };
-  // slova za popunu, otprilike po učestalosti u bosanskom
-  var POPUNA = 'AAAAAAAAAAAIIIIIIIIIOOOOOOOOOEEEEEEEENNNNNNSSSSSRRRRRJJJJTTTTUUUUDDDKKKKVVVLLLMMMPPPGGZZBBČĆŠŽHCFĐ';
+  // Slova za popunu, otprilike po učestalosti u jeziku. Na njemačkom i
+  // engleskom u mreži ne stoje naša slova ni dvoslovi — dijete bi ih tražilo
+  // uzalud, jer ih u prevedenim riječima nema.
+  var BOSANSKI = window.MektebJezik.jezik === 'bs';
+  var POPUNA = BOSANSKI
+    ? 'AAAAAAAAAAAIIIIIIIIIOOOOOOOOOEEEEEEEENNNNNNSSSSSRRRRRJJJJTTTTUUUUDDDKKKKVVVLLLMMMPPPGGZZBBČĆŠŽHCFĐ'
+    : 'EEEEEEEEEEEAAAAAAAAAIIIIIIIIOOOOOOONNNNNNNSSSSSRRRRRTTTTTLLLLUUUUDDDHHHGGGMMMBBKKWWFFPPZZVJCY';
   var DVOSLOVI = ['DŽ', 'LJ', 'NJ'];
   var SVG = 'http://www.w3.org/2000/svg';
 
@@ -434,7 +443,7 @@ body{
     return niz;
   }
   function uSlova(rijec, dvoslovi) {
-    var s = String(rijec).toLocaleUpperCase('bs').replace(/[^A-ZČĆĐŠŽ|]/g, '');
+    var s = String(rijec).toLocaleUpperCase(BOSANSKI ? 'bs' : 'de').replace(/[^A-ZÄÖÜČĆĐŠŽ|]/g, '');
     var izlaz = [];
     for (var i = 0; i < s.length; i++) {
       if (s[i] === '|') continue;
@@ -475,7 +484,7 @@ body{
 
   function pripremi(p) {
     podaci = p || {};
-    var dvoslovi = podaci.dvoslovi !== false;
+    var dvoslovi = BOSANSKI && podaci.dvoslovi !== false;
     rijeci = (podaci.rijeci || []).map(function (w) {
       var o = typeof w === 'string' ? { rijec: w } : w;
       var slova = uSlova(o.rijec || '', dvoslovi);
@@ -488,8 +497,8 @@ body{
     rijeci.forEach(function (w) { w.obrnuto = w.slova.slice().reverse().join('|'); });
 
     imaOpisa = rijeci.length > 0 && rijeci.every(function (w) { return w.opis; });
-    el.naslov.textContent = podaci.naslov || 'Osmosmjerka';
-    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + 'Osmosmjerka · Mekteb.net';
+    el.naslov.textContent = podaci.naslov || T('Osmosmjerka');
+    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + T('Osmosmjerka · Mekteb.net');
     el.uputa.textContent = podaci.uputa || '';
     el.uputa.hidden = !podaci.uputa;
     el.prikaz.hidden = !imaOpisa;
@@ -549,14 +558,14 @@ body{
 
   function novaIgra() {
     if (stanje && stanje.sat) clearInterval(stanje.sat);
-    if (!rijeci.length) { greska('U podacima nema riječi. Provjeri JSON datoteku.'); return; }
+    if (!rijeci.length) { greska(T('U podacima nema riječi. Provjeri JSON datoteku.')); return; }
 
     var tezina = odabrano('tezina');
     var najduza = Math.max.apply(null, rijeci.map(function (w) { return w.slova.length; }));
     var n = Math.min(14, Math.max(8, parseInt(podaci.velicina, 10) || 10, najduza));
     var slozeno;
     try { slozeno = sloziMrezu(n, SMJEROVI[tezina], podaci.dvoslovi !== false); }
-    catch (g) { greska('Riječi ne staju u mrežu. Smanji broj riječi ili povećaj polje "velicina".'); return; }
+    catch (g) { greska(T('Riječi ne staju u mrežu. Smanji broj riječi ili povećaj polje "velicina".')); return; }
 
     stanje = {
       n: slozeno.n, m: slozeno.m, mjesta: slozeno.mjesta, tezina: tezina,
@@ -615,7 +624,7 @@ body{
 
   function nacrtajSpisak() {
     var opisi = odabrano('prikaz') === 'opisi';
-    el.spisakNaslov.textContent = opisi ? 'Pogodi riječ i pronađi je' : 'Riječi koje tražiš';
+    el.spisakNaslov.textContent = opisi ? T('Pogodi riječ i pronađi je') : T('Riječi koje tražiš');
     el.spisak.className = opisi ? '' : 'kratko';
     el.spisak.textContent = '';
     rijeci.forEach(function (w, i) {
@@ -628,13 +637,13 @@ body{
 
       if (opisi && !boja) {
         var opis = document.createElement('span'); opis.textContent = w.opis + ' ';
-        var broj = document.createElement('span'); broj.className = 'nepoznata'; broj.textContent = '(' + w.slova.length + ' slova)';
+        var broj = document.createElement('span'); broj.className = 'nepoznata'; broj.textContent = T('(%broj% slova)', { broj: w.slova.length });
         tekst.appendChild(opis); tekst.appendChild(broj);
       } else {
         var rijec = document.createElement('span'); rijec.className = 'rijec'; rijec.textContent = w.prikaz;
         tekst.appendChild(rijec);
         if (boja) {
-          var sr = document.createElement('span'); sr.className = 'sr'; sr.textContent = ' (pronađeno)';
+          var sr = document.createElement('span'); sr.className = 'sr'; sr.textContent = T(' (pronađeno)');
           tekst.appendChild(sr);
           if (w.opis) { var o = document.createElement('span'); o.className = 'opis'; o.textContent = w.opis; tekst.appendChild(o); }
         }
@@ -642,7 +651,7 @@ body{
       li.appendChild(znak); li.appendChild(tekst);
       el.spisak.appendChild(li);
     });
-    el.brojac.textContent = stanje.brojNadjenih + ' od ' + rijeci.length;
+    el.brojac.textContent = T('%broj% od %ukupno%', { broj: stanje.brojNadjenih, ukupno: rijeci.length });
   }
 
   /* ---------- sat ---------- */
@@ -744,7 +753,7 @@ body{
     if (rijeci[i].opis) el.objasnjenje.appendChild(document.createTextNode(' – ' + rijeci[i].opis));
     el.objasnjenje.style.setProperty('--boja', boja);
     el.objasnjenje.className = 'objasnjenje ima';
-    reci('Pronađena riječ: ' + rijeci[i].prikaz + '. ' + rijeci[i].opis);
+    reci(T('Pronađena riječ: %rijec%. %opis%', { rijec: rijeci[i].prikaz, opis: rijeci[i].opis }));
     javi('rijec', { rijec: rijeci[i].prikaz, pronadjeno: stanje.brojNadjenih, ukupno: rijeci.length });
     if (stanje.brojNadjenih === rijeci.length) { zavrsi(); return; }
     zvuk('tacno');
@@ -758,9 +767,9 @@ body{
     el.sat.textContent = vrijeme(stanje.sekunde);
     el.pomoc.disabled = true;
 
-    var pomoc = stanje.pomoc === 0 ? 'Bez pomoći.' :
-                stanje.pomoc === 1 ? 'Pomoć korištena jednom.' : 'Pomoć korištena ' + stanje.pomoc + ' puta.';
-    el.krajOpis.textContent = 'Vrijeme: ' + vrijeme(stanje.sekunde) + '. ' + pomoc;
+    var pomoc = stanje.pomoc === 0 ? T('Bez pomoći.') :
+                stanje.pomoc === 1 ? T('Pomoć korištena jednom.') : T('Pomoć korištena %broj% puta.', { broj: stanje.pomoc });
+    el.krajOpis.textContent = T('Vrijeme: %vrijeme%. %pomoc%', { vrijeme: vrijeme(stanje.sekunde), pomoc: pomoc });
     el.kraj.hidden = false;
     trunje();
     el.ponovo.focus({ preventScroll: true });
@@ -864,7 +873,7 @@ body{
       p.classList.remove('mig'); void p.offsetWidth; p.classList.add('mig');
       stanje.pomoc++;
       pokreniSat();
-      reci('Prvo slovo je u redu ' + (mj.r + 1) + ', koloni ' + (mj.c + 1) + '.');
+      reci(T('Prvo slovo je u redu %red%, koloni %kolona%.', { red: mj.r + 1, kolona: mj.c + 1 }));
       return;
     }
   });

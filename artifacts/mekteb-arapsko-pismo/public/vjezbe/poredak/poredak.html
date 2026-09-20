@@ -315,10 +315,14 @@ body{
 }
 </script>
 
+<!-- Sučelje vježbe na jeziku djeteta (?lang=de). Vidi /vjezbe/jezik.js. -->
+<script src="/vjezbe/jezik.js"></script>
+
 <script>
 (function () {
   'use strict';
 
+  var T = window.MektebJezik.t;
   var $ = function (id) { return document.getElementById(id); };
   var el = {
     naslov: $('naslov'), uputa: $('uputa'), brojac: $('brojac'), sat: $('sat'),
@@ -367,9 +371,9 @@ body{
     tacne = Array.isArray(podaci.stavke)
       ? podaci.stavke.map(function (s) { return String(s == null ? '' : s).trim(); }).filter(Boolean)
       : [];
-    el.naslov.textContent = podaci.naslov || 'Poredak';
-    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + 'Poredak · Mekteb.net';
-    el.uputa.textContent = podaci.uputa || 'Složi stavke od prve do zadnje, pa klikni „Provjeri".';
+    el.naslov.textContent = podaci.naslov || T('Poredak');
+    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + T('Poredak · Mekteb.net');
+    el.uputa.textContent = podaci.uputa || T('Složi stavke od prve do zadnje, pa klikni „Provjeri".');
     el.uputa.hidden = !el.uputa.textContent;
   }
 
@@ -386,7 +390,7 @@ body{
   function novaIgra() {
     if (stanje && stanje.sat) clearInterval(stanje.sat);
     if (tacne.length < 2) {
-      greska('Za ovu vježbu trebaju najmanje dvije stavke. Stavke se pišu u polju „stavke", tačnim redoslijedom.');
+      greska(T('Za ovu vježbu trebaju najmanje dvije stavke. Stavke se pišu u polju „stavke", tačnim redoslijedom.'));
       return;
     }
 
@@ -444,7 +448,8 @@ body{
       hvat.dataset.i = i;
       hvat.textContent = stavka.tekst;
       hvat.disabled = stavka.zakljucana || stanje.gotovo;
-      hvat.setAttribute('aria-label', (i + 1) + '. ' + stavka.tekst + (stavka.zakljucana ? ' — na svome mjestu' : ''));
+      hvat.setAttribute('aria-label', T(stavka.zakljucana ? '%broj%. %tekst% — na svome mjestu' : '%broj%. %tekst%',
+        { broj: i + 1, tekst: stavka.tekst }));
       if (stanje.izabrana === stavka.id) {
         li.classList.add('izabrana');
         hvat.setAttribute('aria-pressed', 'true');
@@ -459,7 +464,7 @@ body{
         dugme.dataset.smjer = s[2];
         dugme.dataset.i = i;
         dugme.textContent = s[1];
-        dugme.setAttribute('aria-label', 'Pomjeri ' + s[0] + ': ' + stavka.tekst);
+        dugme.setAttribute('aria-label', T(s[0] === 'gore' ? 'Pomjeri gore: %tekst%' : 'Pomjeri dolje: %tekst%', { tekst: stavka.tekst }));
         dugme.disabled = stavka.zakljucana || stanje.gotovo || susjed(i, s[2]) < 0;
         strelice.appendChild(dugme);
       });
@@ -486,7 +491,7 @@ body{
   }
 
   function osvjeziBrojac() {
-    el.brojac.textContent = stanje.naMjestu + ' od ' + tacne.length;
+    el.brojac.textContent = T('%broj% od %ukupno%', { broj: stanje.naMjestu, ukupno: tacne.length });
   }
 
   /* ---------- sat ---------- */
@@ -524,8 +529,8 @@ body{
     stanje.izabrana = null;
     el.provjeri.disabled = false;
     nacrtaj(a.id);
-    poruci('Zamijenjeno: „' + a.tekst + '" i „' + b.tekst + '".');
-    reci('Zamijenjeno.');
+    poruci(T('Zamijenjeno: „%a%" i „%b%".', { a: a.tekst, b: b.tekst }));
+    reci(T('Zamijenjeno.'));
   }
 
   /** Diskretan zvuk; ako zvuk.js nije učitan ili je ugašen, ništa se ne desi. */
@@ -567,9 +572,9 @@ body{
     if (naMjestu === tacne.length) { zavrsi(); return; }
 
     zvuk('greska');
-    poruci('Na svome mjestu: ' + naMjestu + ' od ' + tacne.length +
-           '. Označene stavke još nisu na svome mjestu — zamijeni im mjesta pa provjeri ponovo.', 'lose');
-    reci('Na svome mjestu ' + naMjestu + ' od ' + tacne.length + '.');
+    poruci(T('Na svome mjestu: %broj% od %ukupno%. Označene stavke još nisu na svome mjestu — zamijeni im mjesta pa provjeri ponovo.',
+      { broj: naMjestu, ukupno: tacne.length }), 'lose');
+    reci(T('Na svome mjestu %broj% od %ukupno%.', { broj: naMjestu, ukupno: tacne.length }));
     // Bez ijedne izmjene nova provjera ne bi rekla ništa novo.
     el.provjeri.disabled = true;
   }
@@ -586,13 +591,13 @@ body{
     poruci('');
     nacrtaj();
 
-    var opis = 'Vrijeme: ' + vrijeme(stanje.sekunde) + '.';
+    var opis = T('Vrijeme: %vrijeme%.', { vrijeme: vrijeme(stanje.sekunde) });
     if (stanje.izPrve !== null) {
       opis += stanje.izPrve === tacne.length
-        ? ' Iz prve sve na svome mjestu!'
-        : ' Iz prve na mjestu: ' + stanje.izPrve + ' od ' + tacne.length + '.';
+        ? T(' Iz prve sve na svome mjestu!')
+        : T(' Iz prve na mjestu: %broj% od %ukupno%.', { broj: stanje.izPrve, ukupno: tacne.length });
     }
-    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? ' Pomoć korištena jednom.' : ' Pomoć korištena ' + stanje.pomoc + ' puta.';
+    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? T(' Pomoć korištena jednom.') : T(' Pomoć korištena %broj% puta.', { broj: stanje.pomoc });
     el.krajOpis.textContent = opis;
     el.kraj.hidden = false;
     el.ponovo.focus({ preventScroll: true });
@@ -667,7 +672,7 @@ body{
         return;
       }
       oznaci(stanje.izabrana === stavka.id ? null : stavka.id);
-      poruci(stanje.izabrana ? 'Sada dodirni stavku s kojom mijenja mjesto.' : '');
+      poruci(stanje.izabrana ? T('Sada dodirni stavku s kojom mijenja mjesto.') : '');
       return;
     }
     if (cilj) zamijeni(vuce.i, +cilj.dataset.i);
@@ -701,7 +706,7 @@ body{
       return;
     }
     oznaci(stanje.izabrana === stavka.id ? null : stavka.id);
-    poruci(stanje.izabrana ? 'Sada odaberi stavku s kojom mijenja mjesto.' : '');
+    poruci(stanje.izabrana ? T('Sada odaberi stavku s kojom mijenja mjesto.') : '');
   });
 
   /* ---------- komande ---------- */
@@ -736,8 +741,8 @@ body{
       nacrtaj();
       osvjeziBrojac();
       javi('stavka', { stavka: b.tekst, pronadjeno: stanje.naMjestu, ukupno: tacne.length });
-      poruci('Ovdje ide: „' + b.tekst + '".', 'dobro');
-      reci('Pomoć. Ovdje ide ' + b.tekst);
+      poruci(T('Ovdje ide: „%tekst%".', { tekst: b.tekst }), 'dobro');
+      reci(T('Pomoć. Ovdje ide %tekst%', { tekst: b.tekst }));
       if (svePoRedu()) provjeri();
       return;
     }
