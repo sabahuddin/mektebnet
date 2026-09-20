@@ -206,6 +206,11 @@ test("urednički ispravljeni redovi stoje kako su odobreni", () => {
   // Allahovo ime Samad, „as-hab“ kao dva glasa i razdvojeno „Subhanaka Allahumma“.
   const ocekivano: Array<[string, string]> = [
     ["Allahus-samed", "Allahus-Samad"],
+    ["Ettehijjatu lillahi ves-salavatu vet-tajjibat", "At-tahiyyatu lillahi was-salawatu wat-tayyibatu"],
+    [
+      "Esselamu alejke ejjuhen-nebijju ve rahmetullahi ve berekatuh",
+      "As-salamu 'alayka ayyuhan-nabiyyu wa rahmatullahi wa barakatuhu",
+    ],
     ["Elem tere kejfe fe'ale rabbuke bi ashabil-fil", "Alam tara kayfa fa'ala Rabbuka bi as-habil-fil"],
     [
       "Subhanekellahumme ve bihamdike ve tebarekesmuke ve te'ala džedduke ve la ilahe gajruk",

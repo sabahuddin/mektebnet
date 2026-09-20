@@ -227,10 +227,10 @@ export const CJELINE: Cjelina[] = [
   {
     naziv: "Ettehijjatu",
     redovi: [
-      { bs: "Ettehijjatu lillahi ves-salavatu vet-tajjibat", en: "At-tahiyyatu lillahi was-salawatu wat-tayyibat" },
+      { bs: "Ettehijjatu lillahi ves-salavatu vet-tajjibat", en: "At-tahiyyatu lillahi was-salawatu wat-tayyibatu" },
       {
         bs: "Esselamu alejke ejjuhen-nebijju ve rahmetullahi ve berekatuh",
-        en: "As-salamu 'alayka ayyuhan-nabiyyu wa rahmatullahi wa barakatuh",
+        en: "As-salamu 'alayka ayyuhan-nabiyyu wa rahmatullahi wa barakatuhu",
       },
       { bs: "Esselamu alejna ve ala ibadillahis-salihin", en: "As-salamu 'alayna wa 'ala 'ibadillahis-salihin" },
       {
