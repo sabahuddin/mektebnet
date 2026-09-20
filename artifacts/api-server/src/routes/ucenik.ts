@@ -305,7 +305,8 @@ router.get("/plan-lekcija", async (req, res) => {
       .where(where)
       .orderBy(asc(planLekcijaTable.datum), asc(planLekcijaTable.redoslijed));
 
-    res.json(lekcije);
+    // `redoslijed` je 0-baziran u bazi; učenik i roditelj vide broj časa.
+    res.json(lekcije.map(l => ({ ...l, cas: (l.redoslijed ?? 0) + 1 })));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

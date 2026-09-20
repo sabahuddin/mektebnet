@@ -35,6 +35,7 @@ import {
   medaljoniTable,
   etapaPolaganjaTable,
   etapaPokusajOdobrenjaTable,
+  embedCompletionsTable,
   pushTokensTable,
 } from "@workspace/db/schema";
 import { eq, and, or, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
@@ -44,6 +45,8 @@ import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspore
 import { mektebDokumentiDir, streamDokument, deleteDokumentFajl, optimizePdfFile } from "../lib/dokumenti.js";
 import { normalizeUploadedFilename } from "../lib/file-names.js";
 import { getGlobalNapametKatalog, getNapametKatalog } from "../data/napamet.js";
+import { getStaticVjezba } from "../lib/static-vjezbe.js";
+import { jeNasaVjezba } from "../lib/nase-vjezbe.js";
 
 const router = Router();
 const ukupneOcjeneFilter = or(
@@ -3722,6 +3725,27 @@ router.delete("/kalendar/:id", async (req, res) => {
 
 // ── PLAN LEKCIJA ────────────────────────────────────────────────────────────────
 
+// Plan lekcija se vodi po časovima: jedan red = jedan čas tog dana. Broj časa
+// je 1-baziran za muallima, a u bazi ostaje postojeća kolona `redoslijed`
+// (0-bazirana), pa nema izmjene sheme ni migracije.
+const MAX_CASOVA_PO_DANU = 8;
+
+function casIzRedoslijeda(redoslijed: number): number {
+  return (redoslijed ?? 0) + 1;
+}
+
+function redoslijedIzCasa(cas: unknown, fallback: unknown): number | null {
+  const broj = Number(cas ?? (Number(fallback ?? 0) + 1));
+  if (!Number.isInteger(broj) || broj < 1 || broj > MAX_CASOVA_PO_DANU) return null;
+  return broj - 1;
+}
+
+type PlanLekcijaRed = typeof planLekcijaTable.$inferSelect;
+
+function planLekcijaOut(red: PlanLekcijaRed) {
+  return { ...red, cas: casIzRedoslijeda(red.redoslijed) };
+}
+
 // GET /api/muallim/plan-lekcija?grupaId=X&datum=YYYY-MM-DD
 router.get("/plan-lekcija", async (req, res) => {
   try {
@@ -3740,39 +3764,93 @@ router.get("/plan-lekcija", async (req, res) => {
       .where(where)
       .orderBy(asc(planLekcijaTable.datum), asc(planLekcijaTable.redoslijed));
 
-    res.json(lekcije);
+    res.json(lekcije.map(planLekcijaOut));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
 });
 
-// POST /api/muallim/plan-lekcija — add lesson to day plan
+// POST /api/muallim/plan-lekcija — upiši čas u plan dana. Ako taj čas tog dana
+// već postoji, unos se prepisuje (muallim mijenja lekciju na 1. ili 2. času
+// bez brisanja).
 router.post("/plan-lekcija", async (req, res) => {
   try {
-    const { grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed } = req.body;
+    const { grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed, cas } = req.body;
     if (!grupaId || !datum || !lekcijaNaslov) { res.status(400).json({ error: "grupaId, datum i lekcijaNaslov su obavezni" }); return; }
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
 
+    const noviRedoslijed = redoslijedIzCasa(cas, redoslijed);
+    if (noviRedoslijed === null) {
+      res.status(400).json({ error: `Čas mora biti broj od 1 do ${MAX_CASOVA_PO_DANU}` });
+      return;
+    }
+
+    const [postojeci] = await db.select().from(planLekcijaTable).where(and(
+      eq(planLekcijaTable.grupaId, grupaId),
+      eq(planLekcijaTable.datum, datum),
+      eq(planLekcijaTable.redoslijed, noviRedoslijed),
+    ));
+
+    if (postojeci) {
+      const [azuriran] = await db.update(planLekcijaTable)
+        .set({ lekcijaNaslov, lekcijaTip: lekcijaTip || postojeci.lekcijaTip })
+        .where(eq(planLekcijaTable.id, postojeci.id))
+        .returning();
+      res.json(planLekcijaOut(azuriran));
+      return;
+    }
+
     const [nova] = await db.insert(planLekcijaTable).values({
       grupaId, muallimId: req.user!.userId, datum, lekcijaNaslov,
       lekcijaTip: lekcijaTip || "ilmihal",
-      redoslijed: redoslijed || 0,
+      redoslijed: noviRedoslijed,
     }).returning();
 
-    res.status(201).json(nova);
+    res.status(201).json(planLekcijaOut(nova));
+  } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PATCH /api/muallim/plan-lekcija/:id — izmijeni lekciju ili vrstu časa
+router.patch("/plan-lekcija/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [entry] = await db.select().from(planLekcijaTable).where(eq(planLekcijaTable.id, id));
+    if (!entry) { res.status(404).json({ error: "Stavka plana ne postoji" }); return; }
+
+    const grupa = await verifyGrupaAccess(entry.grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const { lekcijaNaslov, lekcijaTip } = req.body ?? {};
+    const izmjene: Partial<PlanLekcijaRed> = {};
+    if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) izmjene.lekcijaNaslov = lekcijaNaslov.trim();
+    if (typeof lekcijaTip === "string" && lekcijaTip.trim()) izmjene.lekcijaTip = lekcijaTip.trim();
+    if (Object.keys(izmjene).length === 0) { res.status(400).json({ error: "Nema izmjena" }); return; }
+
+    const [azuriran] = await db.update(planLekcijaTable)
+      .set(izmjene)
+      .where(eq(planLekcijaTable.id, id))
+      .returning();
+
+    res.json(planLekcijaOut(azuriran));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
 });
 
 // DELETE /api/muallim/plan-lekcija/:id
+// Pristup ide preko grupe (kao kod izmjene), pa i zamjenski i glavni muallim
+// mogu ispraviti plan koji je unio kolega.
 router.delete("/plan-lekcija/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [entry] = await db.select().from(planLekcijaTable).where(eq(planLekcijaTable.id, id));
-    if (!entry || entry.muallimId !== req.user!.userId) { res.status(403).json({ error: "Nemaš pristup" }); return; }
+    if (!entry) { res.status(404).json({ error: "Stavka plana ne postoji" }); return; }
+    const grupa = await verifyGrupaAccess(entry.grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nemaš pristup" }); return; }
     await db.delete(planLekcijaTable).where(eq(planLekcijaTable.id, id));
     res.json({ ok: true });
   } catch (err) {
@@ -4413,7 +4491,7 @@ router.get("/kalendar/sve", async (req, res) => {
 
     res.json({
       kalendar: kalendar.map(k => ({ ...k, grupaNaziv: grupaMap.get(k.grupaId) || null })),
-      planLekcija: planLekcija.map(p => ({ ...p, grupaNaziv: grupaMap.get(p.grupaId) || null })),
+      planLekcija: planLekcija.map(p => ({ ...planLekcijaOut(p), grupaNaziv: grupaMap.get(p.grupaId) || null })),
     });
   } catch (err) {
     console.error("Kalendar sve error:", err);
@@ -4877,6 +4955,203 @@ router.get("/ucenik/:id/h5p-pokusaji", async (req, res) => {
     res.json({ pokusaji, prilozi: priloziOut, naseVjezbePokusaji });
   } catch (err) {
     console.error("Ucenik H5P pokusaji error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/muallim/ucenik/:id/statistika-vjezbi
+// Jedan pregled svega što je učenik samostalno uradio: H5P vježbe, naše
+// vježbe (embed iz `public/vjezbe`), etapne vježbe (statički HTML iz registra)
+// i etapni kvizovi (medaljoni). Za svaku vrstu vraća broj urađenih vježbi,
+// broj pokušaja i postignuti uspjeh, plus stavke za tabelu na profilu.
+router.get("/ucenik/:id/statistika-vjezbi", async (req, res) => {
+  try {
+    const ucenikId = parseInt(req.params.id);
+    if (!ucenikId) { res.status(400).json({ error: "ID učenika nevalidan" }); return; }
+
+    const profil = await getManageableUcenikProfile(req.user!.userId, ucenikId);
+    if (!profil && req.user!.role !== "admin") { res.status(403).json({ error: "Učenik nije vaš" }); return; }
+
+    const prosjek = (vrijednosti: number[]) =>
+      vrijednosti.length ? Math.round(vrijednosti.reduce((a, b) => a + b, 0) / vrijednosti.length) : null;
+
+    const [h5pPokusaji, staticPokusaji, embedZavrseni, etapaPokusaji] = await Promise.all([
+      db.select({
+        priloziId: h5pPokusajiTable.priloziId,
+        procenat: h5pPokusajiTable.procenat,
+        hasanatGained: h5pPokusajiTable.hasanatGained,
+        completedAt: h5pPokusajiTable.completedAt,
+      }).from(h5pPokusajiTable)
+        .where(eq(h5pPokusajiTable.userId, ucenikId))
+        .orderBy(desc(h5pPokusajiTable.completedAt)),
+      db.select({
+        exerciseKey: staticVjezbaPokusajiTable.exerciseKey,
+        procenat: staticVjezbaPokusajiTable.procenat,
+        hasanatGained: staticVjezbaPokusajiTable.hasanatGained,
+        completedAt: staticVjezbaPokusajiTable.completedAt,
+      }).from(staticVjezbaPokusajiTable)
+        .where(eq(staticVjezbaPokusajiTable.userId, ucenikId))
+        .orderBy(desc(staticVjezbaPokusajiTable.completedAt)),
+      db.select({
+        priloziId: embedCompletionsTable.priloziId,
+        hasanatGained: embedCompletionsTable.hasanatGained,
+        completedAt: embedCompletionsTable.completedAt,
+        externalUrl: prilozi.externalUrl,
+        originalName: prilozi.originalName,
+        lekcijaId: prilozi.lekcijaId,
+      }).from(embedCompletionsTable)
+        .innerJoin(prilozi, eq(prilozi.id, embedCompletionsTable.priloziId))
+        .where(eq(embedCompletionsTable.studentId, String(ucenikId)))
+        .orderBy(desc(embedCompletionsTable.completedAt)),
+      db.select({
+        medaljonId: etapaPolaganjaTable.medaljonId,
+        naziv: medaljoniTable.naziv,
+        nivo: medaljoniTable.nivo,
+        procenat: etapaPolaganjaTable.procenat,
+        polozeno: etapaPolaganjaTable.polozeno,
+        pokusajBr: etapaPolaganjaTable.pokusajBr,
+        createdAt: etapaPolaganjaTable.createdAt,
+      }).from(etapaPolaganjaTable)
+        .innerJoin(medaljoniTable, eq(etapaPolaganjaTable.medaljonId, medaljoniTable.id))
+        .where(eq(etapaPolaganjaTable.studentId, String(ucenikId)))
+        .orderBy(desc(etapaPolaganjaTable.createdAt)),
+    ]);
+
+    // Nazivi H5P priloga i lekcija uz njih — da muallim vidi na čemu je dijete radilo.
+    const lekcijaIds = new Set<number>();
+    const h5pPriloziIds = [...new Set(h5pPokusaji.map(p => p.priloziId))];
+    const h5pPriloziInfo = h5pPriloziIds.length > 0
+      ? await db.select({
+          id: prilozi.id,
+          originalName: prilozi.originalName,
+          lekcijaId: prilozi.lekcijaId,
+        }).from(prilozi).where(inArray(prilozi.id, h5pPriloziIds))
+      : [];
+    for (const p of h5pPriloziInfo) lekcijaIds.add(p.lekcijaId);
+    for (const e of embedZavrseni) lekcijaIds.add(e.lekcijaId);
+
+    const lekcije = lekcijaIds.size > 0
+      ? await db.select({
+          id: ilmihalLekcijeTable.id,
+          naslov: ilmihalLekcijeTable.naslov,
+          slug: ilmihalLekcijeTable.slug,
+        }).from(ilmihalLekcijeTable).where(inArray(ilmihalLekcijeTable.id, [...lekcijaIds]))
+      : [];
+    const lekcijaMap = new Map(lekcije.map(l => [l.id, l]));
+    const h5pPrilogMap = new Map(h5pPriloziInfo.map(p => [p.id, p]));
+
+    // ── H5P ──────────────────────────────────────────────────────────────────
+    const h5pPoVjezbi = new Map<number, typeof h5pPokusaji>();
+    for (const p of h5pPokusaji) {
+      const rows = h5pPoVjezbi.get(p.priloziId) ?? [];
+      rows.push(p);
+      h5pPoVjezbi.set(p.priloziId, rows);
+    }
+    const h5pStavke = [...h5pPoVjezbi.entries()].map(([priloziId, rows]) => {
+      const info = h5pPrilogMap.get(priloziId);
+      const lek = info ? lekcijaMap.get(info.lekcijaId) : undefined;
+      return {
+        id: priloziId,
+        naziv: info?.originalName || `H5P #${priloziId}`,
+        lekcijaNaslov: lek?.naslov ?? null,
+        lekcijaSlug: lek?.slug ?? null,
+        pokusaji: rows.length,
+        najboljiProcenat: Math.max(...rows.map(r => r.procenat)),
+        zadnjiProcenat: rows[0]!.procenat,
+        zadnjiDatum: rows[0]!.completedAt,
+      };
+    }).sort((a, b) => String(b.zadnjiDatum).localeCompare(String(a.zadnjiDatum)));
+
+    // ── Etapne vježbe (statički HTML iz registra) ────────────────────────────
+    const etapnePoVjezbi = new Map<string, typeof staticPokusaji>();
+    for (const p of staticPokusaji) {
+      const rows = etapnePoVjezbi.get(p.exerciseKey) ?? [];
+      rows.push(p);
+      etapnePoVjezbi.set(p.exerciseKey, rows);
+    }
+    const etapneStavke = [...etapnePoVjezbi.entries()].map(([key, rows]) => ({
+      id: key,
+      naziv: getStaticVjezba(key)?.naslov || key,
+      pokusaji: rows.length,
+      najboljiProcenat: Math.max(...rows.map(r => r.procenat)),
+      zadnjiProcenat: rows[0]!.procenat,
+      zadnjiDatum: rows[0]!.completedAt,
+    })).sort((a, b) => String(b.zadnjiDatum).localeCompare(String(a.zadnjiDatum)));
+
+    // ── Naše vježbe i vanjske embed vježbe ──────────────────────────────────
+    // Naša vježba se prepoznaje po `external_url` (isti registar koji koristi
+    // stranica lekcije), sve ostalo je vanjski alat (LearningApps, Wordwall…).
+    const naseZavrsene = embedZavrseni.filter(e => jeNasaVjezba(e.externalUrl));
+    const vanjskeZavrsene = embedZavrseni.filter(e => !jeNasaVjezba(e.externalUrl));
+    const naseStavke = naseZavrsene.map(e => {
+      const lek = lekcijaMap.get(e.lekcijaId);
+      return {
+        id: e.priloziId,
+        naziv: e.originalName,
+        lekcijaNaslov: lek?.naslov ?? null,
+        lekcijaSlug: lek?.slug ?? null,
+        kapiMeda: e.hasanatGained,
+        zadnjiDatum: e.completedAt,
+      };
+    });
+
+    // ── Etapni kvizovi ──────────────────────────────────────────────────────
+    const etapePoMedaljonu = new Map<number, typeof etapaPokusaji>();
+    for (const p of etapaPokusaji) {
+      const rows = etapePoMedaljonu.get(p.medaljonId) ?? [];
+      rows.push(p);
+      etapePoMedaljonu.set(p.medaljonId, rows);
+    }
+    const etapniStavke = [...etapePoMedaljonu.values()].map(rows => {
+      const zadnji = rows[0]!;
+      return {
+        id: zadnji.medaljonId,
+        naziv: zadnji.naziv,
+        nivo: zadnji.nivo,
+        pokusaji: rows.length,
+        polozeno: rows.some(r => r.polozeno),
+        najboljiProcenat: Math.max(...rows.map(r => r.procenat)),
+        zadnjiProcenat: zadnji.procenat,
+        zadnjiDatum: zadnji.createdAt,
+      };
+    }).sort((a, b) => a.nivo - b.nivo || a.naziv.localeCompare(b.naziv, "bs"));
+
+    res.json({
+      h5p: {
+        vjezbe: h5pStavke.length,
+        pokusaji: h5pPokusaji.length,
+        prosjekProcenat: prosjek(h5pPokusaji.map(p => p.procenat)),
+        kapiMeda: h5pPokusaji.reduce((s, p) => s + (p.hasanatGained || 0), 0),
+        stavke: h5pStavke,
+      },
+      naseVjezbe: {
+        vjezbe: naseStavke.length,
+        zavrseno: naseZavrsene.length,
+        kapiMeda: naseZavrsene.reduce((s, e) => s + (e.hasanatGained || 0), 0),
+        stavke: naseStavke,
+      },
+      etapneVjezbe: {
+        vjezbe: etapneStavke.length,
+        pokusaji: staticPokusaji.length,
+        prosjekProcenat: prosjek(staticPokusaji.map(p => p.procenat)),
+        kapiMeda: staticPokusaji.reduce((s, p) => s + (p.hasanatGained || 0), 0),
+        stavke: etapneStavke,
+      },
+      vanjskeVjezbe: {
+        zavrseno: vanjskeZavrsene.length,
+        kapiMeda: vanjskeZavrsene.reduce((s, e) => s + (e.hasanatGained || 0), 0),
+      },
+      etapniKvizovi: {
+        etape: etapniStavke.length,
+        polozeno: etapniStavke.filter(s => s.polozeno).length,
+        pokusaji: etapaPokusaji.length,
+        prosjekProcenat: prosjek(etapaPokusaji.map(p => p.procenat)),
+        najboljiProsjek: prosjek(etapniStavke.map(s => s.najboljiProcenat)),
+        stavke: etapniStavke,
+      },
+    });
+  } catch (err) {
+    console.error("Ucenik statistika vjezbi error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });
