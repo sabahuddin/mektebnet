@@ -150,18 +150,16 @@ function ciljniJezik(jezik: string): CiljniJezik | null {
 }
 
 const TRANSKRIPCIJA_PRIMJERI: Record<string, string> = {
-  "Njemački (Deutsch)": "El-Fatiha → Al-Fatiha, El-Ihlas → Al-Ichlas, El-Kurejš → Quraisch, El-Kevser → Al-Kauthar (njemački pravopis: sch, ch, dsch, au, ai; bez dijakritika)",
-  "Engleski (English)": "El-Fatiha → Al-Fatihah, El-Ihlas → Al-Ikhlas, El-Kurejš → Quraysh, El-Kevser → Al-Kawthar (engleski pravopis: sh, kh, j, aw, ay; bez dijakritika)",
+  "Njemački (Deutsch)": "njemački pravopis: sch (ne sh), ch (ne kh), dsch (ne j), au (ne aw), ai (ne ay); bez dijakritika. Npr. „mineš-šejtanir-radžim“ → „minasch-schaitanir-radschim“, „jevmid-din“ → „yaumid-din“, „alejhim“ → „alaihim“, El-Ihlas → Al-Ichlas, El-Kurejš → Quraisch",
+  "Engleski (English)": "engleski pravopis: sh, kh, j, aw, ay; bez dijakritika. Npr. „mineš-šejtanir-radžim“ → „minash-shaytanir-rajim“, „jevmid-din“ → „yawmid-din“, „alejhim“ → „alayhim“, El-Ihlas → Al-Ikhlas, El-Kurejš → Quraysh",
 };
 
 function transkripcijaPravilo(targetName: string): string {
   const primjeri = TRANSKRIPCIJA_PRIMJERI[targetName];
   return [
-    "- Kur'anski tekst pisan latinicom (ajet, dova, formula) NE prevodi po značenju i NE prepisuj bosanska slova jedno po jedno. Napiši USTALJENU MEĐUNARODNU transkripciju, onakvu kakva stoji u dječijim knjigama i udžbenicima — npr. „Elhamdu lillahi rabbil-alemin“ → „Alhamdu lillahi Rabbil-alamin“, „Euzu billahi mineš-šejtanir-radžim“ → „A'udhu billahi minash-shaytanir-rajim“. Međunarodni oblik je isti za njemački i engleski.",
-    "- Bosanska transkripcija sažima više arapskih glasova u jedno slovo (ث, س i ص su sve „s“; ذ, ز i ظ su sve „z“; ق i ك su „k“), pa prepisivanje slova daje pogrešan oblik. Oslanjaj se na poznati oblik formule, a ako ga ne znaš pouzdano, ostavi bosanski zapis nepromijenjen.",
-    primjeri
-      ? `- NAZIV sure ili dove prati pravopis ciljnog jezika: ${primjeri}.`
-      : "- NAZIV sure ili dove zapiši u transkripciji uobičajenoj za ciljni jezik; ako je nemaš, ostavi bosanski oblik.",
+    "- Kur'anski tekst pisan latinicom (ajet, dova, formula) i naziv sure NE prevodi po značenju. Napiši ih u transkripciji CILJNOG JEZIKA, onakvoj kakva je u dječijim knjigama i udžbenicima tog jezika — dijete to treba moći pročitati po pravopisu koji zna. Njemački i engleski se razlikuju i NISU zamjenjivi.",
+    primjeri ? `- Za ovaj jezik vrijedi: ${primjeri}.` : "- Ako za ovaj jezik nemaš ustaljenu transkripciju, ostavi bosanski zapis nepromijenjen.",
+    "- NE prepisuj bosanska slova jedno po jedno: bosanska transkripcija sažima više arapskih glasova u jedno slovo (ث, س i ص su sve „s“; ذ, ز i ظ su sve „z“; ق i ك su „k“), pa prepisivanje daje pogrešan oblik. Oslanjaj se na poznati oblik formule, a ako ga ne znaš pouzdano, ostavi bosanski zapis.",
   ].join("\n");
 }
 
@@ -174,7 +172,7 @@ ${transkripcijaPravilo(targetName)}
 - Generički izraz "dova/dove" NIJE naziv dove: na njemačkom piši "Bittgebet (dova)" ili gramatički odgovarajući oblik. "Odijevanje" je običan bosanski izraz: prevedi ga kao "Kleidung (odijevanje)" kada je potreban stručni kontekst, nikada ga ne ostavljaj samog.
 - Prevedi svu običnu bosansku formulaciju, i kada je pisana velikim slovima ili je bosanski prijevod dove, ajeta ili citata. Netaknuto ostaje samo arapsko pismo; latinična transkripcija arapskog prati pravopis ciljnog jezika.
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
-- Ne dodaji arapsko pismo, salavat/salam simbole ni počasne izraze kojih nema u izvorniku.\n- Postojeću eulogiju za Poslanika i vjerovjesnike ("s.a.v.s.", "a.s.", "alejhis-selam") napiši punim izrazom ciljnog jezika: engleski "(peace be upon him)", njemački "(Friede sei mit ihm)". Arapski znak ﷺ NE koristi — ni kad stoji u izvorniku. "dž.š." (za Allaha) i "r.a." (za ashabe) ostavi kako jesu.
+- Ne dodaji arapsko pismo, salavat/salam simbole ni počasne izraze kojih nema u izvorniku.\n- Postojeću eulogiju za Poslanika i vjerovjesnike ("s.a.v.s.", "a.s.", "alejhis-selam") napiši punim izrazom ciljnog jezika u zagradi: engleski "(peace be upon him)", njemački "(Friede sei mit ihm)". Arapski znak ﷺ NE koristi — ni kad stoji u izvorniku.\n- Eulogiju uz Allahovo ime ("dž.š.", "dželle šanuhu") napiši kao apoziciju, bez zagrada: engleski "Allah, the Almighty,", njemački "Allah, der Erhabene,". "r.a." (za ashabe) ostavi kako jeste.
 - Za njemački odgovor upotrijebi njemački za sav prevedivi tekst; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
 - Zadrži placeholdere u vitičastim zagradama {ovako} i HTML/markup ako postoji.
 - Vrati ISKLJUČIVO validan JSON objekt oblika {"prijevodi": [...]} gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz. Bez objašnjenja.`;
@@ -240,7 +238,7 @@ Stroga pravila:
 - Bosanski prijevod ajeta, dove ili citata MORAŠ prevesti na njemački, čak i kada je cijeli tekst pisan velikim slovima. Netaknuto ostaje samo arapsko pismo; latinična transkripcija arapskog prati pravopis ciljnog jezika.
 - Zadrži islamske/arapske termine kako jesu.
 ${transkripcijaPravilo(targetName)}
-- Ne dodaji arapsko pismo, salavat/salam simbole ni počasne izraze kojih nema u izvorniku.\n- Postojeću eulogiju za Poslanika i vjerovjesnike ("s.a.v.s.", "a.s.", "alejhis-selam") napiši punim izrazom ciljnog jezika: engleski "(peace be upon him)", njemački "(Friede sei mit ihm)". Arapski znak ﷺ NE koristi — ni kad stoji u izvorniku. "dž.š." (za Allaha) i "r.a." (za ashabe) ostavi kako jesu.
+- Ne dodaji arapsko pismo, salavat/salam simbole ni počasne izraze kojih nema u izvorniku.\n- Postojeću eulogiju za Poslanika i vjerovjesnike ("s.a.v.s.", "a.s.", "alejhis-selam") napiši punim izrazom ciljnog jezika u zagradi: engleski "(peace be upon him)", njemački "(Friede sei mit ihm)". Arapski znak ﷺ NE koristi — ni kad stoji u izvorniku.\n- Eulogiju uz Allahovo ime ("dž.š.", "dželle šanuhu") napiši kao apoziciju, bez zagrada: engleski "Allah, the Almighty,", njemački "Allah, der Erhabene,". "r.a." (za ashabe) ostavi kako jeste.
 - Ako je ciljni jezik njemački, sav prevedivi tekst mora biti na njemačkom; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
 - Za stručni islamski termin s prirodnim njemačkim ekvivalentom koristi njemački izraz uz bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ne radi to za nazive sura/dova, arapske transliteracije ni vlastita imena.
 - Generički izraz "dova/dove" prevedi kao "Bittgebet (dova)" (ili odgovarajući njemački padež); to nije naziv pojedinačne dove. "Odijevanje" prevedi kao "Kleidung (odijevanje)" i ne ostavljaj ga samog na bosanskom.

@@ -2,55 +2,81 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   dotjeraj,
-  medjunarodnaTranskripcija,
   normalizirajTranskripciju,
   primijeniEulogije,
+  transkripcija,
 } from "./transkripcija.js";
 
-// Sura El-Fatiha onako kako stoji u lekciji na mekteb.net, ajet po ajet.
-const FATIHA: Array<[string, string]> = [
-  ["Bismillahir-rahmanir-rahim.", "Bismillahir-Rahmanir-Rahim."],
-  ["Elhamdu lillahi rabbil-alemin.", "Alhamdu lillahi Rabbil-alamin."],
-  ["Er-rahmanir-rahim.", "Ar-Rahmanir-Rahim."],
-  ["Maliki jevmid-din.", "Maliki yawmid-din."],
-  ["Ijjake na'budu ve ijjake neste'in.", "Iyyaka na'budu wa iyyaka nasta'in."],
-  ["Ihdines-siratal-mustekim.", "Ihdinas-siratal-mustaqim."],
-  [
-    "Siratallezine en'amte alejhim, gajril-magdubi alejhim ve led-dallin.",
-    "Siratal-ladhina an'amta alayhim, ghayril-maghdubi alayhim wa lad-dallin.",
-  ],
+// Sura El-Fatiha onako kako stoji u lekciji na mekteb.net: bosanski, pa
+// njemački i engleski oblik koji dijete treba moći pročitati.
+const FATIHA: Array<{ bs: string; de: string; en: string }> = [
+  {
+    bs: "Bismillahir-rahmanir-rahim.",
+    de: "Bismillahir-Rahmanir-Rahim.",
+    en: "Bismillahir-Rahmanir-Rahim.",
+  },
+  {
+    bs: "Elhamdu lillahi rabbil-alemin.",
+    de: "Alhamdu lillahi Rabbil-alamin.",
+    en: "Alhamdu lillahi Rabbil-alamin.",
+  },
+  { bs: "Er-rahmanir-rahim.", de: "Ar-Rahmanir-Rahim.", en: "Ar-Rahmanir-Rahim." },
+  { bs: "Maliki jevmid-din.", de: "Maliki yaumid-din.", en: "Maliki yawmid-din." },
+  {
+    bs: "Ijjake na'budu ve ijjake neste'in.",
+    de: "Iyyaka na'budu wa iyyaka nasta'in.",
+    en: "Iyyaka na'budu wa iyyaka nasta'in.",
+  },
+  {
+    bs: "Ihdines-siratal-mustekim.",
+    de: "Ihdinas-siratal-mustaqim.",
+    en: "Ihdinas-siratal-mustaqim.",
+  },
+  {
+    bs: "Siratallezine en'amte alejhim, gajril-magdubi alejhim ve led-dallin.",
+    de: "Siratal-ladhina an'amta alaihim, ghairil-maghdubi alaihim wa lad-dallin.",
+    en: "Siratal-ladhina an'amta alayhim, ghayril-maghdubi alayhim wa lad-dallin.",
+  },
 ];
 
-test("El-Fatiha dobija međunarodnu transkripciju, ista za oba jezika", () => {
-  for (const [bosanski, medjunarodni] of FATIHA) {
-    assert.equal(medjunarodnaTranskripcija(bosanski), medjunarodni, `ajet: ${bosanski}`);
-    for (const jezik of ["de", "en"] as const) {
-      assert.equal(dotjeraj(bosanski, "bilo kakav prijevod", jezik), medjunarodni);
-    }
+test("El-Fatiha ima svoj oblik za njemački i svoj za engleski", () => {
+  for (const ajet of FATIHA) {
+    assert.equal(transkripcija(ajet.bs, "de"), ajet.de, `de: ${ajet.bs}`);
+    assert.equal(transkripcija(ajet.bs, "en"), ajet.en, `en: ${ajet.bs}`);
+    assert.equal(dotjeraj(ajet.bs, "bilo kakav prijevod", "de"), ajet.de);
+    assert.equal(dotjeraj(ajet.bs, "bilo kakav prijevod", "en"), ajet.en);
   }
 });
 
-test("transkripcija se prepoznaje i uz drugačije crtice, navodnike i velika slova", () => {
-  const varijante = [
-    "BISMILLAHIR-RAHMANIR-RAHIM",
-    "„Bismillahir-rahmanir-rahim.“",
-    "Bismillahir–rahmanir–rahim",
-  ];
-  for (const v of varijante) {
-    assert.match(medjunarodnaTranskripcija(v) ?? "", /^Bismillahir-Rahmanir-Rahim/, v);
-  }
+test("njemački i engleski se zaista razlikuju gdje se razlikuje i pravopis", () => {
+  // aj → ai (njemački) naspram ay (engleski)
+  assert.match(transkripcija("Maliki jevmid-din.", "de") ?? "", /yaumid/);
+  assert.match(transkripcija("Maliki jevmid-din.", "en") ?? "", /yawmid/);
+  // š → sch naspram sh, dž → dsch naspram j
+  const euzuDe = transkripcija("Euzu billahi mineš-šejtanir-radžim.", "de") ?? "";
+  const euzuEn = transkripcija("Euzu billahi mineš-šejtanir-radžim.", "en") ?? "";
+  assert.equal(euzuDe, "A'udhu billahi minasch-schaitanir-radschim.");
+  assert.equal(euzuEn, "A'udhu billahi minash-shaytanir-rajim.");
+  assert.notEqual(euzuDe, euzuEn);
 });
 
-test("euzu-formula ima svoj međunarodni oblik", () => {
-  assert.equal(
-    medjunarodnaTranskripcija("Euzu billahi mineš-šejtanir-radžim."),
-    "A'udhu billahi minash-shaytanir-rajim.",
-  );
+test("njemački oblik nema engleske digrafe sh, kh i samostalno j", () => {
+  for (const ajet of FATIHA) {
+    const de = transkripcija(ajet.bs, "de") ?? "";
+    assert.doesNotMatch(de, /(?<!c)sh|kh/, `njemački ne piše sh/kh: ${de}`);
+  }
+  assert.doesNotMatch(transkripcija("Euzu billahi mineš-šejtanir-radžim.", "de") ?? "", /(?<!c)sh|kh/);
+});
+
+test("transkripcija se prepoznaje uz drugačije crtice, navodnike i velika slova", () => {
+  for (const v of ["BISMILLAHIR-RAHMANIR-RAHIM", "„Bismillahir-rahmanir-rahim.“", "Bismillahir–rahmanir–rahim"]) {
+    assert.match(transkripcija(v, "en") ?? "", /^Bismillahir-Rahmanir-Rahim/, v);
+  }
 });
 
 test("obična rečenica nije transkripcija i ostaje prevodiocu", () => {
   for (const tekst of ["Prije svakog posla izgovaramo bismillu.", "Sura El-Fatiha ima sedam ajeta.", ""]) {
-    assert.equal(medjunarodnaTranskripcija(tekst), null, tekst);
+    for (const jezik of ["de", "en"] as const) assert.equal(transkripcija(tekst, jezik), null, tekst);
   }
 });
 
@@ -76,11 +102,21 @@ test("arapski znak ﷺ nikad ne ostaje u njemačkom ni engleskom", () => {
   }
 });
 
-test("dž.š. i r.a. se ne diraju — to su druge formule", () => {
-  const izvor = "Allah, dž.š., i Ebu Bekr, r.a.";
-  for (const jezik of ["de", "en"] as const) {
-    assert.equal(primijeniEulogije(izvor, jezik), izvor);
+test("dž.š. uz Allahovo ime dobija puni izraz, a zarezi ostaju", () => {
+  const izvor = "Allah, dž.š., nauči nas je dvije lijepe rečenice.";
+  assert.equal(primijeniEulogije(izvor, "en"), "Allah, the Almighty, nauči nas je dvije lijepe rečenice.");
+  assert.equal(primijeniEulogije(izvor, "de"), "Allah, der Erhabene, nauči nas je dvije lijepe rečenice.");
+});
+
+test("dželle šanuhu i zapis bez kvačica daju isti izraz", () => {
+  for (const izvor of ["Allah dželle šanuhu", "Allah dz.s."]) {
+    assert.match(primijeniEulogije(izvor, "de"), /der Erhabene$/, izvor);
   }
+});
+
+test("r.a. se ne dira — za ashabe još nije dogovoren izraz", () => {
+  const izvor = "Ebu Bekr, r.a., bio je prvi halifa.";
+  for (const jezik of ["de", "en"] as const) assert.equal(primijeniEulogije(izvor, jezik), izvor);
 });
 
 test("tekst bez eulogije se ne dira — ni razmaci ni interpunkcija", () => {
@@ -93,9 +129,7 @@ test("tekst bez eulogije se ne dira — ni razmaci ni interpunkcija", () => {
     "Radni list — Muallim: ______   Datum: ______",
   ];
   for (const tekst of netaknuto) {
-    for (const jezik of ["de", "en"] as const) {
-      assert.equal(primijeniEulogije(tekst, jezik), tekst, tekst);
-    }
+    for (const jezik of ["de", "en"] as const) assert.equal(primijeniEulogije(tekst, jezik), tekst, tekst);
   }
 });
 
