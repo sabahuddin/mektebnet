@@ -69,8 +69,28 @@ const DOTTED = /^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
 const T_CALL = /\bt\(\s*(["'`])((?:\\.|(?!\1).)*?)\1/g;
 const sourceStrings = new Set<string>();
 
+/**
+ * JSX ne prosljeđuje tekst doslovno: prelomi reda i uvlake se sažimaju po
+ * pravilu kompajlera, a razmak uz susjedni element OSTAJE. Zato ovdje
+ * ponavljamo isto pravilo — inače bi ključ izgubio vodeći razmak i prijevod
+ * se u aplikaciji nikad ne bi pogodio.
+ */
 function normalizeJsxText(text: string) {
-  return text.replace(/\s+/g, " ");
+  const lines = text.split(/\r\n|\n|\r/);
+  let lastNonEmptyLine = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (/[^ \t]/.test(lines[i])) lastNonEmptyLine = i;
+  }
+  let out = "";
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].replace(/\t/g, " ");
+    if (i !== 0) line = line.replace(/^ +/, "");
+    if (i !== lines.length - 1) line = line.replace(/ +$/, "");
+    if (!line) continue;
+    if (i !== lastNonEmptyLine) line += " ";
+    out += line;
+  }
+  return out;
 }
 
 function collectTranslateContentText(file: string, code: string) {
@@ -81,7 +101,8 @@ function collectTranslateContentText(file: string, code: string) {
     const active = isInsideTranslateContent || startsTranslateContent;
 
     if (active && ts.isJsxText(node)) {
-      const text = normalizeJsxText(node.getText(sourceFile));
+      // getFullText, ne getText — getText odsijeca vodeći razmak kao triviju.
+      const text = normalizeJsxText(node.getFullText(sourceFile));
       if (/\p{L}/u.test(text)) sourceStrings.add(text);
     }
 

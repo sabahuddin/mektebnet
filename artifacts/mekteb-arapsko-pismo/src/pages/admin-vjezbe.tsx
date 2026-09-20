@@ -60,7 +60,7 @@ export default function AdminVjezbePage() {
 
   const handleApplyReplace = () => {
     if (matchCount === 0 || findText === replaceText) return;
-    if (matchCount > 1 && !window.confirm(t(`Pronađeno je ${matchCount} istih tekstova. Zamijeniti ih sve?`))) {
+    if (matchCount > 1 && !window.confirm(t("Pronađeno je {n} istih tekstova. Zamijeniti ih sve?", { n: String(matchCount) }))) {
       return;
     }
     const newHtml = sourceHtml.split(findText).join(replaceText);
@@ -366,7 +366,7 @@ export default function AdminVjezbePage() {
                               ? t("Nije pronađeno u kodu.") 
                               : matchCount === 1 
                                 ? t("Pronađeno 1 tačno podudaranje.") 
-                                : t(`Pronađeno ${matchCount} tačnih podudaranja.`)}
+                                : t("Pronađeno {n} tačnih podudaranja.", { n: String(matchCount) })}
                           </div>
                         )}
                       </div>

@@ -149,7 +149,7 @@ export default function AdminCitaonicaPage() {
     if (!token || !uvoz || uvoz.nedostaje === 0) return;
     const kat = kategorije.find(k => k.slug === uvozKategorija);
     const gdje = kat ? kat.naziv : uvozKategorija;
-    if (!window.confirm(t(`Ubaciti ${uvoz.nedostaje} priča u kategoriju „${gdje}"? Priče koje već postoje se preskaču.`))) return;
+    if (!window.confirm(t("Ubaciti {n} priča u kategoriju „{gdje}”? Priče koje već postoje se preskaču.", { n: String(uvoz.nedostaje), gdje }))) return;
     setUvozim(true);
     try {
       const rezultat = await apiRequest<{ dodano: { naslov: string }[]; preskoceno: { naslov: string }[] }>(
@@ -157,7 +157,7 @@ export default function AdminCitaonicaPage() {
       );
       toast({
         title: t("Priče su uvezene"),
-        description: t(`Dodano: ${rezultat.dodano.length}. Preskočeno (već postoji): ${rezultat.preskoceno.length}.`),
+        description: t("Dodano: {dodano}. Preskočeno (već postoji): {preskoceno}.", { dodano: String(rezultat.dodano.length), preskoceno: String(rezultat.preskoceno.length) }),
       });
       await loadAll();
     } catch (err: any) {
@@ -416,7 +416,7 @@ export default function AdminCitaonicaPage() {
                   <div className="min-w-0 flex-1">
                     <h2 className="font-extrabold text-foreground">{t("33 priče za djecu")}</h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {t(`Knjiga ide uz platformu, s ilustracijama. Od ${uvoz.ukupno} priča, u Čitaonici nedostaje ${uvoz.nedostaje}. Priče koje već postoje se preskaču.`)}
+                      {t("Knjiga ide uz platformu, s ilustracijama. Od {ukupno} priča, u Čitaonici nedostaje {nedostaje}. Priče koje već postoje se preskaču.", { ukupno: String(uvoz.ukupno), nedostaje: String(uvoz.nedostaje) })}
                     </p>
                     <details className="mt-2">
                       <summary className="text-sm font-bold text-teal-700 cursor-pointer">{t("Koje priče nedostaju")}</summary>
@@ -444,7 +444,7 @@ export default function AdminCitaonicaPage() {
                         className="inline-flex items-center gap-2 px-5 min-h-11 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold disabled:opacity-60"
                       >
                         {uvozim ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                        {uvozim ? t("Uvozim…") : t(`Uvezi ${uvoz.nedostaje} priča`)}
+                        {uvozim ? t("Uvozim…") : t("Uvezi {n} priča", { n: String(uvoz.nedostaje) })}
                       </button>
                     </div>
                   </div>
