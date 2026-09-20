@@ -327,10 +327,14 @@ body{
 }
 </script>
 
+<!-- Sučelje vježbe na jeziku djeteta (?lang=de). Vidi /vjezbe/jezik.js. -->
+<script src="/vjezbe/jezik.js"></script>
+
 <script>
 (function () {
   'use strict';
 
+  var T = window.MektebJezik.t;
   var $ = function (id) { return document.getElementById(id); };
   var el = {
     naslov: $('naslov'), uputa: $('uputa'), brojac: $('brojac'), sat: $('sat'),
@@ -388,9 +392,9 @@ body{
         .filter(function (par) { return par.lijevo && par.desno; })
       : [];
 
-    el.naslov.textContent = podaci.naslov || 'Spoji parove';
-    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + 'Spoji parove · Mekteb.net';
-    el.uputa.textContent = podaci.uputa || 'Prevuci odgovor uz pojam kojem pripada, pa klikni „Provjeri".';
+    el.naslov.textContent = podaci.naslov || T('Spoji parove');
+    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + T('Spoji parove · Mekteb.net');
+    el.uputa.textContent = podaci.uputa || T('Prevuci odgovor uz pojam kojem pripada, pa klikni „Provjeri".');
     el.uputa.hidden = !el.uputa.textContent;
   }
 
@@ -407,7 +411,7 @@ body{
   function novaIgra() {
     if (stanje && stanje.sat) clearInterval(stanje.sat);
     if (parovi.length < 2) {
-      greska('Za ovu vježbu trebaju najmanje dva para. Par se piše kao „lijevo" i „desno".');
+      greska(T('Za ovu vježbu trebaju najmanje dva para. Par se piše kao „lijevo" i „desno".'));
       return;
     }
 
@@ -480,14 +484,14 @@ body{
       mjesto.setAttribute('role', 'button');
       var smjesten = odgovorNa(pojam.i);
       mjesto.setAttribute('aria-label', smjesten
-        ? pojam.tekst + ': ' + smjesten.tekst
-        : pojam.tekst + ' — ovdje smjesti odgovor');
+        ? T('%pojam%: %odgovor%', { pojam: pojam.tekst, odgovor: smjesten.tekst })
+        : T('%pojam% — ovdje smjesti odgovor', { pojam: pojam.tekst }));
       if (smjesten) {
         mjesto.appendChild(napraviOdgovor(smjesten));
       } else {
         var prazno = document.createElement('p');
         prazno.className = 'prazno';
-        prazno.textContent = 'Ovdje ide odgovor';
+        prazno.textContent = T('Ovdje ide odgovor');
         mjesto.appendChild(prazno);
       }
 
@@ -515,7 +519,7 @@ body{
 
   function osvjeziBrojac() {
     var spojeno = stanje.odgovori.filter(function (o) { return o.gdje !== null; }).length;
-    el.brojac.textContent = spojeno + ' od ' + parovi.length;
+    el.brojac.textContent = T('%broj% od %ukupno%', { broj: spojeno, ukupno: parovi.length });
     el.provjeri.disabled = stanje.gotovo || spojeno < parovi.length;
   }
 
@@ -557,11 +561,11 @@ body{
     osvjeziBrojac();
 
     if (el.provjeri.disabled === false) {
-      poruci('Svi parovi su spojeni. Klikni „Provjeri" da vidiš kako si uradio.');
-      reci('Sve je spojeno. Klikni Provjeri.');
+      poruci(T('Svi parovi su spojeni. Klikni „Provjeri" da vidiš kako si uradio.'));
+      reci(T('Sve je spojeno. Klikni Provjeri.'));
     } else {
-      poruci('Spojeno: ' + pojam.tekst + ' → ' + odgovor.tekst + '.');
-      reci('Spojeno. ' + pojam.tekst + ' i ' + odgovor.tekst);
+      poruci(T('Spojeno: %pojam% → %odgovor%.', { pojam: pojam.tekst, odgovor: odgovor.tekst }));
+      reci(T('Spojeno. %pojam% i %odgovor%', { pojam: pojam.tekst, odgovor: odgovor.tekst }));
     }
   }
 
@@ -574,8 +578,8 @@ body{
     stanje.izabrani = null;
     nacrtaj(odgovor.id);
     osvjeziBrojac();
-    poruci('Odgovor „' + odgovor.tekst + '" je vraćen među ponuđene.');
-    reci('Vraćeno. ' + odgovor.tekst);
+    poruci(T('Odgovor „%odgovor%" je vraćen među ponuđene.', { odgovor: odgovor.tekst }));
+    reci(T('Vraćeno. %tekst%', { tekst: odgovor.tekst }));
   }
 
   function oznaci(id) {
@@ -634,9 +638,9 @@ body{
     if (tacnih === parovi.length) { zavrsi(); return; }
 
     zvuk('greska');
-    poruci('Tačnih parova: ' + tacnih + ' od ' + parovi.length +
-           '. Označeni odgovori nisu uz svoj pojam — dodirni ih da ih vratiš, pa probaj ponovo.', 'lose');
-    reci('Tačno ' + tacnih + ' od ' + parovi.length + '. Ispravi označene.');
+    poruci(T('Tačnih parova: %broj% od %ukupno%. Označeni odgovori nisu uz svoj pojam — dodirni ih da ih vratiš, pa probaj ponovo.',
+      { broj: tacnih, ukupno: parovi.length }), 'lose');
+    reci(T('Tačno %broj% od %ukupno%. Ispravi označene.', { broj: tacnih, ukupno: parovi.length }));
     el.provjeri.disabled = true;
   }
 
@@ -652,13 +656,13 @@ body{
     poruci('');
     nacrtaj();
 
-    var opis = 'Vrijeme: ' + vrijeme(stanje.sekunde) + '.';
+    var opis = T('Vrijeme: %vrijeme%.', { vrijeme: vrijeme(stanje.sekunde) });
     if (stanje.izPrve !== null) {
       opis += stanje.izPrve === parovi.length
-        ? ' Iz prve svi parovi tačni!'
-        : ' Iz prve tačno: ' + stanje.izPrve + ' od ' + parovi.length + '.';
+        ? T(' Iz prve svi parovi tačni!')
+        : T(' Iz prve tačno: %broj% od %ukupno%.', { broj: stanje.izPrve, ukupno: parovi.length });
     }
-    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? ' Pomoć korištena jednom.' : ' Pomoć korištena ' + stanje.pomoc + ' puta.';
+    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? T(' Pomoć korištena jednom.') : T(' Pomoć korištena %broj% puta.', { broj: stanje.pomoc });
     el.krajOpis.textContent = opis;
     el.kraj.hidden = false;
     el.ponovo.focus({ preventScroll: true });
@@ -732,7 +736,7 @@ body{
       // Dodir bez povlačenja: odgovor uz pojam se vraća, odgovor iz ponude se označi.
       if (vuce.odgovor.gdje !== null) { vrati(vuce.odgovor); return; }
       oznaci(stanje.izabrani === vuce.odgovor.id ? null : vuce.odgovor.id);
-      poruci(stanje.izabrani ? 'Sada dodirni pojam uz koji ide „' + vuce.odgovor.tekst + '".' : '');
+      poruci(stanje.izabrani ? T('Sada dodirni pojam uz koji ide „%odgovor%".', { odgovor: vuce.odgovor.tekst }) : '');
       return;
     }
     if (!cilj) return;
@@ -750,7 +754,7 @@ body{
     if (!odgovor || odgovor.zakljucan) return;
     if (odgovor.gdje !== null) { vrati(odgovor); return; }
     oznaci(stanje.izabrani === odgovor.id ? null : odgovor.id);
-    poruci(stanje.izabrani ? 'Sada odaberi pojam uz koji ide „' + odgovor.tekst + '".' : '');
+    poruci(stanje.izabrani ? T('Sada odaberi pojam uz koji ide „%odgovor%".', { odgovor: odgovor.tekst }) : '');
   }
   el.ponuda.addEventListener('click', klikNaOdgovor);
   el.parovi.addEventListener('click', klikNaOdgovor);
@@ -761,7 +765,7 @@ body{
     var mjesto = e.target.closest && e.target.closest('.mjesto');
     if (!mjesto) return;
     if (!stanje.izabrani) {
-      poruci('Prvo odaberi odgovor, pa ga smjesti uz pojam.');
+      poruci(T('Prvo odaberi odgovor, pa ga smjesti uz pojam.'));
       return;
     }
     spoji(nadji(stanje.izabrani), +mjesto.dataset.i);
@@ -774,7 +778,7 @@ body{
     e.preventDefault();
     if (!stanje || stanje.gotovo) return;
     if (!stanje.izabrani) {
-      poruci('Prvo odaberi odgovor, pa ga smjesti uz pojam.');
+      poruci(T('Prvo odaberi odgovor, pa ga smjesti uz pojam.'));
       return;
     }
     spoji(nadji(stanje.izabrani), +mjesto.dataset.i);
@@ -807,8 +811,8 @@ body{
     nacrtaj();
     osvjeziBrojac();
     var pojam = pojamNa(odgovor.par);
-    poruci('Uz „' + (pojam ? pojam.tekst : '') + '" ide „' + odgovor.tekst + '".', 'dobro');
-    reci('Pomoć. ' + (pojam ? pojam.tekst : '') + ' ide sa ' + odgovor.tekst);
+    poruci(T('Uz „%pojam%" ide „%odgovor%".', { pojam: pojam ? pojam.tekst : '', odgovor: odgovor.tekst }), 'dobro');
+    reci(T('Pomoć. %pojam% ide sa %odgovor%', { pojam: pojam ? pojam.tekst : '', odgovor: odgovor.tekst }));
     if (stanje.odgovori.every(function (o) { return o.gdje !== null; })) provjeri();
   });
 

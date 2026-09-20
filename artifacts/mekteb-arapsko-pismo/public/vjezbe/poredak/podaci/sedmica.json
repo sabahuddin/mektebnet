@@ -10,5 +10,33 @@
     "petak",
     "subota",
     "nedjelja"
-  ]
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Ordne die Wochentage",
+      "uputa": "Ordne die Tage von Montag bis Sonntag und klicke dann auf „Prüfen“.",
+      "stavke": [
+        "Montag",
+        "Dienstag",
+        "Mittwoch",
+        "Donnerstag",
+        "Freitag",
+        "Samstag",
+        "Sonntag"
+      ]
+    },
+    "en": {
+      "naslov": "Put the days of the week in order",
+      "uputa": "Put the days in order from Monday to Sunday, then click „Check“.",
+      "stavke": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday"
+      ]
+    }
+  }
 }

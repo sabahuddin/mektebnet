@@ -288,7 +288,7 @@ export const translations = {
       hasanati: "Hasanat",
       dana: "Tage",
       igriceDesc: "Lustige Lernspiele — sammle Hasanat beim Spielen",
-      siraDesc: "Das Leben des Propheten (s.a.w.s.) — Quizze und Lernkarten",
+      siraDesc: "Das Leben des Propheten (Friede sei mit ihm) — Quizze und Lernkarten",
       uskoro: "BALD",
     },
     login: {
@@ -498,7 +498,7 @@ export const translations = {
       hasanati: "hasanat",
       dana: "days",
       igriceDesc: "Fun educational games — collect Hasanat through play",
-      siraDesc: "Life of the Prophet (s.a.w.s.) — quizzes and flashcards",
+      siraDesc: "Life of the Prophet (peace be upon him) — quizzes and flashcards",
       uskoro: "SOON",
     },
     login: {

@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import {
   NASE_VJEZBE_PREFIKSI,
@@ -8,9 +11,11 @@ import {
   isValidTip,
   isValidVjezbaId,
   jeNasaVjezba,
+  jeziciPrijevoda,
   listSveVjezbe,
   listVjezbe,
   obrisiVjezbu,
+  primijeniJezik,
   slobodanId,
   spremiVjezbu,
   validirajPodatke,
@@ -276,4 +281,99 @@ test("upisivanje odgovora trazi pitanje i odgovor za svaki red", async () => {
   }
   const pojmovi = await getVjezba("upisi", "pojmovi");
   assert.equal(pojmovi?.detalj, "4 pitanja");
+});
+
+test("prijevod mijenja samo tekst, nikad postavke vježbe", () => {
+  const izvornik = {
+    id: "ramazan-01",
+    naslov: "Ramazan",
+    tezina: "srednje",
+    prikaz: "opisi",
+    rijeci: [{ rijec: "post", opis: "Ne jedemo i ne pijemo." }],
+    prijevodi: {
+      // Prijevod pokušava promijeniti i ID i težinu — mora biti ignorisan.
+      de: {
+        id: "podmetnuto",
+        tezina: "tesko",
+        naslov: "Ramadan",
+        rijeci: [{ rijec: "Fasten", opis: "Wir essen und trinken nicht." }],
+      },
+    },
+  };
+  const de = primijeniJezik(izvornik, "de");
+  assert.equal(de.naslov, "Ramadan");
+  assert.deepEqual(de.rijeci, [{ rijec: "Fasten", opis: "Wir essen und trinken nicht." }]);
+  assert.equal(de.id, "ramazan-01");
+  assert.equal(de.tezina, "srednje");
+  assert.equal(de.prikaz, "opisi");
+  assert.equal("prijevodi" in de, false, "mapa prijevoda ne ide djetetu");
+});
+
+test("jezik bez prijevoda i bosanski vraćaju izvornik", () => {
+  const izvornik = { naslov: "Ramazan", prijevodi: { de: { naslov: "Ramadan" } } };
+  for (const jezik of ["bs", "tr", "", undefined, null]) {
+    const out = primijeniJezik(izvornik, jezik as string | undefined | null);
+    assert.equal(out.naslov, "Ramazan", String(jezik));
+    assert.equal("prijevodi" in out, false, String(jezik));
+  }
+});
+
+test("neispravan prijevod pada na validaciji kao i izvornik", () => {
+  const osnova = {
+    naslov: "Razvrstaj",
+    kategorije: [
+      { naziv: "Prva", stavke: ["jedan", "dva"] },
+      { naziv: "Druga", stavke: ["tri"] },
+    ],
+  };
+  assert.equal(validirajPodatke("razvrstaj", osnova), null);
+  // Ista stavka u dvije kutije — dijete ne bi znalo gdje ide.
+  const losPrijevod = {
+    ...osnova,
+    prijevodi: {
+      de: {
+        naslov: "Sortiere",
+        kategorije: [
+          { naziv: "Erste", stavke: ["eins", "zwei"] },
+          { naziv: "Zweite", stavke: ["eins"] },
+        ],
+      },
+    },
+  };
+  assert.match(String(validirajPodatke("razvrstaj", losPrijevod)), /^Prijevod \(de\):/);
+  assert.match(String(validirajPodatke("razvrstaj", { ...osnova, prijevodi: { xx: {} } })), /Nepoznat jezik/);
+  assert.match(String(validirajPodatke("razvrstaj", { ...osnova, prijevodi: [] })), /mapa jezik/);
+});
+
+// Izvor istine za ugrađene vježbe je `public/`; `citajPodatke` čita iz build
+// foldera kad on postoji, pa bi test inače ovisio o tome je li build svjež.
+const PODACI_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../mekteb-arapsko-pismo/public/vjezbe",
+);
+
+test("svaka ugrađena vježba ima ispravan njemački i engleski prijevod", async () => {
+  let provjereno = 0;
+  for (const tip of Object.keys(TIPOVI_VJEZBI)) {
+    const dir = path.join(PODACI_DIR, tip, "podaci");
+    const datoteke = (await fs.readdir(dir)).filter((f) => f.endsWith(".json"));
+    assert.ok(datoteke.length > 0, `${tip} nema nijednu ugrađenu vježbu`);
+    for (const datoteka of datoteke) {
+      const oznaka = `${tip}/${datoteka}`;
+      const podaci = JSON.parse(await fs.readFile(path.join(dir, datoteka), "utf8"));
+      assert.equal(validirajPodatke(tip, podaci), null, oznaka);
+      assert.deepEqual(jeziciPrijevoda(podaci), ["de", "en"], `${oznaka} nema prijevod na oba jezika`);
+      for (const jezik of ["de", "en"]) {
+        const prevedeno = primijeniJezik(podaci, jezik);
+        assert.equal(validirajPodatke(tip, prevedeno), null, `${oznaka} (${jezik})`);
+        assert.notEqual(
+          String(prevedeno.naslov),
+          String(podaci.naslov),
+          `${oznaka} (${jezik}): naslov nije preveden`,
+        );
+        provjereno += 1;
+      }
+    }
+  }
+  assert.ok(provjereno >= 24, `provjereno samo ${provjereno} prijevoda`);
 });

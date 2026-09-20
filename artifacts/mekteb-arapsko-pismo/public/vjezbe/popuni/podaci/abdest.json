@@ -2,5 +2,17 @@
   "id": "abdest-01",
   "naslov": "Ammar i Lejla uzimaju abdest",
   "uputa": "Prevuci riječ na prazno mjesto. Možeš i ovako: dodirni riječ, pa dodirni prazninu. Kad popuniš sve, klikni „Provjeri\".",
-  "tekst": "Ammar i Lejla su došli u mekteb. Prije namaza željeli su pravilno uzeti {abdest}.\n\nPrvo su proučili {Bismillu} i oprali svoje {šake} tri puta.\n\nZatim su isprali {usta} i {nos}.\n\nPoslije toga oprali su {lice} tri puta.\n\nAmmar je zatim oprao desnu, pa lijevu {ruku} do iza laktova.\n\nLejla je mokrim rukama potrla {glavu}, a zatim su potrli i {uši}.\n\nNa kraju su oprali svoje {noge}, prvo desnu, pa lijevu.\n\nSada su Ammar i Lejla bili spremni za {namaz}."
+  "tekst": "Ammar i Lejla su došli u mekteb. Prije namaza željeli su pravilno uzeti {abdest}.\n\nPrvo su proučili {Bismillu} i oprali svoje {šake} tri puta.\n\nZatim su isprali {usta} i {nos}.\n\nPoslije toga oprali su {lice} tri puta.\n\nAmmar je zatim oprao desnu, pa lijevu {ruku} do iza laktova.\n\nLejla je mokrim rukama potrla {glavu}, a zatim su potrli i {uši}.\n\nNa kraju su oprali svoje {noge}, prvo desnu, pa lijevu.\n\nSada su Ammar i Lejla bili spremni za {namaz}.",
+  "prijevodi": {
+    "de": {
+      "naslov": "Ammar und Lejla nehmen Wudu",
+      "uputa": "Ziehe das Wort auf die freie Stelle. Es geht auch so: tippe das Wort an, dann die Lücke. Wenn alles ausgefüllt ist, klicke auf „Prüfen“.",
+      "tekst": "Ammar und Lejla sind in den Mekteb gekommen. Vor dem Gebet wollten sie richtig {Wudu} nehmen.\n\nZuerst sprachen sie die {Bismilla} und wuschen dreimal ihre {Hände}.\n\nDann spülten sie {Mund} und {Nase}.\n\nDanach wuschen sie dreimal das {Gesicht}.\n\nAmmar wusch anschließend den rechten, dann den linken {Arm} bis über den Ellbogen.\n\nLejla strich mit nassen Händen über den {Kopf}, danach strichen sie auch über die {Ohren}.\n\nZum Schluss wuschen sie ihre {Füße}, zuerst den rechten, dann den linken.\n\nJetzt waren Ammar und Lejla bereit für das {Gebet}."
+    },
+    "en": {
+      "naslov": "Ammar and Lejla make wudu",
+      "uputa": "Drag the word onto the empty space. You can also tap the word and then tap the gap. When you have filled them all in, click „Check“.",
+      "tekst": "Ammar and Lejla came to the mekteb. Before the prayer they wanted to make {wudu} properly.\n\nFirst they said the {Bismillah} and washed their {hands} three times.\n\nThen they rinsed their {mouth} and {nose}.\n\nAfter that they washed their {face} three times.\n\nAmmar then washed his right, then his left {arm} up to above the elbow.\n\nLejla wiped her {head} with wet hands, and then they wiped their {ears}.\n\nFinally they washed their {feet}, first the right, then the left.\n\nNow Ammar and Lejla were ready for the {prayer}."
+    }
+  }
 }

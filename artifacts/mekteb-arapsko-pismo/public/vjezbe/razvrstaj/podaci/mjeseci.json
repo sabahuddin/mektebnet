@@ -5,11 +5,77 @@
   "kategorije": [
     {
       "naziv": "Hidžretski mjeseci",
-      "stavke": ["muharrem", "safer", "redžeb", "ramazan", "ševval"]
+      "stavke": [
+        "muharrem",
+        "safer",
+        "redžeb",
+        "ramazan",
+        "ševval"
+      ]
     },
     {
       "naziv": "Mjeseci po Suncu",
-      "stavke": ["januar", "april", "juli", "oktobar", "decembar"]
+      "stavke": [
+        "januar",
+        "april",
+        "juli",
+        "oktobar",
+        "decembar"
+      ]
     }
-  ]
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Ordne die Monate",
+      "uputa": "Ziehe jeden Monat in die Kiste, zu der er gehört. Wenn du alle eingeordnet hast, klicke auf „Prüfen“.",
+      "kategorije": [
+        {
+          "naziv": "Hidschri-Monate",
+          "stavke": [
+            "Muharram",
+            "Safar",
+            "Radschab",
+            "Ramadan",
+            "Schawwal"
+          ]
+        },
+        {
+          "naziv": "Monate nach der Sonne",
+          "stavke": [
+            "Januar",
+            "April",
+            "Juli",
+            "Oktober",
+            "Dezember"
+          ]
+        }
+      ]
+    },
+    "en": {
+      "naslov": "Sort the months",
+      "uputa": "Drag each month into the box it belongs to. When you have sorted them all, click „Check“.",
+      "kategorije": [
+        {
+          "naziv": "Hijri months",
+          "stavke": [
+            "Muharram",
+            "Safar",
+            "Rajab",
+            "Ramadan",
+            "Shawwal"
+          ]
+        },
+        {
+          "naziv": "Months by the sun",
+          "stavke": [
+            "January",
+            "April",
+            "July",
+            "October",
+            "December"
+          ]
+        }
+      ]
+    }
+  }
 }

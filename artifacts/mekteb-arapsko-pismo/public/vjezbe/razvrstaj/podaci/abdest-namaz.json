@@ -5,11 +5,80 @@
   "kategorije": [
     {
       "naziv": "Radimo pri abdestu",
-      "stavke": ["peremo šake", "ispiremo usta", "ispiremo nos", "peremo lice", "potiremo glavu", "peremo noge"]
+      "stavke": [
+        "peremo šake",
+        "ispiremo usta",
+        "ispiremo nos",
+        "peremo lice",
+        "potiremo glavu",
+        "peremo noge"
+      ]
     },
     {
       "naziv": "Radimo u namazu",
-      "stavke": ["stojimo na kijamu", "učimo Fatihu", "činimo ruku'", "činimo sedždu", "predajemo selam"]
+      "stavke": [
+        "stojimo na kijamu",
+        "učimo Fatihu",
+        "činimo ruku'",
+        "činimo sedždu",
+        "predajemo selam"
+      ]
     }
-  ]
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Wudu oder Gebet?",
+      "uputa": "Wohin gehört jede Handlung? Ziehe sie in die richtige Kiste und klicke dann auf „Prüfen“.",
+      "kategorije": [
+        {
+          "naziv": "Machen wir beim Wudu",
+          "stavke": [
+            "wir waschen die Hände",
+            "wir spülen den Mund",
+            "wir spülen die Nase",
+            "wir waschen das Gesicht",
+            "wir streichen über den Kopf",
+            "wir waschen die Füße"
+          ]
+        },
+        {
+          "naziv": "Machen wir im Gebet",
+          "stavke": [
+            "wir stehen im Kijam",
+            "wir lesen die Fatiha",
+            "wir machen Ruku",
+            "wir machen Sadschda",
+            "wir geben den Selam"
+          ]
+        }
+      ]
+    },
+    "en": {
+      "naslov": "Wudu or prayer?",
+      "uputa": "Where does each action belong? Drag it into the right box, then click „Check“.",
+      "kategorije": [
+        {
+          "naziv": "We do this in wudu",
+          "stavke": [
+            "we wash our hands",
+            "we rinse our mouth",
+            "we rinse our nose",
+            "we wash our face",
+            "we wipe our head",
+            "we wash our feet"
+          ]
+        },
+        {
+          "naziv": "We do this in prayer",
+          "stavke": [
+            "we stand in qiyam",
+            "we recite the Fatihah",
+            "we make ruku",
+            "we make sajdah",
+            "we give the salam"
+          ]
+        }
+      ]
+    }
+  }
 }

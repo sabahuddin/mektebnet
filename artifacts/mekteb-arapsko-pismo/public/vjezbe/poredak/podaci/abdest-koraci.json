@@ -12,5 +12,37 @@
     "Potari mokrim rukama glavu",
     "Potari uši",
     "Operi noge do iznad članaka"
-  ]
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Ordne die Schritte des Wudu",
+      "uputa": "Die Schritte sind durcheinander. Ordne sie vom ersten bis zum letzten und klicke dann auf „Prüfen“.",
+      "stavke": [
+        "Sprich die Bismilla",
+        "Wasche die Hände dreimal",
+        "Spüle den Mund dreimal",
+        "Spüle die Nase dreimal",
+        "Wasche das Gesicht dreimal",
+        "Wasche die Arme bis über die Ellbogen",
+        "Streiche mit nassen Händen über den Kopf",
+        "Streiche über die Ohren",
+        "Wasche die Füße bis über die Knöchel"
+      ]
+    },
+    "en": {
+      "naslov": "Put the steps of wudu in order",
+      "uputa": "The steps are mixed up. Put them in order from first to last, then click „Check“.",
+      "stavke": [
+        "Say the Bismillah",
+        "Wash your hands three times",
+        "Rinse your mouth three times",
+        "Rinse your nose three times",
+        "Wash your face three times",
+        "Wash your arms up to above the elbows",
+        "Wipe your head with wet hands",
+        "Wipe your ears",
+        "Wash your feet up to above the ankles"
+      ]
+    }
+  }
 }

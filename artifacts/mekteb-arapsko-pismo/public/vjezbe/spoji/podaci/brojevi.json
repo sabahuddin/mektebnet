@@ -3,10 +3,79 @@
   "naslov": "Spoji broj i riječ",
   "uputa": "Prevuci riječ uz broj kojem pripada. Kad spojiš sve, klikni „Provjeri\".",
   "parovi": [
-    { "lijevo": "1", "desno": "jedan" },
-    { "lijevo": "3", "desno": "tri" },
-    { "lijevo": "5", "desno": "pet" },
-    { "lijevo": "7", "desno": "sedam" },
-    { "lijevo": "10", "desno": "deset" }
-  ]
+    {
+      "lijevo": "1",
+      "desno": "jedan"
+    },
+    {
+      "lijevo": "3",
+      "desno": "tri"
+    },
+    {
+      "lijevo": "5",
+      "desno": "pet"
+    },
+    {
+      "lijevo": "7",
+      "desno": "sedam"
+    },
+    {
+      "lijevo": "10",
+      "desno": "deset"
+    }
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Verbinde Zahl und Wort",
+      "uputa": "Ziehe das Wort zu der Zahl, zu der es gehört. Wenn du alles verbunden hast, klicke auf „Prüfen“.",
+      "parovi": [
+        {
+          "lijevo": "1",
+          "desno": "eins"
+        },
+        {
+          "lijevo": "3",
+          "desno": "drei"
+        },
+        {
+          "lijevo": "5",
+          "desno": "fünf"
+        },
+        {
+          "lijevo": "7",
+          "desno": "sieben"
+        },
+        {
+          "lijevo": "10",
+          "desno": "zehn"
+        }
+      ]
+    },
+    "en": {
+      "naslov": "Match the number and the word",
+      "uputa": "Drag the word to the number it belongs to. When you have matched them all, click „Check“.",
+      "parovi": [
+        {
+          "lijevo": "1",
+          "desno": "one"
+        },
+        {
+          "lijevo": "3",
+          "desno": "three"
+        },
+        {
+          "lijevo": "5",
+          "desno": "five"
+        },
+        {
+          "lijevo": "7",
+          "desno": "seven"
+        },
+        {
+          "lijevo": "10",
+          "desno": "ten"
+        }
+      ]
+    }
+  }
 }

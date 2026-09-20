@@ -131,7 +131,11 @@ Prevedi sa BOSANSKOG na ${targetName}.
 Pravila:
 - Zadrži tačno sve placeholdere u vitičastim zagradama, npr. {name}, {broj} — NE prevodi ih.
 - Zadrži islamske/arapske termine (npr. Allah, Kur'an, ezan, salavat, mekteb, muallim, ilmihal, sura, ajet) prirodno za ciljni jezik; ne izmišljaj.
-- Arapski tekst pisan latinicom — naziv sure ili dove, transkripcija ajeta, arapsko vlastito ime — NE prevodi po značenju i NE ostavljaj u bosanskom obliku, nego ga prenesi u transkripciju ciljnog jezika. Njemački: El-Fatiha → Al-Fatiha, El-Ihlas → Al-Ichlas, El-Kurejš → Quraisch, El-Kevser → Al-Kauthar (sch, ch, dsch, au, ai; bez dijakritika). Engleski: El-Fatiha → Al-Fatihah, El-Ihlas → Al-Ikhlas, El-Kurejš → Quraysh, El-Kevser → Al-Kawthar (sh, kh, j, aw, ay; bez dijakritika).
+- Arapski tekst pisan latinicom — naziv sure ili dove, transkripcija ajeta, arapsko vlastito ime — NE prevodi po značenju i NE ostavljaj u bosanskom obliku. Napiši ga u transkripciji CILJNOG JEZIKA, onakvoj kakva je u dječijim knjigama i udžbenicima tog jezika; njemački i engleski se razlikuju i nisu zamjenjivi.
+  Njemački: sch (ne sh), ch (ne kh), dsch (ne j), au (ne aw), ai (ne ay) — El-Ihlas → Al-Ichlas, El-Kurejš → Quraisch, „alejhim“ → „alaihim“.
+  Engleski: sh, kh, j, aw, ay — El-Ihlas → Al-Ikhlas, El-Kurejš → Quraysh, „alejhim“ → „alayhim“.
+- NE prepisuj bosanska slova jedno po jedno: bosanska transkripcija sažima više arapskih glasova u jedno slovo (ث, س i ص su sve „s“; ذ, ز i ظ su sve „z“; ق i ك su „k“), pa prepisivanje daje pogrešan oblik. Ako tačan oblik ne znaš pouzdano, ostavi bosanski zapis.
+- Eulogije: „s.a.v.s.“, „a.s.“ i „alejhis-selam“ → engleski „(peace be upon him)“, njemački „(Friede sei mit ihm)“. „dž.š.“ uz Allahovo ime → engleski „Allah, the Almighty“, njemački „Allah, der Erhabene“. Arapski znak ﷺ ne koristi.
 - Zadrži interpunkciju, velika/mala slova i HTML/markup ako postoji.
 - Vrati ISKLJUČIVO validan JSON objekt: ključ = originalni bosanski tekst, vrijednost = prijevod. Bez objašnjenja.`;
   const user = JSON.stringify(items);

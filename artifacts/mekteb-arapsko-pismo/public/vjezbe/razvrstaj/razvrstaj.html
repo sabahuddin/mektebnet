@@ -327,10 +327,14 @@ body{
 }
 </script>
 
+<!-- Sučelje vježbe na jeziku djeteta (?lang=de). Vidi /vjezbe/jezik.js. -->
+<script src="/vjezbe/jezik.js"></script>
+
 <script>
 (function () {
   'use strict';
 
+  var T = window.MektebJezik.t;
   var $ = function (id) { return document.getElementById(id); };
   var el = {
     naslov: $('naslov'), uputa: $('uputa'), brojac: $('brojac'), sat: $('sat'),
@@ -390,9 +394,9 @@ body{
         .filter(function (k) { return k.naziv && k.stavke.length; })
       : [];
 
-    el.naslov.textContent = podaci.naslov || 'Razvrstaj';
-    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + 'Razvrstaj · Mekteb.net';
-    el.uputa.textContent = podaci.uputa || 'Prevuci svaku stavku u kutiju kojoj pripada, pa klikni „Provjeri".';
+    el.naslov.textContent = podaci.naslov || T('Razvrstaj');
+    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + T('Razvrstaj · Mekteb.net');
+    el.uputa.textContent = podaci.uputa || T('Prevuci svaku stavku u kutiju kojoj pripada, pa klikni „Provjeri".');
     el.uputa.hidden = !el.uputa.textContent;
   }
 
@@ -409,7 +413,7 @@ body{
   function novaIgra() {
     if (stanje && stanje.sat) clearInterval(stanje.sat);
     if (kategorije.length < 2) {
-      greska('Za ovu vježbu trebaju najmanje dvije kutije, svaka sa bar jednom stavkom.');
+      greska(T('Za ovu vježbu trebaju najmanje dvije kutije, svaka sa bar jednom stavkom.'));
       return;
     }
 
@@ -464,7 +468,7 @@ body{
       kutija.dataset.k = ki;
       kutija.tabIndex = 0;
       kutija.setAttribute('role', 'button');
-      kutija.setAttribute('aria-label', 'Kutija ' + k.naziv + ' — ovdje smjesti izabranu stavku');
+      kutija.setAttribute('aria-label', T('Kutija %naziv% — ovdje smjesti izabranu stavku', { naziv: k.naziv }));
 
       var naslov = document.createElement('h2');
       naslov.appendChild(document.createTextNode(k.naziv));
@@ -486,7 +490,7 @@ body{
       if (uKutiji.length === 0) {
         var prazno = document.createElement('p');
         prazno.className = 'prazno';
-        prazno.textContent = 'Prazno';
+        prazno.textContent = T('Prazno');
         kutija.appendChild(prazno);
       }
       el.kutije.appendChild(kutija);
@@ -512,7 +516,7 @@ body{
 
   function osvjeziBrojac() {
     var razvrstano = stanje.stavke.filter(function (s) { return s.gdje !== null; }).length;
-    el.brojac.textContent = razvrstano + ' od ' + stanje.stavke.length;
+    el.brojac.textContent = T('%broj% od %ukupno%', { broj: razvrstano, ukupno: stanje.stavke.length });
     // Provjera ima smisla tek kad je ponuda prazna.
     el.provjeri.disabled = stanje.gotovo || razvrstano < stanje.stavke.length;
   }
@@ -543,11 +547,11 @@ body{
     nacrtaj(stavka.id);
     osvjeziBrojac();
     if (el.provjeri.disabled === false) {
-      poruci('Sve je razvrstano. Klikni „Provjeri" da vidiš kako si uradio.');
-      reci('Sve je razvrstano. Klikni Provjeri.');
+      poruci(T('Sve je razvrstano. Klikni „Provjeri" da vidiš kako si uradio.'));
+      reci(T('Sve je razvrstano. Klikni Provjeri.'));
     } else {
-      poruci('Smješteno: ' + stavka.tekst + ' → ' + kategorije[ki].naziv + '.');
-      reci('Smješteno u ' + kategorije[ki].naziv);
+      poruci(T('Smješteno: %tekst% → %kutija%.', { tekst: stavka.tekst, kutija: kategorije[ki].naziv }));
+      reci(T('Smješteno u %kutija%', { kutija: kategorije[ki].naziv }));
     }
   }
 
@@ -558,8 +562,8 @@ body{
     stanje.izabrana = null;
     nacrtaj(stavka.id);
     osvjeziBrojac();
-    poruci('Stavka „' + stavka.tekst + '" je vraćena među ponuđene.');
-    reci('Vraćeno. ' + stavka.tekst);
+    poruci(T('Stavka „%tekst%" je vraćena među ponuđene.', { tekst: stavka.tekst }));
+    reci(T('Vraćeno. %tekst%', { tekst: stavka.tekst }));
   }
 
   function oznaci(id) {
@@ -614,9 +618,9 @@ body{
     if (tacnih === stanje.stavke.length) { zavrsi(); return; }
 
     zvuk('greska');
-    poruci('Tačno razvrstano: ' + tacnih + ' od ' + stanje.stavke.length +
-           '. Označene stavke nisu u pravoj kutiji — dodirni ih da ih vratiš, pa probaj ponovo.', 'lose');
-    reci('Tačno ' + tacnih + ' od ' + stanje.stavke.length + '. Ispravi označene stavke.');
+    poruci(T('Tačno razvrstano: %broj% od %ukupno%. Označene stavke nisu u pravoj kutiji — dodirni ih da ih vratiš, pa probaj ponovo.',
+      { broj: tacnih, ukupno: stanje.stavke.length }), 'lose');
+    reci(T('Tačno %broj% od %ukupno%. Ispravi označene stavke.', { broj: tacnih, ukupno: stanje.stavke.length }));
     el.provjeri.disabled = true;
   }
 
@@ -633,13 +637,13 @@ body{
     nacrtaj();
 
     var ukupno = stanje.stavke.length;
-    var opis = 'Vrijeme: ' + vrijeme(stanje.sekunde) + '.';
+    var opis = T('Vrijeme: %vrijeme%.', { vrijeme: vrijeme(stanje.sekunde) });
     if (stanje.izPrve !== null) {
       opis += stanje.izPrve === ukupno
-        ? ' Iz prve sve tačno!'
-        : ' Iz prve tačno: ' + stanje.izPrve + ' od ' + ukupno + '.';
+        ? T(' Iz prve sve tačno!')
+        : T(' Iz prve tačno: %broj% od %ukupno%.', { broj: stanje.izPrve, ukupno: ukupno });
     }
-    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? ' Pomoć korištena jednom.' : ' Pomoć korištena ' + stanje.pomoc + ' puta.';
+    if (stanje.pomoc > 0) opis += stanje.pomoc === 1 ? T(' Pomoć korištena jednom.') : T(' Pomoć korištena %broj% puta.', { broj: stanje.pomoc });
     el.krajOpis.textContent = opis;
     el.kraj.hidden = false;
     el.ponovo.focus({ preventScroll: true });
@@ -712,7 +716,7 @@ body{
       // Dodir bez povlačenja: stavka u kutiji se vraća, stavka iz ponude se označi.
       if (vuce.stavka.gdje !== null) { vrati(vuce.stavka); return; }
       oznaci(stanje.izabrana === vuce.stavka.id ? null : vuce.stavka.id);
-      poruci(stanje.izabrana ? 'Sada dodirni kutiju u koju ide „' + vuce.stavka.tekst + '".' : '');
+      poruci(stanje.izabrana ? T('Sada dodirni kutiju u koju ide „%tekst%".', { tekst: vuce.stavka.tekst }) : '');
       return;
     }
     if (!cilj) return;
@@ -731,7 +735,7 @@ body{
     if (!stavka || stavka.zakljucana) return;
     if (stavka.gdje !== null) { vrati(stavka); return; }
     oznaci(stanje.izabrana === stavka.id ? null : stavka.id);
-    poruci(stanje.izabrana ? 'Sada odaberi kutiju u koju ide „' + stavka.tekst + '".' : '');
+    poruci(stanje.izabrana ? T('Sada odaberi kutiju u koju ide „%tekst%".', { tekst: stavka.tekst }) : '');
   }
   el.ponuda.addEventListener('click', klikNaStavku);
   el.kutije.addEventListener('click', klikNaStavku);
@@ -742,7 +746,7 @@ body{
     var kutija = e.target.closest && e.target.closest('.kutija');
     if (!kutija) return;
     if (!stanje.izabrana) {
-      poruci('Prvo odaberi stavku, pa je smjesti u kutiju.');
+      poruci(T('Prvo odaberi stavku, pa je smjesti u kutiju.'));
       return;
     }
     smjesti(nadji(stanje.izabrana), +kutija.dataset.k);
@@ -755,7 +759,7 @@ body{
     e.preventDefault();
     if (!stanje || stanje.gotovo) return;
     if (!stanje.izabrana) {
-      poruci('Prvo odaberi stavku, pa je smjesti u kutiju.');
+      poruci(T('Prvo odaberi stavku, pa je smjesti u kutiju.'));
       return;
     }
     smjesti(nadji(stanje.izabrana), +kutija.dataset.k);
@@ -785,8 +789,8 @@ body{
     stanje.izabrana = null;
     nacrtaj();
     osvjeziBrojac();
-    poruci('„' + stavka.tekst + '" ide u kutiju ' + kategorije[stavka.kutija].naziv + '.', 'dobro');
-    reci('Pomoć. ' + stavka.tekst + ' ide u ' + kategorije[stavka.kutija].naziv);
+    poruci(T('„%tekst%" ide u kutiju %kutija%.', { tekst: stavka.tekst, kutija: kategorije[stavka.kutija].naziv }), 'dobro');
+    reci(T('Pomoć. %tekst% ide u %kutija%', { tekst: stavka.tekst, kutija: kategorije[stavka.kutija].naziv }));
     if (stanje.stavke.every(function (s) { return s.gdje !== null; })) provjeri();
   });
 
