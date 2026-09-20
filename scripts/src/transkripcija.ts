@@ -50,8 +50,19 @@ export function normalizirajTranskripciju(tekst: string): string {
  */
 const EN_DE: Record<string, string> = { sh: "sch", kh: "ch", j: "dsch", aw: "au", ay: "ai" };
 
+/**
+ * „aw“ i „ay“ postaju „au“ i „ai“ samo kad zaista zatvaraju slog. Ako iza njih
+ * dolazi samoglasnik, „w“ i „y“ su obični suglasnici i ostaju kakvi jesu:
+ * salawatu → salawatu (ne „salauatu“), tawasaw → tawasau.
+ */
+const EN_DE_UZORAK = /[Ss]h|[Kk]h|[Jj]|[Aa][wy](?![aeiouAEIOU])/g;
+
 export function njemackiIzEngleskog(engleski: string): string {
-  return engleski.replace(/sh|kh|aw|ay|j/g, (m) => EN_DE[m]);
+  return engleski.replace(EN_DE_UZORAK, (m) => {
+    const zamjena = EN_DE[m.toLowerCase()];
+    const veliko = m[0] !== m[0].toLowerCase();
+    return veliko ? zamjena[0].toUpperCase() + zamjena.slice(1) : zamjena;
+  });
 }
 
 const TRANSKRIPCIJA_MAPA = new Map(

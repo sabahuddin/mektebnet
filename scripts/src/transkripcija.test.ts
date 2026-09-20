@@ -165,8 +165,8 @@ test("njemački oblik se izvodi iz engleskog, bez engleskih digrafa", () => {
     for (const red of cjelina.redovi) {
       const de = njemackiIzEngleskog(red.en);
       assert.equal(transkripcija(red.bs, "de"), de, `${cjelina.naziv}: ${red.bs}`);
-      assert.doesNotMatch(de, /(?<!c)sh|kh/, `njemački ne piše sh/kh: ${de}`);
-      assert.doesNotMatch(de, /\bj|[aeiou]j/, `njemački ne piše j za dž: ${de}`);
+      assert.doesNotMatch(de, /(?<!c)sh|kh/i, `njemački ne piše sh/kh: ${de}`);
+      assert.doesNotMatch(de, /\bj|[aeiou]j/i, `njemački ne piše j za dž: ${de}`);
     }
   }
 });
@@ -184,4 +184,52 @@ test("nijedna transkripcija ne nosi naša slova", () => {
 test("bosanski ključevi se ne ponavljaju", () => {
   const kljucevi = CJELINE.flatMap((c) => c.redovi).map((r) => normalizirajTranskripciju(r.bs));
   assert.equal(new Set(kljucevi).size, kljucevi.length, "ista bosanska transkripcija stoji dvaput");
+});
+
+test("njemačka pretvorba poštuje velika slova", () => {
+  assert.equal(njemackiIzEngleskog("Jaza'uhum"), "Dschaza'uhum");
+  assert.equal(njemackiIzEngleskog("Shaytan"), "Schaitan");
+  assert.equal(njemackiIzEngleskog("Khawf"), "Chauf");
+});
+
+test("aw i ay ostaju suglasnici kad iza njih dolazi samoglasnik", () => {
+  // salawat i layunbadhanna imaju obično „w“ odnosno „j“ — nisu diftonzi.
+  assert.equal(njemackiIzEngleskog("was-salawatu"), "was-salawatu");
+  assert.equal(njemackiIzEngleskog("layunbadhanna"), "layunbadhanna");
+  // kawthar i tawasaw završavaju slog, pa se pišu njemačkim „au“.
+  assert.equal(njemackiIzEngleskog("kawthar"), "kauthar");
+  assert.equal(njemackiIzEngleskog("tawasaw"), "tawasau");
+});
+
+test("urednički ispravljeni redovi stoje kako su odobreni", () => {
+  // Muallimove primjedbe sa stranice za provjeru: završeci u Kunut-dovi,
+  // Allahovo ime Samad, „as-hab“ kao dva glasa i razdvojeno „Subhanaka Allahumma“.
+  const ocekivano: Array<[string, string]> = [
+    ["Allahus-samed", "Allahus-Samad"],
+    ["Elem tere kejfe fe'ale rabbuke bi ashabil-fil", "Alam tara kayfa fa'ala Rabbuka bi as-habil-fil"],
+    [
+      "Subhanekellahumme ve bihamdike ve tebarekesmuke ve te'ala džedduke ve la ilahe gajruk",
+      "Subhanaka Allahumma wa bihamdika wa tabarakasmuka wa ta'ala jadduka wa la ilaha ghayruk",
+    ],
+    [
+      "Allahumme inna neste'inuke ve nestagfiruke ve nestehdik, ve nu'minu bike ve netubu ilejk",
+      "Allahumma inna nasta'inuka wa nastaghfiruka wa nastahdike, wa nu'minu bika wa natubu ilayke",
+    ],
+    [
+      "Ve netevekkelu alejke ve nusni alejkel-hajre kullehu, neškuruke ve la nekfuruk, ve nahle'u ve netruku men jefdžuruk",
+      "Wa natawakkalu 'alayka wa nuthni 'alaykal-khayra kullahu, nashkuruka wa la nakfuruke, wa nakhla'u wa natruku man yafjuruke",
+    ],
+    [
+      "Allahumme ijjake na'budu ve leke nusalli ve nesdžud, ve ilejke nes'a ve nahfid",
+      "Allahumma iyyaka na'budu wa laka nusalli wa nasjudu, wa ilayka nas'a wa nahfidu",
+    ],
+    [
+      "Nerdžu rahmeteke ve nahša azabek, inne azabeke bil-kuffari mulhik",
+      "Narju rahmataka wa nakhsha 'adhabake, inna 'adhabaka bil-kuffari mulhiq",
+    ],
+  ];
+  for (const [bs, en] of ocekivano) {
+    assert.equal(transkripcija(bs, "en"), en, bs);
+    assert.equal(transkripcija(bs, "de"), njemackiIzEngleskog(en), bs);
+  }
 });

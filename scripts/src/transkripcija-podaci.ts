@@ -53,7 +53,7 @@ export const CJELINE: Cjelina[] = [
     naziv: "El-Ihlas",
     redovi: [
       { bs: "Kul huvallahu ehad", en: "Qul huwallahu ahad" },
-      { bs: "Allahus-samed", en: "Allahus-samad" },
+      { bs: "Allahus-samed", en: "Allahus-Samad" },
       { bs: "Lem jelid ve lem juled", en: "Lam yalid wa lam yulad" },
       { bs: "Ve lem jekun lehu kufuven ehad", en: "Wa lam yakun lahu kufuwan ahad" },
     ],
@@ -140,7 +140,7 @@ export const CJELINE: Cjelina[] = [
   {
     naziv: "El-Fil",
     redovi: [
-      { bs: "Elem tere kejfe fe'ale rabbuke bi ashabil-fil", en: "Alam tara kayfa fa'ala Rabbuka bi ashabil-fil" },
+      { bs: "Elem tere kejfe fe'ale rabbuke bi ashabil-fil", en: "Alam tara kayfa fa'ala Rabbuka bi as-habil-fil" },
       { bs: "Elem jedž'al kejdehum fi tadlil", en: "Alam yaj'al kaydahum fi tadlil" },
       { bs: "Ve ersele alejhim tajren ebabil", en: "Wa arsala 'alayhim tayran ababil" },
       { bs: "Termihim bi hidžaretin min siddžil", en: "Tarmihim bihijaratin min sijjil" },
@@ -220,7 +220,7 @@ export const CJELINE: Cjelina[] = [
     redovi: [
       {
         bs: "Subhanekellahumme ve bihamdike ve tebarekesmuke ve te'ala džedduke ve la ilahe gajruk",
-        en: "Subhanakallahumma wa bihamdika wa tabarakasmuka wa ta'ala jadduka wa la ilaha ghayruk",
+        en: "Subhanaka Allahumma wa bihamdika wa tabarakasmuka wa ta'ala jadduka wa la ilaha ghayruk",
       },
     ],
   },
@@ -270,19 +270,19 @@ export const CJELINE: Cjelina[] = [
     redovi: [
       {
         bs: "Allahumme inna neste'inuke ve nestagfiruke ve nestehdik, ve nu'minu bike ve netubu ilejk",
-        en: "Allahumma inna nasta'inuka wa nastaghfiruka wa nastahdik, wa nu'minu bika wa natubu ilayk",
+        en: "Allahumma inna nasta'inuka wa nastaghfiruka wa nastahdike, wa nu'minu bika wa natubu ilayke",
       },
       {
         bs: "Ve netevekkelu alejke ve nusni alejkel-hajre kullehu, neškuruke ve la nekfuruk, ve nahle'u ve netruku men jefdžuruk",
-        en: "Wa natawakkalu 'alayka wa nuthni 'alaykal-khayra kullahu, nashkuruka wa la nakfuruk, wa nakhla'u wa natruku man yafjuruk",
+        en: "Wa natawakkalu 'alayka wa nuthni 'alaykal-khayra kullahu, nashkuruka wa la nakfuruke, wa nakhla'u wa natruku man yafjuruke",
       },
       {
         bs: "Allahumme ijjake na'budu ve leke nusalli ve nesdžud, ve ilejke nes'a ve nahfid",
-        en: "Allahumma iyyaka na'budu wa laka nusalli wa nasjud, wa ilayka nas'a wa nahfid",
+        en: "Allahumma iyyaka na'budu wa laka nusalli wa nasjudu, wa ilayka nas'a wa nahfidu",
       },
       {
         bs: "Nerdžu rahmeteke ve nahša azabek, inne azabeke bil-kuffari mulhik",
-        en: "Narju rahmataka wa nakhsha 'adhabak, inna 'adhabaka bil-kuffari mulhiq",
+        en: "Narju rahmataka wa nakhsha 'adhabake, inna 'adhabaka bil-kuffari mulhiq",
       },
     ],
   },
