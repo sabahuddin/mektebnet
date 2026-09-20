@@ -134,13 +134,34 @@ async function callOpenAI(body: Record<string, unknown>): Promise<any> {
   return data;
 }
 
+/**
+ * Transkripcija nije prijevod. Naziv sure, dove ili ajet zapisan latinicom je
+ * isti arapski zvuk, samo drugim pravopisom — pa u njemačkom i engleskom mora
+ * pratiti njihov pravopis, a ne ostati u bosanskom obliku.
+ */
+const TRANSKRIPCIJA_PRIMJERI: Record<string, string> = {
+  "Njemački (Deutsch)":
+    "El-Fatiha → Al-Fatiha, El-Ihlas → Al-Ichlas, El-Kurejš → Quraisch, El-Kevser → Al-Kauthar, Eš-Šems → Asch-Schams, El-Bekara → Al-Baqara; njemački pravopis koristi sch, ch, dsch, au i ai, bez dijakritika",
+  "Engleski (English)":
+    "El-Fatiha → Al-Fatihah, El-Ihlas → Al-Ikhlas, El-Kurejš → Quraysh, El-Kevser → Al-Kawthar, Eš-Šems → Ash-Shams, El-Bekara → Al-Baqarah; engleski pravopis koristi sh, kh, j, aw i ay, bez dijakritika",
+};
+
+function transkripcijaPravilo(targetName: string): string {
+  const primjeri = TRANSKRIPCIJA_PRIMJERI[targetName];
+  if (!primjeri) {
+    return "- Arapski tekst pisan latinicom (naziv sure ili dove, transkripcija ajeta) NE prevodi po značenju; zapiši ga u transkripciji uobičajenoj za ciljni jezik, a ako za taj jezik nemaš ustaljenu transkripciju, ostavi bosanski oblik.";
+  }
+  return `- Arapski tekst pisan latinicom (naziv sure ili dove, transkripcija ajeta, arapsko vlastito ime) NE prevodi po značenju i NE ostavljaj u bosanskom obliku — prenesi ga u transkripciju ciljnog jezika: ${primjeri}.`;
+}
+
 const TEXT_SYS = (targetName: string) => `Ti si profesionalni prevodilac za islamsku edukativnu platformu za djecu (mekteb).
 Prevedi sa BOSANSKOG na ${targetName}.
 Pravila:
-- Zadrži islamske/arapske termine i vlastita imena prirodno za ciljni jezik (npr. Allah, Kur'an, sura, ajet, ezan, salavat, mekteb, muallim, ilmihal, abdest); nazive sura i dova NE prevodi (npr. El-Fatiha, El-Ihlas ostaju isti).
+- Zadrži islamske/arapske termine i vlastita imena prirodno za ciljni jezik (npr. Allah, Kur'an, sura, ajet, ezan, salavat, mekteb, muallim, ilmihal, abdest).
+${transkripcijaPravilo(targetName)}
 - Za stručni islamski termin koji ima prirodan njemački ekvivalent, napiši njemački izraz pa bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ovo ne primjenjuj na nazive sura/dova, arapske transliteracije i vlastita imena.
 - Generički izraz "dova/dove" NIJE naziv dove: na njemačkom piši "Bittgebet (dova)" ili gramatički odgovarajući oblik. "Odijevanje" je običan bosanski izraz: prevedi ga kao "Kleidung (odijevanje)" kada je potreban stručni kontekst, nikada ga ne ostavljaj samog.
-- Prevedi svu običnu bosansku formulaciju, i kada je pisana velikim slovima ili je bosanski prijevod dove, ajeta ili citata. Netaknuti ostaju samo arapsko pismo i arapska transliteracija.
+- Prevedi svu običnu bosansku formulaciju, i kada je pisana velikim slovima ili je bosanski prijevod dove, ajeta ili citata. Netaknuto ostaje samo arapsko pismo; latinična transkripcija arapskog prati pravopis ciljnog jezika.
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Ne dodaji arapsko pismo, salavat/salam simbole ili počasne izraze koji ne postoje u izvorniku. Svaki postojeći počasni oblik (npr. "a.s.", "alejhis-selam", ﷺ ili arapski tekst) sačuvaj DOSLOVNO, bez proširivanja, zamjene ili pretvaranja u drugi oblik.
 - Za njemački odgovor upotrijebi njemački za sav prevedivi tekst; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
@@ -167,7 +188,7 @@ async function translateTexts(items: string[], targetName: string, forceTranslat
         // prijevoda istog redoslijeda i dužine pa zip-ujemo s našim originalima.
         content:
           `${forceTranslation
-            ? "Prethodni pokušaj je pogrešno ostavio ovaj bosanski tekst nepreveden. Prevedi ga sada POTPUNO na ciljni jezik, čak i ako je pisan velikim slovima. Ne zadržavaj bosansku rečenicu. Ako je to stručni islamski termin poput dove, šarta ili namaza, napiši prirodni termin na ciljnom jeziku i zadrži bosanski izraz samo u zagradi — ne vraćaj isti bosanski termin samostalno. Iznimke su samo arapsko pismo, doslovna arapska transliteracija i vlastita imena. "
+            ? "Prethodni pokušaj je pogrešno ostavio ovaj bosanski tekst nepreveden. Prevedi ga sada POTPUNO na ciljni jezik, čak i ako je pisan velikim slovima. Ne zadržavaj bosansku rečenicu. Ako je to stručni islamski termin poput dove, šarta ili namaza, napiši prirodni termin na ciljnom jeziku i zadrži bosanski izraz samo u zagradi — ne vraćaj isti bosanski termin samostalno. Iznimka je samo arapsko pismo; latiničnu transkripciju arapskog prenesi u pravopis ciljnog jezika umjesto da je ostaviš u bosanskom obliku. "
             : ""}Prevedi svaki string iz ulaznog niza. Vrati JSON objekt oblika {"prijevodi": [...]} ` +
           `gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz ` +
           `(prijevodi[i] je prijevod od ulaz[i]). Prevedi po značenju i kad izvorni tekst sadrži ` +
@@ -205,8 +226,9 @@ Stroga pravila:
 - Prevedi SAMO ljudski čitljiv tekst između tagova i tekstualne atribute (alt, title, placeholder). NE diraj vrijednosti src, href, data-*, class, id, style.
 - Prevedi SVAKU običnu bosansku rečenicu; ne ostavljaj vidljivi bosanski tekst nepreveden. Prije slanja odgovora provjeri da cijeli rezultat sadrži isti broj i redoslijed HTML tagova kao ulaz.
 - Zadrži arapski tekst (ajeti, dove, kaligrafija) NETAKNUT — ne prevodi i ne transliteriraj ga.
-- Bosanski prijevod ajeta, dove ili citata MORAŠ prevesti na njemački, čak i kada je cijeli tekst pisan velikim slovima. Netaknuti ostaju samo arapsko pismo i arapska transliteracija.
-- Zadrži islamske/arapske termine i nazive sura/dova kako jesu (El-Fatiha itd.).
+- Bosanski prijevod ajeta, dove ili citata MORAŠ prevesti na njemački, čak i kada je cijeli tekst pisan velikim slovima. Netaknuto ostaje samo arapsko pismo; latinična transkripcija arapskog prati pravopis ciljnog jezika.
+- Zadrži islamske/arapske termine kako jesu.
+${transkripcijaPravilo(targetName)}
 - Ne dodaji arapsko pismo, salavat/salam simbole ili počasne izraze koji ne postoje u izvorniku. Svaki postojeći počasni oblik (npr. "a.s.", "alejhis-selam", ﷺ ili arapski tekst) sačuvaj DOSLOVNO, bez proširivanja, zamjene ili pretvaranja u drugi oblik.
 - Ako je ciljni jezik njemački, sav prevedivi tekst mora biti na njemačkom; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
 - Za stručni islamski termin s prirodnim njemačkim ekvivalentom koristi njemački izraz uz bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ne radi to za nazive sura/dova, arapske transliteracije ni vlastita imena.

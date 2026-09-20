@@ -8,13 +8,14 @@ import { BookOpen, Search, ChevronLeft } from "lucide-react";
 import {
   fetchSurahList,
   revelationLabel,
-  surahBosnianName,
+  surahName,
+  surahSearchNames,
   surahArabicDisplayName,
   type SurahMeta,
 } from "@/lib/quran";
 
 export default function KuranPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [sure, setSure] = useState<SurahMeta[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export default function KuranPage() {
     if (!s) return sure;
     return sure.filter(
       (x) =>
-        surahBosnianName(x.number).toLowerCase().includes(s) ||
+        surahSearchNames(x.number).some((ime) => ime.toLowerCase().includes(s)) ||
         x.englishName.toLowerCase().includes(s) ||
         x.englishNameTranslation.toLowerCase().includes(s) ||
         String(x.number).includes(s) ||
@@ -120,7 +121,7 @@ export default function KuranPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-extrabold text-foreground truncate">
-                        {surahBosnianName(s.number)}
+                        {surahName(s.number, lang)}
                       </span>
                       <span
                         className="text-primary text-xl shrink-0"

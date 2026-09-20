@@ -11,7 +11,7 @@ import {
   fetchSurah,
   revelationLabel,
   surahHasBismillahHeader,
-  surahBosnianName,
+  surahName,
   surahArabicDisplayName,
   BISMILLAH,
   type Ayah,
@@ -19,7 +19,7 @@ import {
 } from "@/lib/quran";
 
 export default function KuranSuraPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { n } = useParams<{ n: string }>();
   const surahNum = Math.max(1, Math.min(114, parseInt(n || "1", 10) || 1));
 
@@ -64,7 +64,7 @@ export default function KuranSuraPage() {
   }, [surahNum]);
 
   const showBismillah = meta ? surahHasBismillahHeader(meta.number) : false;
-  const bosanski = surahBosnianName(surahNum);
+  const nazivSure = surahName(surahNum, lang);
 
   const activeAyahNum = audio.activeKey ? Number(audio.activeKey.split(":")[1]) : null;
 
@@ -103,7 +103,7 @@ export default function KuranSuraPage() {
               >
                 {surahArabicDisplayName(meta.name)}
               </div>
-              <div className="font-black text-lg">{bosanski}</div>
+              <div className="font-black text-lg">{nazivSure}</div>
             </div>
           </div>
         ) : null}
@@ -178,7 +178,7 @@ export default function KuranSuraPage() {
           canStop={audio.activeKey != null}
           repeatOne={audio.repeatOne}
           onToggleRepeat={() => audio.setRepeatOne((r) => !r)}
-          title={`${surahNum}. ${bosanski}`}
+          title={`${surahNum}. ${nazivSure}`}
           subtitle={
             activeAyahNum != null ? t("Ajet {n} / {ukupno}", { n: String(activeAyahNum), ukupno: String(meta.numberOfAyahs) }) : t("Odaberi učača i klikni ajet")
           }

@@ -4026,6 +4026,20 @@ router.put("/profil/password", async (req, res) => {
 
 // ── STATISTIKA GRUPE ─────────────────────────────────────────────────────────
 
+function prazanZbirVjezbi() {
+  return {
+    naseVjezbe: 0,
+    h5pPokusaji: 0,
+    h5pProsjek: null as number | null,
+    etapnePokusaji: 0,
+    etapneProsjek: null as number | null,
+    etapePokusaji: 0,
+    etapePolozeno: 0,
+    etapeUkupno: 0,
+    etapeProsjek: null as number | null,
+  };
+}
+
 async function getGrupaFullStats(grupaId: number) {
   const profili = await db.select().from(ucenikProfiliTable)
     .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
@@ -4187,6 +4201,116 @@ router.get("/grupa/:id/statistika", async (req, res) => {
     res.status(500).json({ error: "Greška servera" });
   }
 });
+
+// GET /api/muallim/grupa/:id/statistika-vjezbi
+// Isti pogled kao na profilu učenika, ali za cijelu grupu: koliko je svako
+// dijete uradilo naših vježbi, H5P vježbi, etapnih vježbi i etapnih kvizova, i
+// s kojim uspjehom. Vraća i zbir grupe, da muallim odmah vidi gdje se stalo.
+router.get("/grupa/:id/statistika-vjezbi", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+
+    const profili = await db.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+    const ucenikIds = profili.map(p => p.userId);
+    if (ucenikIds.length === 0) {
+      res.json({ ucenici: [], ukupno: prazanZbirVjezbi() });
+      return;
+    }
+
+    const ucenikIdsTekst = ucenikIds.map(String);
+    const [users, h5pRedovi, statickiRedovi, embedRedovi, etapaRedovi] = await Promise.all([
+      db.select({ id: usersTable.id, displayName: usersTable.displayName })
+        .from(usersTable).where(inArray(usersTable.id, ucenikIds)),
+      db.select({
+        userId: h5pPokusajiTable.userId,
+        priloziId: h5pPokusajiTable.priloziId,
+        procenat: h5pPokusajiTable.procenat,
+      }).from(h5pPokusajiTable).where(inArray(h5pPokusajiTable.userId, ucenikIds)),
+      db.select({
+        userId: staticVjezbaPokusajiTable.userId,
+        exerciseKey: staticVjezbaPokusajiTable.exerciseKey,
+        procenat: staticVjezbaPokusajiTable.procenat,
+      }).from(staticVjezbaPokusajiTable).where(inArray(staticVjezbaPokusajiTable.userId, ucenikIds)),
+      db.select({
+        studentId: embedCompletionsTable.studentId,
+        externalUrl: prilozi.externalUrl,
+      }).from(embedCompletionsTable)
+        .innerJoin(prilozi, eq(prilozi.id, embedCompletionsTable.priloziId))
+        .where(inArray(embedCompletionsTable.studentId, ucenikIdsTekst)),
+      db.select({
+        studentId: etapaPolaganjaTable.studentId,
+        medaljonId: etapaPolaganjaTable.medaljonId,
+        procenat: etapaPolaganjaTable.procenat,
+        polozeno: etapaPolaganjaTable.polozeno,
+      }).from(etapaPolaganjaTable).where(inArray(etapaPolaganjaTable.studentId, ucenikIdsTekst)),
+    ]);
+
+    const imena = new Map(users.map(u => [u.id, u.displayName]));
+    const prosjek = (vrijednosti: number[]) =>
+      vrijednosti.length ? Math.round(vrijednosti.reduce((a, b) => a + b, 0) / vrijednosti.length) : null;
+
+    const ucenici = ucenikIds.map(uid => {
+      const h5p = h5pRedovi.filter(r => r.userId === uid);
+      const staticki = statickiRedovi.filter(r => r.userId === uid);
+      const nase = embedRedovi.filter(r => r.studentId === String(uid) && jeNasaVjezba(r.externalUrl));
+      const etape = etapaRedovi.filter(r => r.studentId === String(uid));
+      const etapePoMedaljonu = new Map<number, typeof etape>();
+      for (const red of etape) {
+        const redovi = etapePoMedaljonu.get(red.medaljonId) ?? [];
+        redovi.push(red);
+        etapePoMedaljonu.set(red.medaljonId, redovi);
+      }
+
+      return {
+        id: uid,
+        ime: imena.get(uid) || "Nepoznat",
+        naseVjezbe: nase.length,
+        h5pVjezbe: new Set(h5p.map(r => r.priloziId)).size,
+        h5pPokusaji: h5p.length,
+        h5pProsjek: prosjek(h5p.map(r => r.procenat)),
+        etapneVjezbe: new Set(staticki.map(r => r.exerciseKey)).size,
+        etapnePokusaji: staticki.length,
+        etapneProsjek: prosjek(staticki.map(r => r.procenat)),
+        etapeUkupno: etapePoMedaljonu.size,
+        etapePolozeno: [...etapePoMedaljonu.values()].filter(redovi => redovi.some(r => r.polozeno)).length,
+        etapePokusaji: etape.length,
+        // Za etape je mjerodavan najbolji pokušaj po etapi, kao i na profilu.
+        etapeProsjek: prosjek([...etapePoMedaljonu.values()].map(redovi => Math.max(...redovi.map(r => r.procenat)))),
+      };
+    }).sort((a, b) => a.ime.localeCompare(b.ime, "bs"));
+
+    const sveNase = embedRedovi.filter(r => jeNasaVjezba(r.externalUrl));
+    const etapePoUcenikuIMedaljonu = new Map<string, number[]>();
+    for (const red of etapaRedovi) {
+      const kljuc = `${red.studentId}#${red.medaljonId}`;
+      const redovi = etapePoUcenikuIMedaljonu.get(kljuc) ?? [];
+      redovi.push(red.procenat);
+      etapePoUcenikuIMedaljonu.set(kljuc, redovi);
+    }
+
+    res.json({
+      ucenici,
+      ukupno: {
+        naseVjezbe: sveNase.length,
+        h5pPokusaji: h5pRedovi.length,
+        h5pProsjek: prosjek(h5pRedovi.map(r => r.procenat)),
+        etapnePokusaji: statickiRedovi.length,
+        etapneProsjek: prosjek(statickiRedovi.map(r => r.procenat)),
+        etapePokusaji: etapaRedovi.length,
+        etapePolozeno: ucenici.reduce((zbir, u) => zbir + u.etapePolozeno, 0),
+        etapeUkupno: ucenici.reduce((zbir, u) => zbir + u.etapeUkupno, 0),
+        etapeProsjek: prosjek([...etapePoUcenikuIMedaljonu.values()].map(procenti => Math.max(...procenti))),
+      },
+    });
+  } catch (err) {
+    console.error("Grupa statistika vjezbi error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 
 // GET /api/muallim/dashboard-stats — agregat za panel pregled
 // Query param: ?skolskaGodina=2025/26  →  filtrira po školskoj godini.

@@ -126,7 +126,7 @@ export function NapametLokalniProgramEditor({
           <p className="text-[11px] font-bold text-muted-foreground">{sectionNivo === 4 ? t("Dodatak") : `${t("Napamet")} ${sectionNivo}. ${t("nivo")}`}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
              {section.map((item) => <button type="button" key={item.id} onClick={() => onItemClick?.(item)} className="min-w-0 rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-2 text-left text-sm font-semibold leading-snug text-emerald-950 hover:border-emerald-300 hover:bg-emerald-100 transition-colors">
-               <span className="block">{item.naziv}</span>
+               <span className="block">{t(item.naziv)}</span>
                 <NapametUceniciLinija item={item} />
               </button>)}
           </div>

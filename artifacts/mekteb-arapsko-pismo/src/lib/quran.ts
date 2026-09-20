@@ -115,33 +115,110 @@ export function ayahAudioUrl(surah: number, ayahInSurah: number, reciterFolder: 
   return `https://everyayah.com/data/${reciterFolder}/${pad3(surah)}${pad3(ayahInSurah)}.mp3`;
 }
 
-// Bosanski (latinični) nazivi sura — preuzeto sa islam.ba radi ujednačene
-// transliteracije (npr. "El-Bekara", "Ali Imran", "Ja-Sin").
-const BOSNIAN_NAMES: string[] = [
-  "El-Fatiha", "El-Bekara", "Ali Imran", "En-Nisa", "El-Maida", "El-Anam",
-  "El-Araf", "El-Enfal", "Et-Tevba", "Junus", "Hud", "Jusuf", "Er-Rad",
-  "Ibrahim", "El-Hidžr", "En-Nahl", "El-Isra", "El-Kehf", "Merjem", "Ta-Ha",
-  "El-Enbija", "El-Hadždž", "El-Muminun", "En-Nur", "El-Furkan", "Eš-Šuara",
-  "En-Neml", "El-Kasas", "El-Ankebut", "Er-Rum", "Lukman", "Es-Sedžda",
-  "El-Ahzab", "Saba", "Fatir", "Ja-Sin", "Es-Saffat", "Sad", "Ez-Zumar",
-  "El-Mumin", "Fussilat", "Eš-Šura", "Ez-Zuhruf", "Ed-Duhan", "El-Džasija",
-  "El-Ahkaf", "Muhammed", "El-Feth", "El-Hudžurat", "Kaf", "Ed-Darijat",
-  "Et-Tur", "En-Nedžm", "El-Kamer", "Er-Rahman", "El-Vakia", "El-Hadid",
-  "El-Mudžadela", "El-Hašr", "El-Mumtahina", "Es-Saff", "El-Džumua",
-  "El-Munafikun", "Et-Tegabun", "Et-Talak", "Et-Tahrim", "El-Mulk", "El-Kalem",
-  "El-Hakka", "El-Mearidž", "Nuh", "El-Džinn", "El-Muzemmil", "El-Muddessir",
-  "El-Kijama", "El-Insan", "El-Mursalat", "En-Naba", "En-Naziat", "Abasa",
-  "Et-Takvir", "El-Infitar", "El-Mutaffifun", "El-Inšikak", "El-Burudž",
-  "Et-Tarik", "El-'Ala", "El-Gašija", "El-Fedžr", "El-Beled", "Eš-Šems",
-  "El-Lejl", "Ed-Duha", "El-Inširah", "Et-Tin", "El-Alek", "El-Kadr",
-  "El-Bejjina", "Ez-Zilzal", "El-Adijat", "El-Karia", "Et-Tekasur", "El-Asr",
-  "El-Humaza", "El-Fil", "El-Kurejš", "El-Maun", "El-Kevser", "El-Kafirun",
-  "En-Nasr", "El-Leheb", "El-Ihlas", "El-Felek", "En-Nas",
-];
+// Nazivi sura u latinici, po jeziku sučelja. Ovo NIJE prijevod značenja nego
+// transkripcija arapskog naziva, pa svaki jezik koristi svoj pravopis:
+//   bs — transliteracija sa islam.ba (El-Bekara, Ja-Sin)
+//   de — njemačka fonetika bez dijakritika (sch, ch, dsch, au/ai): Al-Ichlas,
+//        Quraisch, Al-Kauthar
+//   en — uobičajena engleska transkripcija bez dijakritika: Al-Ikhlas,
+//        Quraysh, Al-Kawthar
+// Tamo gdje sura ima dva poznata naziva, sva tri jezika drže isti izbor kao
+// bosanski spisak (40. Al-Mumin, 94. Al-Inširah, 111. El-Leheb), da dijete i
+// roditelj prepoznaju istu suru bez obzira na jezik sučelja.
+const SURAH_NAMES: Record<"bs" | "de" | "en", readonly string[]> = {
+  bs: [
+    "El-Fatiha", "El-Bekara", "Ali Imran", "En-Nisa", "El-Maida", "El-Anam",
+    "El-Araf", "El-Enfal", "Et-Tevba", "Junus", "Hud", "Jusuf", "Er-Rad",
+    "Ibrahim", "El-Hidžr", "En-Nahl", "El-Isra", "El-Kehf", "Merjem", "Ta-Ha",
+    "El-Enbija", "El-Hadždž", "El-Muminun", "En-Nur", "El-Furkan", "Eš-Šuara",
+    "En-Neml", "El-Kasas", "El-Ankebut", "Er-Rum", "Lukman", "Es-Sedžda",
+    "El-Ahzab", "Saba", "Fatir", "Ja-Sin", "Es-Saffat", "Sad", "Ez-Zumar",
+    "El-Mumin", "Fussilat", "Eš-Šura", "Ez-Zuhruf", "Ed-Duhan", "El-Džasija",
+    "El-Ahkaf", "Muhammed", "El-Feth", "El-Hudžurat", "Kaf", "Ed-Darijat",
+    "Et-Tur", "En-Nedžm", "El-Kamer", "Er-Rahman", "El-Vakia", "El-Hadid",
+    "El-Mudžadela", "El-Hašr", "El-Mumtahina", "Es-Saff", "El-Džumua",
+    "El-Munafikun", "Et-Tegabun", "Et-Talak", "Et-Tahrim", "El-Mulk", "El-Kalem",
+    "El-Hakka", "El-Mearidž", "Nuh", "El-Džinn", "El-Muzemmil", "El-Muddessir",
+    "El-Kijama", "El-Insan", "El-Mursalat", "En-Naba", "En-Naziat", "Abasa",
+    "Et-Takvir", "El-Infitar", "El-Mutaffifun", "El-Inšikak", "El-Burudž",
+    "Et-Tarik", "El-'Ala", "El-Gašija", "El-Fedžr", "El-Beled", "Eš-Šems",
+    "El-Lejl", "Ed-Duha", "El-Inširah", "Et-Tin", "El-Alek", "El-Kadr",
+    "El-Bejjina", "Ez-Zilzal", "El-Adijat", "El-Karia", "Et-Tekasur", "El-Asr",
+    "El-Humaza", "El-Fil", "El-Kurejš", "El-Maun", "El-Kevser", "El-Kafirun",
+    "En-Nasr", "El-Leheb", "El-Ihlas", "El-Felek", "En-Nas",
+  ],
+  de: [
+    "Al-Fatiha", "Al-Baqara", "Al-Imran", "An-Nisa", "Al-Maida", "Al-Anam",
+    "Al-Araf", "Al-Anfal", "At-Tauba", "Yunus", "Hud", "Yusuf", "Ar-Rad",
+    "Ibrahim", "Al-Hidschr", "An-Nahl", "Al-Isra", "Al-Kahf", "Maryam", "Ta-Ha",
+    "Al-Anbiya", "Al-Hadsch", "Al-Muminun", "An-Nur", "Al-Furqan", "Asch-Schuara",
+    "An-Naml", "Al-Qasas", "Al-Ankabut", "Ar-Rum", "Luqman", "As-Sadschda",
+    "Al-Ahzab", "Saba", "Fatir", "Ya-Sin", "As-Saffat", "Sad", "Az-Zumar",
+    "Al-Mumin", "Fussilat", "Asch-Schura", "Az-Zuchruf", "Ad-Duchan", "Al-Dschathiya",
+    "Al-Ahqaf", "Muhammad", "Al-Fath", "Al-Hudschurat", "Qaf", "Adh-Dhariyat",
+    "At-Tur", "An-Nadschm", "Al-Qamar", "Ar-Rahman", "Al-Waqia", "Al-Hadid",
+    "Al-Mudschadala", "Al-Haschr", "Al-Mumtahana", "As-Saff", "Al-Dschumua",
+    "Al-Munafiqun", "At-Taghabun", "At-Talaq", "At-Tahrim", "Al-Mulk", "Al-Qalam",
+    "Al-Haqqa", "Al-Maaridsch", "Nuh", "Al-Dschinn", "Al-Muzzammil", "Al-Muddaththir",
+    "Al-Qiyama", "Al-Insan", "Al-Mursalat", "An-Naba", "An-Naziat", "Abasa",
+    "At-Takwir", "Al-Infitar", "Al-Mutaffifin", "Al-Inschiqaq", "Al-Burudsch",
+    "At-Tariq", "Al-Ala", "Al-Ghaschiya", "Al-Fadschr", "Al-Balad", "Asch-Schams",
+    "Al-Lail", "Ad-Duha", "Al-Inschirah", "At-Tin", "Al-Alaq", "Al-Qadr",
+    "Al-Baiyina", "Az-Zalzala", "Al-Adiyat", "Al-Qaria", "At-Takathur", "Al-Asr",
+    "Al-Humaza", "Al-Fil", "Quraisch", "Al-Maun", "Al-Kauthar", "Al-Kafirun",
+    "An-Nasr", "Al-Lahab", "Al-Ichlas", "Al-Falaq", "An-Nas",
+  ],
+  en: [
+    "Al-Fatihah", "Al-Baqarah", "Ali Imran", "An-Nisa", "Al-Ma'idah", "Al-An'am",
+    "Al-A'raf", "Al-Anfal", "At-Tawbah", "Yunus", "Hud", "Yusuf", "Ar-Ra'd",
+    "Ibrahim", "Al-Hijr", "An-Nahl", "Al-Isra", "Al-Kahf", "Maryam", "Ta-Ha",
+    "Al-Anbiya", "Al-Hajj", "Al-Mu'minun", "An-Nur", "Al-Furqan", "Ash-Shu'ara",
+    "An-Naml", "Al-Qasas", "Al-Ankabut", "Ar-Rum", "Luqman", "As-Sajdah",
+    "Al-Ahzab", "Saba", "Fatir", "Ya-Sin", "As-Saffat", "Sad", "Az-Zumar",
+    "Al-Mu'min", "Fussilat", "Ash-Shura", "Az-Zukhruf", "Ad-Dukhan", "Al-Jathiyah",
+    "Al-Ahqaf", "Muhammad", "Al-Fath", "Al-Hujurat", "Qaf", "Adh-Dhariyat",
+    "At-Tur", "An-Najm", "Al-Qamar", "Ar-Rahman", "Al-Waqi'ah", "Al-Hadid",
+    "Al-Mujadilah", "Al-Hashr", "Al-Mumtahanah", "As-Saff", "Al-Jumu'ah",
+    "Al-Munafiqun", "At-Taghabun", "At-Talaq", "At-Tahrim", "Al-Mulk", "Al-Qalam",
+    "Al-Haqqah", "Al-Ma'arij", "Nuh", "Al-Jinn", "Al-Muzzammil", "Al-Muddaththir",
+    "Al-Qiyamah", "Al-Insan", "Al-Mursalat", "An-Naba", "An-Nazi'at", "Abasa",
+    "At-Takwir", "Al-Infitar", "Al-Mutaffifin", "Al-Inshiqaq", "Al-Buruj",
+    "At-Tariq", "Al-A'la", "Al-Ghashiyah", "Al-Fajr", "Al-Balad", "Ash-Shams",
+    "Al-Layl", "Ad-Duha", "Al-Inshirah", "At-Tin", "Al-Alaq", "Al-Qadr",
+    "Al-Bayyinah", "Az-Zalzalah", "Al-Adiyat", "Al-Qari'ah", "At-Takathur", "Al-Asr",
+    "Al-Humazah", "Al-Fil", "Quraysh", "Al-Ma'un", "Al-Kawthar", "Al-Kafirun",
+    "An-Nasr", "Al-Lahab", "Al-Ikhlas", "Al-Falaq", "An-Nas",
+  ],
+};
+
+/** Jezici koji imaju vlastitu transkripciju; ostali padaju na bosansku. */
+type SurahNameLang = keyof typeof SURAH_NAMES;
+
+function surahNameLang(lang: string): SurahNameLang {
+  return lang === "de" || lang === "en" ? lang : "bs";
+}
+
+/**
+ * Naziv sure (1-114) u transkripciji zadanog jezika sučelja. Za jezike bez
+ * vlastite liste (sq, tr, ar) vraća bosansku transkripciju.
+ */
+export function surahName(surahNumber: number, lang: string): string {
+  return SURAH_NAMES[surahNameLang(lang)][surahNumber - 1] ?? "";
+}
 
 /** Bosanski naziv sure (1-114). Fallback na prazan string van opsega. */
 export function surahBosnianName(surahNumber: number): string {
-  return BOSNIAN_NAMES[surahNumber - 1] ?? "";
+  return SURAH_NAMES.bs[surahNumber - 1] ?? "";
+}
+
+/**
+ * Svi latinični nazivi jedne sure — za pretragu, da dijete nađe suru i kad
+ * kuca bosanski naziv u njemačkom sučelju (i obrnuto).
+ */
+export function surahSearchNames(surahNumber: number): string[] {
+  return (Object.keys(SURAH_NAMES) as SurahNameLang[])
+    .map((l) => SURAH_NAMES[l][surahNumber - 1] ?? "")
+    .filter(Boolean);
 }
 
 /**

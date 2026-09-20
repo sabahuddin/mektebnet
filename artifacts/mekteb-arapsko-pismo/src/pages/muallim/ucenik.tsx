@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal, Trash2, TrendingUp } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal, Trash2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -83,26 +83,6 @@ interface KvizRezultat {
   procenat: number;
   bodovi: number;
   completedAt: string;
-}
-
-interface H5PPokusaj {
-  id: number;
-  priloziId: number;
-  attemptNo: number;
-  score: number;
-  maxScore: number;
-  procenat: number;
-  hasanatGained: number;
-  completedAt: string;
-}
-
-interface H5PPrilogInfo {
-  id: number;
-  originalName: string;
-  lekcijaId: number;
-  lekcijaNaslov: string | null;
-  lekcijaSlug: string | null;
-  lekcijaNivo: number | null;
 }
 
 interface InteraktivniPitanjePregled {
@@ -209,20 +189,10 @@ export default function UcenikPage() {
   const [napamet, setNapamet] = useState<{ katalog: NapametStavka[]; ocjene: NapametOcjena[] } | null>(null);
   const [grupe, setGrupe] = useState<Grupa[]>([]);
   const [kvizRezultati, setKvizRezultati] = useState<KvizRezultat[]>([]);
-  const [h5pPokusaji, setH5pPokusaji] = useState<H5PPokusaj[]>([]);
-  const [naseVjezbePokusaji, setNaseVjezbePokusaji] = useState(0);
   const [interaktivnaPitanja, setInteraktivnaPitanja] = useState<InteraktivniPitanjePregled[]>([]);
   const [etapaPokusaji, setEtapaPokusaji] = useState<EtapaPokusajiPregled[]>([]);
   const [statistikaVjezbi, setStatistikaVjezbi] = useState<StatistikaVjezbi | null>(null);
   const [approvingEtapaId, setApprovingEtapaId] = useState<number | null>(null);
-  const [h5pPrilozi, setH5pPrilozi] = useState<H5PPrilogInfo[]>([]);
-  const [h5pFilterPrilogId, setH5pFilterPrilogId] = useState<number | null>(null);
-  useEffect(() => {
-    const params = new URLSearchParams(search);
-    const v = params.get("h5pPrilogId");
-    setH5pFilterPrilogId(v ? parseInt(v, 10) : null);
-  }, [search]);
-  const h5pSectionRef = useRef<HTMLDivElement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [planLekcije, setPlanLekcije] = useState<{ id: number; lekcijaNaslov: string }[]>([]);
   const [ilmihalLekcije, setIlmihalLekcije] = useState<IlmihalLekcija[]>([]);
@@ -268,14 +238,13 @@ export default function UcenikPage() {
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
       apiRequest<{ rezultati: KvizRezultat[] }>("GET", `/muallim/ucenik-rezultati/${ucenikId}`, undefined, token).catch(() => ({ rezultati: [] })),
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
-      apiRequest<{ pokusaji: H5PPokusaj[]; prilozi: H5PPrilogInfo[]; naseVjezbePokusaji: number }>("GET", `/muallim/ucenik/${ucenikId}/h5p-pokusaji`, undefined, token).catch(() => ({ pokusaji: [], prilozi: [], naseVjezbePokusaji: 0 })),
       apiRequest<{ pitanja: InteraktivniPitanjePregled[] }>("GET", `/muallim/ucenik/${ucenikId}/interaktivni-blokovi`, undefined, token).catch(() => ({ pitanja: [] })),
       apiRequest<RoditeljVeza[]>("GET", `/muallim/ucenici/${ucenikId}/roditelji`, undefined, token).catch(() => []),
       apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${ucenikId}/zadace`, undefined, token).catch(() => []),
       apiRequest<{ katalog: NapametStavka[]; ocjene: NapametOcjena[] }>("GET", `/muallim/napamet/${ucenikId}`, undefined, token).catch(() => ({ katalog: [], ocjene: [] })),
       apiRequest<EtapaPokusajiPregled[]>("GET", `/muallim/ucenik/${ucenikId}/etape`, undefined, token).catch(() => []),
       apiRequest<StatistikaVjezbi>("GET", `/muallim/ucenik/${ucenikId}/statistika-vjezbi`, undefined, token).catch(() => null),
-    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad, napametData, etapeData, statistikaData]) => {
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, interaktivniData, rod, zad, napametData, etapeData, statistikaData]) => {
       setRoditelji((rod as RoditeljVeza[]) || []);
       setZadace((zad as ZadacaPregled[]) || []);
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
@@ -286,9 +255,6 @@ export default function UcenikPage() {
       setGrupe(g);
       setKvizRezultati((kvizData as any).rezultati || []);
       setIlmihalLekcije(lekcije as IlmihalLekcija[]);
-      setH5pPokusaji((h5pData as any).pokusaji || []);
-      setH5pPrilozi((h5pData as any).prilozi || []);
-      setNaseVjezbePokusaji((h5pData as any).naseVjezbePokusaji || 0);
       setInteraktivnaPitanja((interaktivniData as any).pitanja || []);
       setEtapaPokusaji((etapeData as EtapaPokusajiPregled[]) || []);
       setStatistikaVjezbi((statistikaData as StatistikaVjezbi | null) || null);
@@ -601,24 +567,10 @@ export default function UcenikPage() {
       : "bg-red-100 text-red-700";
   const vjezbeUkupno = statistikaVjezbi
     ? statistikaVjezbi.naseVjezbe.zavrseno + statistikaVjezbi.h5p.pokusaji + statistikaVjezbi.etapneVjezbe.pokusaji
-    : naseVjezbePokusaji + h5pPokusaji.length;
+    : 0;
   const ukupnoBodova = kvizRezultati.reduce((s, r) => s + (r.bodovi || 0), 0);
   const kvizProsjek = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : null;
 
-  const h5pPriloziMap = new Map<number, H5PPrilogInfo>(h5pPrilozi.map(p => [p.id, p]));
-  const filteredH5pPokusaji = h5pFilterPrilogId
-    ? h5pPokusaji.filter(p => p.priloziId === h5pFilterPrilogId)
-    : h5pPokusaji;
-  const h5pProsjek = filteredH5pPokusaji.length
-    ? Math.round(filteredH5pPokusaji.reduce((s, p) => s + p.procenat, 0) / filteredH5pPokusaji.length)
-    : null;
-  const h5pHasanat = filteredH5pPokusaji.reduce((s, p) => s + (p.hasanatGained || 0), 0);
-
-  useEffect(() => {
-    if (h5pFilterPrilogId && !isLoading && h5pSectionRef.current) {
-      h5pSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [h5pFilterPrilogId, isLoading]);
 
   const mjesecniPrisustvo = (() => {
     const map: Record<string, { prisutan: number; total: number }> = {};
@@ -640,8 +592,11 @@ export default function UcenikPage() {
     "07": "Jul", "08": "Aug", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Dec",
   };
 
-  const validModules = ["pregled", "statistika", "prisustvo", "ocjene", "zadace", "napamet", "h5p", "kvizovi", "interaktivno", "roditelji", "postavke", "etape"];
-  let rawModule = params.get("modul") || (hasH5pId ? "h5p" : "pregled");
+  const validModules = ["pregled", "prisustvo", "ocjene", "zadace", "napamet", "kvizovi", "statistika", "interaktivno", "roditelji", "postavke", "etape"];
+  // H5P vježbe više nemaju svoj modul — sadržaj je u Statistici vježbi. Stari
+  // linkovi (modul=h5p, h5pPrilogId) zato vode tamo.
+  let rawModule = params.get("modul") || (hasH5pId ? "statistika" : "pregled");
+  if (rawModule === "h5p") rawModule = "statistika";
   if (!validModules.includes(rawModule) || (rawModule === "etape" && etapaPokusaji.length === 0)) {
     rawModule = "pregled";
   }
@@ -650,7 +605,7 @@ export default function UcenikPage() {
   const setModule = (key: string) => {
     const p = new URLSearchParams(search);
     p.set("modul", key);
-    if (key !== "h5p") p.delete("h5pPrilogId");
+    p.delete("h5pPrilogId");
     setLocation(`/muallim/ucenik/${id}?${p.toString()}`);
   };
 
@@ -658,13 +613,12 @@ export default function UcenikPage() {
 
   const modules = [
     { key: "pregled", label: t("Pregled"), icon: User },
-    { key: "statistika", label: t("Statistika vježbi"), icon: TrendingUp },
     { key: "prisustvo", label: t("Prisustvo"), icon: CalendarCheck },
     { key: "ocjene", label: t("Ocjene"), icon: Star },
     { key: "zadace", label: t("Zadaće"), icon: ClipboardList, badge: utokuCount },
     { key: "napamet", label: t("Napamet"), icon: BookOpen },
-    { key: "h5p", label: t("H5P vježbe"), icon: Sparkles },
     { key: "kvizovi", label: t("Kvizovi"), icon: CheckCircle2 },
+    { key: "statistika", label: t("Statistika vježbi"), icon: TrendingUp },
     { key: "interaktivno", label: t("Učenje u lekcijama"), icon: BookOpen },
     { key: "roditelji", label: t("Roditelji"), icon: Users, badge: roditelji.length },
     { key: "postavke", label: t("Nalog i Lozinka"), icon: KeyRound },
@@ -837,8 +791,8 @@ export default function UcenikPage() {
                         <div className="text-xs text-muted-foreground mt-1">
                           {t("Naše: {n} · H5P: {h} · Etapne: {e}", {
                             n: String(statistikaVjezbi?.naseVjezbe.zavrseno ?? 0),
-                            h: String(statistikaVjezbi?.h5p.pokusaji ?? h5pPokusaji.length),
-                            e: String(statistikaVjezbi?.etapneVjezbe.pokusaji ?? naseVjezbePokusaji),
+                            h: String(statistikaVjezbi?.h5p.pokusaji ?? 0),
+                            e: String(statistikaVjezbi?.etapneVjezbe.pokusaji ?? 0),
                           })}
                         </div>
                       </button>
@@ -1368,120 +1322,6 @@ export default function UcenikPage() {
                     </div>
                     <p className="text-sm text-muted-foreground mb-5">{t("Pregled stavki iz programa ove grupe i posljednjih ocjena učenika.")}</p>
                     <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} />
-                  </div>
-                )}
-
-                {activeModule === "h5p" && (
-                  <div
-                    ref={h5pSectionRef}
-                    className={`bg-white border rounded-2xl p-5 animate-in fade-in slide-in-from-bottom-2 duration-300 ${h5pFilterPrilogId ? "border-primary/40 ring-2 ring-primary/15" : "border-border/50"}`}
-                    data-testid="section-h5p-pokusaji"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <h2 className="font-extrabold text-foreground flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-primary" /> {t("H5P vježbe")}
-                        {h5pPokusaji.length > 0 && (
-                          <span className="text-xs font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full" data-testid="badge-h5p-broj-pokusaja">
-                            {filteredH5pPokusaji.length}{h5pFilterPrilogId ? `/${h5pPokusaji.length}` : ""} {t("pokušaja")}
-                          </span>
-                        )}
-                      </h2>
-                      {h5pProsjek !== null && (
-                        <div className="flex items-center gap-3 text-sm">
-                          <span className={`font-extrabold px-2.5 py-0.5 rounded-full ${h5pProsjek >= 80 ? "bg-emerald-100 text-emerald-700" : h5pProsjek >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`} data-testid="stat-h5p-prosjek">
-                            Ø {h5pProsjek}%
-                          </span>
-                          {h5pHasanat > 0 && (
-                            <span className="flex items-center gap-1 text-amber-600 font-bold">
-                              <Award className="w-4 h-4" /> {h5pHasanat}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {h5pPokusaji.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-6 bg-muted/20 rounded-xl">{t("Učenik još nije radio nijednu H5P vježbu")}</p>
-                    ) : (
-                      <>
-                        {(h5pPrilozi.length > 1 || h5pFilterPrilogId !== null) && (
-                          <div className="flex flex-wrap items-center gap-1.5 mb-4 p-2 bg-muted/30 rounded-xl border border-border/50" data-testid="filter-h5p-prilozi">
-                            <Filter className="w-4 h-4 text-muted-foreground mx-1" />
-                            <button
-                              onClick={() => {
-                                setH5pFilterPrilogId(null);
-                                const params = new URLSearchParams(search);
-                                params.delete("h5pPrilogId");
-                                setLocation(`/muallim/ucenik/${id}?${params.toString()}`);
-                              }}
-                              className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors ${h5pFilterPrilogId === null ? "bg-primary text-white border-primary shadow-sm" : "bg-white text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"}`}
-                              data-testid="btn-h5p-filter-sve"
-                            >
-                              {t("Sve")}
-                            </button>
-                            {h5pPrilozi.map(p => (
-                              <button
-                                key={p.id}
-                                onClick={() => {
-                                  setH5pFilterPrilogId(p.id);
-                                  const params = new URLSearchParams(search);
-                                  params.set("h5pPrilogId", String(p.id));
-                                  setLocation(`/muallim/ucenik/${id}?${params.toString()}`);
-                                }}
-                                className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors max-w-[200px] truncate ${h5pFilterPrilogId === p.id ? "bg-primary text-white border-primary shadow-sm" : "bg-white text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"}`}
-                                title={p.originalName}
-                                data-testid={`btn-h5p-filter-prilog-${p.id}`}
-                              >
-                                {p.originalName.replace(/\.h5p$/i, "")}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="space-y-3" data-testid="list-h5p-pokusaji">
-                          {filteredH5pPokusaji.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-4">{t("Nema pokušaja za odabranu vježbu")}</p>
-                          ) : filteredH5pPokusaji.map(p => {
-                            const info = h5pPriloziMap.get(p.priloziId);
-                            return (
-                              <div key={p.id} className="bg-muted/10 border border-border/50 rounded-xl p-4 transition-colors hover:bg-muted/20" data-testid={`row-h5p-pokusaj-${p.id}`}>
-                                <div className="flex items-start justify-between gap-3 mb-2">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="font-extrabold text-base text-foreground truncate" title={info?.originalName}>
-                                      {info ? info.originalName.replace(/\.h5p$/i, "") : t("Vježba #{n}", { n: String(p.priloziId) })}
-                                    </div>
-                                    {info?.lekcijaNaslov && (
-                                      <div className="text-xs text-muted-foreground mt-1 truncate">
-                                        <BookOpen className="w-3 h-3 inline mr-1" />{info.lekcijaNaslov}
-                                        {info.lekcijaNivo != null && <span className="ml-2 inline-block bg-primary/10 text-primary px-1.5 rounded text-[10px] font-bold align-middle">{t("Nivo {n}", { n: String(info.lekcijaNivo) })}</span>}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <span className={`text-sm font-black px-2.5 py-1 rounded-full shadow-sm shrink-0 ${p.procenat >= 80 ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : p.procenat >= 50 ? "bg-amber-100 text-amber-700 border border-amber-200" : "bg-red-100 text-red-700 border border-red-200"}`}>
-                                    {p.procenat}%
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between text-xs text-muted-foreground mt-3">
-                                  <span className="font-medium bg-white px-2 py-1 rounded-md border border-border/50">{t("Pokušaj #{n} · {score}/{max}", { n: String(p.attemptNo), score: String(p.score), max: String(p.maxScore) })}</span>
-                                  <div className="flex items-center gap-3">
-                                    {p.hasanatGained > 0 && (
-                                      <span className="flex items-center gap-1 text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded-md">
-                                        <Award className="w-3.5 h-3.5" /> {p.hasanatGained}
-                                      </span>
-                                    )}
-                                    <span className="font-medium">{p.completedAt ? new Date(p.completedAt).toLocaleDateString("bs-BA") : "-"}</span>
-                                  </div>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-3 overflow-hidden">
-                                  <div className={`h-full rounded-full ${p.procenat >= 80 ? "bg-emerald-500" : p.procenat >= 50 ? "bg-amber-500" : "bg-red-400"}`}
-                                    style={{ width: `${p.procenat}%` }} />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
                   </div>
                 )}
 

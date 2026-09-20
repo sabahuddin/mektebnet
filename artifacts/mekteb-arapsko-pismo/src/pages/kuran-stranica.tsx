@@ -9,13 +9,13 @@ import { useQuranAudio, useReciter, type PlayItem } from "@/hooks/use-quran-audi
 import { ChevronLeft } from "lucide-react";
 import {
   fetchPage,
-  surahBosnianName,
+  surahName,
   QURAN_PAGES,
   type PageAyah,
 } from "@/lib/quran";
 
 export default function KuranStranicaPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { p } = useParams<{ p: string }>();
   const pageNum = Math.max(1, Math.min(QURAN_PAGES, parseInt(p || "1", 10) || 1));
   const [, navigate] = useLocation();
@@ -172,7 +172,7 @@ export default function KuranStranicaPage() {
           title={t("Stranica {br}", { br: String(pageNum) })}
           subtitle={
             active != null
-              ? t("{sura} · ajet {br}", { sura: surahBosnianName(active.surah), br: String(active.ayah) })
+              ? t("{sura} · ajet {br}", { sura: surahName(active.surah, lang), br: String(active.ayah) })
               : t("Odaberi učača i klikni ajet")
           }
           reciterId={reciterId}

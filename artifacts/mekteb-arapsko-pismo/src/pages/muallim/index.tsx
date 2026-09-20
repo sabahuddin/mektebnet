@@ -269,6 +269,37 @@ interface StatData {
   zvjezdiceNegativne?: number;
 }
 
+interface StatVjezbeUcenik {
+  id: number;
+  ime: string;
+  naseVjezbe: number;
+  h5pVjezbe: number;
+  h5pPokusaji: number;
+  h5pProsjek: number | null;
+  etapneVjezbe: number;
+  etapnePokusaji: number;
+  etapneProsjek: number | null;
+  etapeUkupno: number;
+  etapePolozeno: number;
+  etapePokusaji: number;
+  etapeProsjek: number | null;
+}
+
+interface StatVjezbeData {
+  ucenici: StatVjezbeUcenik[];
+  ukupno: {
+    naseVjezbe: number;
+    h5pPokusaji: number;
+    h5pProsjek: number | null;
+    etapnePokusaji: number;
+    etapneProsjek: number | null;
+    etapePokusaji: number;
+    etapePolozeno: number;
+    etapeUkupno: number;
+    etapeProsjek: number | null;
+  };
+}
+
 interface Zadaca {
   id: number;
   grupaId: number;
@@ -576,7 +607,8 @@ export default function MuallimPanel() {
   const [interaktivniStatPregled, setInteraktivniStatPregled] = useState<InteraktivniPregledGrupe | null>(null);
   const [statLoading, setStatLoading] = useState(false);
   const statRequestRef = useRef(0);
-  const [statView, setStatView] = useState<"pregled" | "prisustvo" | "mjesecno">("pregled");
+  const [statView, setStatView] = useState<"pregled" | "vjezbe" | "prisustvo" | "mjesecno">("pregled");
+  const [statVjezbe, setStatVjezbe] = useState<StatVjezbeData | null>(null);
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingSpisak, setExportingSpisak] = useState(false);
 
@@ -934,15 +966,18 @@ export default function MuallimPanel() {
     const requestId = ++statRequestRef.current;
     setStatData(null);
     setInteraktivniStatPregled(null);
+    setStatVjezbe(null);
     setStatLoading(true);
     Promise.all([
       apiRequest<StatData>("GET", `/muallim/grupa/${statGrupaId}/statistika`, undefined, token),
       apiRequest<InteraktivniPregledGrupe>("GET", `/muallim/grupa/${statGrupaId}/interaktivni-blokovi`, undefined, token).catch(() => null),
+      apiRequest<StatVjezbeData>("GET", `/muallim/grupa/${statGrupaId}/statistika-vjezbi`, undefined, token).catch(() => null),
     ])
-      .then(([data, interaktivni]) => {
+      .then(([data, interaktivni, vjezbe]) => {
         if (requestId !== statRequestRef.current) return;
         setStatData(data);
         setInteraktivniStatPregled(interaktivni);
+        setStatVjezbe(vjezbe);
         setStatView("pregled");
       })
       .catch(() => {
@@ -2922,6 +2957,7 @@ export default function MuallimPanel() {
                     <div className="flex gap-2 bg-muted/30 rounded-xl p-1">
                       {([
                         { id: "pregled" as const, label: t("Zbirni pregled"), icon: BarChart3 },
+                        { id: "vjezbe" as const, label: t("Vježbe"), icon: Sparkles },
                         { id: "prisustvo" as const, label: t("Prisustvo po datumima"), icon: CalendarCheck },
                         { id: "mjesecno" as const, label: t("Mjesečni pregled"), icon: Calendar },
                       ]).map(v => (
@@ -3024,6 +3060,119 @@ export default function MuallimPanel() {
                           </div>
                         )}
                       </>
+                    )}
+
+                    {statView === "vjezbe" && (
+                      !statVjezbe ? (
+                        <div className="bg-white border border-border/50 rounded-2xl p-8 text-center text-sm text-muted-foreground">
+                          {t("Statistiku vježbi nije moguće učitati")}
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                            <div className="rounded-2xl border border-border/50 bg-violet-50 p-5" data-testid="stat-grupa-nase-vjezbe">
+                              <Sparkles className="w-5 h-5 text-violet-600 mb-2" />
+                              <div className="text-2xl font-extrabold text-violet-600">{statVjezbe.ukupno.naseVjezbe || "—"}</div>
+                              <div className="text-sm font-medium text-muted-foreground">{t("Naše vježbe")}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">{t("Urađeno u grupi")}</div>
+                            </div>
+                            <div className="rounded-2xl border border-border/50 bg-white p-5" data-testid="stat-grupa-h5p">
+                              <Sparkles className="w-5 h-5 text-primary mb-2" />
+                              <div className="text-2xl font-extrabold text-primary">{statVjezbe.ukupno.h5pPokusaji || "—"}</div>
+                              <div className="text-sm font-medium text-muted-foreground">{t("H5P pokušaji")}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {statVjezbe.ukupno.h5pProsjek !== null ? `Ø ${statVjezbe.ukupno.h5pProsjek}%` : t("Bez rezultata")}
+                              </div>
+                            </div>
+                            <div className="rounded-2xl border border-border/50 bg-white p-5" data-testid="stat-grupa-etapne-vjezbe">
+                              <ClipboardList className="w-5 h-5 text-teal-600 mb-2" />
+                              <div className="text-2xl font-extrabold text-teal-600">{statVjezbe.ukupno.etapnePokusaji || "—"}</div>
+                              <div className="text-sm font-medium text-muted-foreground">{t("Etapne vježbe")}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {statVjezbe.ukupno.etapneProsjek !== null ? `Ø ${statVjezbe.ukupno.etapneProsjek}%` : t("Bez rezultata")}
+                              </div>
+                            </div>
+                            <div className="rounded-2xl border border-border/50 bg-amber-50 p-5" data-testid="stat-grupa-etapni-kvizovi">
+                              <Award className="w-5 h-5 text-amber-600 mb-2" />
+                              <div className="text-2xl font-extrabold text-amber-600">
+                                {statVjezbe.ukupno.etapeUkupno > 0 ? `${statVjezbe.ukupno.etapePolozeno}/${statVjezbe.ukupno.etapeUkupno}` : "—"}
+                              </div>
+                              <div className="text-sm font-medium text-muted-foreground">{t("Etapni kvizovi")}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {t("Položeno · {n} pokušaja", { n: String(statVjezbe.ukupno.etapePokusaji) })}
+                                {statVjezbe.ukupno.etapeProsjek !== null && ` · Ø ${statVjezbe.ukupno.etapeProsjek}%`}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+                            <div className="px-4 py-3 bg-muted/30 border-b border-border/30 flex items-center justify-between">
+                              <h4 className="font-extrabold text-foreground flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-primary" /> {t("Vježbe po učeniku")}
+                              </h4>
+                              <span className="text-xs text-muted-foreground">{statVjezbe.ucenici.length} {t("učenika")}</span>
+                            </div>
+                            {statVjezbe.ucenici.length === 0 ? (
+                              <p className="px-4 py-8 text-center text-sm text-muted-foreground">{t("Grupa nema aktivnih učenika")}</p>
+                            ) : (
+                              <div className="overflow-x-auto">
+                                <table className="w-full">
+                                  <thead className="border-b border-border/50 bg-muted/20">
+                                    <tr>
+                                      {[t("Učenik"), t("Naše vježbe"), t("H5P"), t("Etapne vježbe"), t("Etapni kvizovi")].map(h => (
+                                        <th key={h} className="px-3 py-2.5 text-left text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{h}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {statVjezbe.ucenici.map((u, i) => (
+                                      <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
+                                        className="border-b border-border/30 hover:bg-muted/20 transition-colors cursor-pointer"
+                                        onClick={() => otvoriStatUcenika(u.id)}
+                                        data-testid={`row-stat-vjezbe-${u.id}`}>
+                                        <td className="px-3 py-3 font-bold text-foreground whitespace-nowrap">{u.ime}</td>
+                                        <td className="px-3 py-3 text-sm font-bold text-violet-600">{u.naseVjezbe || <span className="text-muted-foreground font-medium">—</span>}</td>
+                                        <td className="px-3 py-3 text-sm whitespace-nowrap">
+                                          {u.h5pPokusaji > 0 ? (
+                                            <span className="font-bold text-foreground">
+                                              {u.h5pVjezbe}
+                                              <span className="ml-1 text-xs font-medium text-muted-foreground">
+                                                ({u.h5pPokusaji} {t("pok.")}{u.h5pProsjek !== null ? ` · ${u.h5pProsjek}%` : ""})
+                                              </span>
+                                            </span>
+                                          ) : <span className="text-muted-foreground">—</span>}
+                                        </td>
+                                        <td className="px-3 py-3 text-sm whitespace-nowrap">
+                                          {u.etapnePokusaji > 0 ? (
+                                            <span className="font-bold text-foreground">
+                                              {u.etapneVjezbe}
+                                              <span className="ml-1 text-xs font-medium text-muted-foreground">
+                                                ({u.etapnePokusaji} {t("pok.")}{u.etapneProsjek !== null ? ` · ${u.etapneProsjek}%` : ""})
+                                              </span>
+                                            </span>
+                                          ) : <span className="text-muted-foreground">—</span>}
+                                        </td>
+                                        <td className="px-3 py-3 text-sm whitespace-nowrap">
+                                          {u.etapeUkupno > 0 ? (
+                                            <span className={`font-extrabold ${u.etapePolozeno === u.etapeUkupno ? "text-emerald-600" : "text-amber-600"}`}>
+                                              {u.etapePolozeno}/{u.etapeUkupno}
+                                              {u.etapeProsjek !== null && <span className="ml-1 text-xs font-medium text-muted-foreground">({u.etapeProsjek}%)</span>}
+                                            </span>
+                                          ) : <span className="text-muted-foreground">—</span>}
+                                        </td>
+                                      </motion.tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-muted-foreground">
+                            {t("Naše vježbe se boduju jednom po vježbi, pa se prati urađenost. Za etapne kvizove mjerodavan je najbolji pokušaj po etapi.")}
+                          </p>
+                        </div>
+                      )
                     )}
 
                     {statView === "prisustvo" && (

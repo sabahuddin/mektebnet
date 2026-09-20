@@ -1,4 +1,5 @@
-import { surahBosnianName, surahHasBismillahHeader, BISMILLAH } from "@/lib/quran";
+import { surahName, surahHasBismillahHeader, BISMILLAH } from "@/lib/quran";
+import { useLanguage } from "@/context/language";
 import { ayahKey } from "@/hooks/use-quran-audio";
 
 export interface FlowAyah {
@@ -30,6 +31,7 @@ function groupBySurah(ayahs: FlowAyah[]): FlowAyah[][] {
 }
 
 function SurahDivider({ ayah }: { ayah: FlowAyah }) {
+  const { lang } = useLanguage();
   return (
     <div className="text-center my-5 first:mt-0">
       <div className="inline-flex flex-col items-center gap-1 px-6 py-3 rounded-2xl bg-primary/5 border border-primary/15">
@@ -41,7 +43,7 @@ function SurahDivider({ ayah }: { ayah: FlowAyah }) {
           {ayah.surahArabicName}
         </span>
         <span className="text-sm font-extrabold text-foreground">
-          {ayah.surah}. {surahBosnianName(ayah.surah)}
+          {ayah.surah}. {surahName(ayah.surah, lang)}
         </span>
       </div>
       {surahHasBismillahHeader(ayah.surah) && (

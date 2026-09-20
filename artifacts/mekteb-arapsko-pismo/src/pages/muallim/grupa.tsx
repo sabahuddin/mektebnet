@@ -1197,7 +1197,7 @@ export default function GrupaPage() {
                 <div className="space-y-3">
                   <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                     <p className="text-xs font-extrabold uppercase tracking-wide text-emerald-700">{t("NAPAMET")}</p>
-                    <p className="mt-1 font-extrabold text-emerald-950">{brzaNapametOcjena.stavka.naziv}</p>
+                    <p className="mt-1 font-extrabold text-emerald-950">{t(brzaNapametOcjena.stavka.naziv)}</p>
                   </div>
                   <div>
                     <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Ocjena")}</label>
@@ -1595,7 +1595,7 @@ export default function GrupaPage() {
                   {napametOdabrana.nivo === 4 ? t("Dodatak") : `${t("Napamet")} ${napametOdabrana.nivo}. ${t("nivo")}`}
                 </p>
                 <h2 id="napamet-detalji-title" className="mt-1 text-lg font-extrabold text-emerald-950">
-                  {napametDetalji?.stavka.naziv || napametOdabrana.naziv}
+                  {t(napametDetalji?.stavka.naziv || napametOdabrana.naziv)}
                 </h2>
               </div>
               <button type="button" aria-label={t("Zatvori")} onClick={() => { setNapametOdabrana(null); setNapametDetalji(null); }} className="rounded-lg p-1.5 text-emerald-700 hover:bg-emerald-100">
