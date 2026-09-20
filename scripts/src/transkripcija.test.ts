@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { CJELINE } from "./transkripcija-podaci.js";
 import {
   dotjeraj,
+  njemackiIzEngleskog,
   normalizirajTranskripciju,
   primijeniEulogije,
   transkripcija,
@@ -114,9 +116,18 @@ test("dželle šanuhu i zapis bez kvačica daju isti izraz", () => {
   }
 });
 
-test("r.a. se ne dira — za ashabe još nije dogovoren izraz", () => {
+test("r.a. uz ashabe dobija rodno neutralan puni izraz", () => {
   const izvor = "Ebu Bekr, r.a., bio je prvi halifa.";
-  for (const jezik of ["de", "en"] as const) assert.equal(primijeniEulogije(izvor, jezik), izvor);
+  assert.equal(primijeniEulogije(izvor, "en"), "Ebu Bekr (may Allah be pleased with them), bio je prvi halifa.");
+  assert.equal(primijeniEulogije(izvor, "de"), "Ebu Bekr (möge Allah mit ihnen zufrieden sein), bio je prvi halifa.");
+});
+
+test("rodno neutralan oblik vrijedi i uz žensko ime i uz množinu", () => {
+  // Bosansko „r.a.“ je isto za sve rodove, pa oblik ne smije biti muški.
+  for (const izvor of ["Hatidža, r.a.", "ashabi radijallahu anhum"]) {
+    assert.match(primijeniEulogije(izvor, "en"), /\(may Allah be pleased with them\)$/, izvor);
+    assert.doesNotMatch(primijeniEulogije(izvor, "en"), /with him|with her/);
+  }
 });
 
 test("tekst bez eulogije se ne dira — ni razmaci ni interpunkcija", () => {
@@ -135,4 +146,42 @@ test("tekst bez eulogije se ne dira — ni razmaci ni interpunkcija", () => {
 
 test("eulogija na samom početku ne dobija vodeći razmak", () => {
   assert.equal(primijeniEulogije("a.s. je rekao", "en"), "(peace be upon him) je rekao");
+});
+
+test("svaka sura i dova iz programa ima transkripciju za oba jezika", () => {
+  for (const cjelina of CJELINE) {
+    assert.ok(cjelina.redovi.length > 0, `${cjelina.naziv}: prazna cjelina`);
+    for (const red of cjelina.redovi) {
+      for (const jezik of ["de", "en"] as const) {
+        const oblik = transkripcija(red.bs, jezik);
+        assert.ok(oblik && oblik.length > 0, `${cjelina.naziv} / ${jezik}: ${red.bs}`);
+      }
+    }
+  }
+});
+
+test("njemački oblik se izvodi iz engleskog, bez engleskih digrafa", () => {
+  for (const cjelina of CJELINE) {
+    for (const red of cjelina.redovi) {
+      const de = njemackiIzEngleskog(red.en);
+      assert.equal(transkripcija(red.bs, "de"), de, `${cjelina.naziv}: ${red.bs}`);
+      assert.doesNotMatch(de, /(?<!c)sh|kh/, `njemački ne piše sh/kh: ${de}`);
+      assert.doesNotMatch(de, /\bj|[aeiou]j/, `njemački ne piše j za dž: ${de}`);
+    }
+  }
+});
+
+test("nijedna transkripcija ne nosi naša slova", () => {
+  for (const cjelina of CJELINE) {
+    for (const red of cjelina.redovi) {
+      for (const jezik of ["de", "en"] as const) {
+        assert.doesNotMatch(transkripcija(red.bs, jezik) ?? "", /[čćžšđ]/i, `${cjelina.naziv}: ${red.bs}`);
+      }
+    }
+  }
+});
+
+test("bosanski ključevi se ne ponavljaju", () => {
+  const kljucevi = CJELINE.flatMap((c) => c.redovi).map((r) => normalizirajTranskripciju(r.bs));
+  assert.equal(new Set(kljucevi).size, kljucevi.length, "ista bosanska transkripcija stoji dvaput");
 });

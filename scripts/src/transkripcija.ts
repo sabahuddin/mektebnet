@@ -17,6 +17,8 @@
  *     engleskom djetetu, a arapski znak ﷺ se namjerno ne koristi.
  */
 
+import { CJELINE } from "./transkripcija-podaci.js";
+
 export type CiljniJezik = "de" | "en";
 
 /** Ključ za poređenje: mala slova, bez naših kvačica, bez interpunkcije. */
@@ -36,58 +38,27 @@ export function normalizirajTranskripciju(tekst: string): string {
     .trim();
 }
 
-interface Zapis {
-  /** Bosanski zapis kako stoji u lekciji (poređenje ide normalizirano). */
-  bs: string;
-  de: string;
-  en: string;
+/**
+ * Engleski zapis → njemački. Engleska transkripcija čuva sve razlike koje
+ * njemački pravopis traži, pa je pretvorba jednoznačna i nema nagađanja:
+ *   sh → sch, kh → ch, j → dsch, aw → au, ay → ai
+ * Ostalo (th, dh, gh, q, apostrof za ajn) njemački zadržava.
+ *
+ * Napomena za buduće unose: ako se u engleskom zapisu „sh“ ili „kh“ nađu kao
+ * dva odvojena glasa (npr. Is-haq), razdvoji ih crticom u engleskom zapisu,
+ * inače bi ih ova pretvorba spojila u jedan njemački digraf.
+ */
+const EN_DE: Record<string, string> = { sh: "sch", kh: "ch", j: "dsch", aw: "au", ay: "ai" };
+
+export function njemackiIzEngleskog(engleski: string): string {
+  return engleski.replace(/sh|kh|aw|ay|j/g, (m) => EN_DE[m]);
 }
 
-/**
- * Bosanska transkripcija → njemačka i engleska. Nove sure se dodaju ovdje;
- * poređenje ide kroz `normalizirajTranskripciju`, pa sitne razlike u
- * crticama, apostrofima i velikim slovima ne smetaju.
- */
-const TRANSKRIPCIJA: Zapis[] = [
-  // Zaštita i bismilla — javljaju se u gotovo svakoj lekciji.
-  {
-    bs: "Euzu billahi mineš-šejtanir-radžim",
-    de: "A'udhu billahi minasch-schaitanir-radschim",
-    en: "A'udhu billahi minash-shaytanir-rajim",
-  },
-  {
-    bs: "Bismillahir-rahmanir-rahim",
-    de: "Bismillahir-Rahmanir-Rahim",
-    en: "Bismillahir-Rahmanir-Rahim",
-  },
-
-  // El-Fatiha, ajet po ajet.
-  {
-    bs: "Elhamdu lillahi rabbil-alemin",
-    de: "Alhamdu lillahi Rabbil-alamin",
-    en: "Alhamdu lillahi Rabbil-alamin",
-  },
-  { bs: "Er-rahmanir-rahim", de: "Ar-Rahmanir-Rahim", en: "Ar-Rahmanir-Rahim" },
-  { bs: "Maliki jevmid-din", de: "Maliki yaumid-din", en: "Maliki yawmid-din" },
-  {
-    bs: "Ijjake na'budu ve ijjake neste'in",
-    de: "Iyyaka na'budu wa iyyaka nasta'in",
-    en: "Iyyaka na'budu wa iyyaka nasta'in",
-  },
-  {
-    bs: "Ihdines-siratal-mustekim",
-    de: "Ihdinas-siratal-mustaqim",
-    en: "Ihdinas-siratal-mustaqim",
-  },
-  {
-    bs: "Siratallezine en'amte alejhim gajril-magdubi alejhim ve led-dallin",
-    de: "Siratal-ladhina an'amta alaihim, ghairil-maghdubi alaihim wa lad-dallin",
-    en: "Siratal-ladhina an'amta alayhim, ghayril-maghdubi alayhim wa lad-dallin",
-  },
-];
-
 const TRANSKRIPCIJA_MAPA = new Map(
-  TRANSKRIPCIJA.map((z) => [normalizirajTranskripciju(z.bs), z]),
+  CJELINE.flatMap((cjelina) => cjelina.redovi).map((red) => [
+    normalizirajTranskripciju(red.bs),
+    { de: njemackiIzEngleskog(red.en), en: red.en },
+  ]),
 );
 
 /**
@@ -117,6 +88,14 @@ const ALLAH: Record<CiljniJezik, string> = {
   de: "der Erhabene",
 };
 
+/** „r.a.“ (radijallahu anhu/anha/anhum) uz ashabe. Bosanska skraćenica je ista
+ *  za muškarca, ženu i množinu, pa oba jezika koriste rodno neutralan oblik —
+ *  inače bi uz žensko ime stajao muški rod. */
+const ASHAB: Record<CiljniJezik, string> = {
+  en: "may Allah be pleased with them",
+  de: "möge Allah mit ihnen zufrieden sein",
+};
+
 // Eulogija za Poslanika i vjerovjesnike, zajedno sa zarezom ili razmakom koji
 // stoji ispred nje. Ide u zagradu odmah uz ime.
 const RAZDJELNIK = "((?:\\s*,\\s*)|\\s+)?";
@@ -136,6 +115,12 @@ const EULOGIJE_ALLAH: RegExp[] = [
   /\bdželle\s+šanuhu\b/gi,
 ];
 
+// Eulogija za ashabe — ide u zagradu uz ime, kao i ona za Poslanika.
+const EULOGIJE_ASHAB: RegExp[] = [
+  new RegExp(`${RAZDJELNIK}\\br\\.\\s*a\\.`, "gi"),
+  new RegExp(`${RAZDJELNIK}\\bradijallahu\\s+anh[ua]?m?\\b\\.?`, "gi"),
+];
+
 /**
  * Zamijeni eulogije punim izrazom ciljnog jezika i ukloni arapski znak.
  * Dira SAMO pogođeni dio teksta: razmak ispred se zadržava jednom, a ako
@@ -147,6 +132,10 @@ export function primijeniEulogije(tekst: string, jezik: CiljniJezik): string {
   for (const uzorak of EULOGIJE_POSLANIK) {
     out = out.replace(uzorak, (_pogodak, razdjelnik: string | undefined) =>
       (razdjelnik ? " " : "") + zamjena);
+  }
+  for (const uzorak of EULOGIJE_ASHAB) {
+    out = out.replace(uzorak, (_pogodak, razdjelnik: string | undefined) =>
+      (razdjelnik ? " " : "") + `(${ASHAB[jezik]})`);
   }
   for (const uzorak of EULOGIJE_ALLAH) {
     out = out.replace(uzorak, ALLAH[jezik]);
