@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal, Trash2 } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Filter, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal, Trash2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -133,6 +133,35 @@ interface EtapaPokusajiPregled {
   }>;
 }
 
+interface StatistikaStavka {
+  id: number | string;
+  naziv: string;
+  nivo?: number;
+  lekcijaNaslov?: string | null;
+  lekcijaSlug?: string | null;
+  pokusaji?: number;
+  polozeno?: boolean;
+  najboljiProcenat?: number;
+  zadnjiProcenat?: number;
+  kapiMeda?: number;
+  zadnjiDatum?: string | null;
+}
+
+interface StatistikaVjezbi {
+  h5p: { vjezbe: number; pokusaji: number; prosjekProcenat: number | null; kapiMeda: number; stavke: StatistikaStavka[] };
+  naseVjezbe: { vjezbe: number; zavrseno: number; kapiMeda: number; stavke: StatistikaStavka[] };
+  etapneVjezbe: { vjezbe: number; pokusaji: number; prosjekProcenat: number | null; kapiMeda: number; stavke: StatistikaStavka[] };
+  vanjskeVjezbe: { zavrseno: number; kapiMeda: number };
+  etapniKvizovi: {
+    etape: number;
+    polozeno: number;
+    pokusaji: number;
+    prosjekProcenat: number | null;
+    najboljiProsjek: number | null;
+    stavke: StatistikaStavka[];
+  };
+}
+
 interface RoditeljVeza {
   id: number;
   displayName: string;
@@ -184,6 +213,7 @@ export default function UcenikPage() {
   const [naseVjezbePokusaji, setNaseVjezbePokusaji] = useState(0);
   const [interaktivnaPitanja, setInteraktivnaPitanja] = useState<InteraktivniPitanjePregled[]>([]);
   const [etapaPokusaji, setEtapaPokusaji] = useState<EtapaPokusajiPregled[]>([]);
+  const [statistikaVjezbi, setStatistikaVjezbi] = useState<StatistikaVjezbi | null>(null);
   const [approvingEtapaId, setApprovingEtapaId] = useState<number | null>(null);
   const [h5pPrilozi, setH5pPrilozi] = useState<H5PPrilogInfo[]>([]);
   const [h5pFilterPrilogId, setH5pFilterPrilogId] = useState<number | null>(null);
@@ -244,7 +274,8 @@ export default function UcenikPage() {
       apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${ucenikId}/zadace`, undefined, token).catch(() => []),
       apiRequest<{ katalog: NapametStavka[]; ocjene: NapametOcjena[] }>("GET", `/muallim/napamet/${ucenikId}`, undefined, token).catch(() => ({ katalog: [], ocjene: [] })),
       apiRequest<EtapaPokusajiPregled[]>("GET", `/muallim/ucenik/${ucenikId}/etape`, undefined, token).catch(() => []),
-    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad, napametData, etapeData]) => {
+      apiRequest<StatistikaVjezbi>("GET", `/muallim/ucenik/${ucenikId}/statistika-vjezbi`, undefined, token).catch(() => null),
+    ]).then(([ucenici, oc, prs, g, kvizData, lekcije, h5pData, interaktivniData, rod, zad, napametData, etapeData, statistikaData]) => {
       setRoditelji((rod as RoditeljVeza[]) || []);
       setZadace((zad as ZadacaPregled[]) || []);
       const found = (ucenici as any[]).find(u => u.id === ucenikId);
@@ -260,6 +291,7 @@ export default function UcenikPage() {
       setNaseVjezbePokusaji((h5pData as any).naseVjezbePokusaji || 0);
       setInteraktivnaPitanja((interaktivniData as any).pitanja || []);
       setEtapaPokusaji((etapeData as EtapaPokusajiPregled[]) || []);
+      setStatistikaVjezbi((statistikaData as StatistikaVjezbi | null) || null);
       const gId = found?.profil?.grupaId || found?.grupaId;
       if (gId) {
         apiRequest<{ id: number; lekcijaNaslov: string }[]>("GET", `/muallim/plan-lekcija?grupaId=${gId}`, undefined, token)
@@ -562,6 +594,14 @@ export default function UcenikPage() {
         isNapamet: true,
       })),
   ].sort((a, b) => b.datum.localeCompare(a.datum) || b.id - a.id);
+  const uspjehKlasa = (procenat: number) => procenat >= 80
+    ? "bg-emerald-100 text-emerald-700"
+    : procenat >= 50
+      ? "bg-amber-100 text-amber-700"
+      : "bg-red-100 text-red-700";
+  const vjezbeUkupno = statistikaVjezbi
+    ? statistikaVjezbi.naseVjezbe.zavrseno + statistikaVjezbi.h5p.pokusaji + statistikaVjezbi.etapneVjezbe.pokusaji
+    : naseVjezbePokusaji + h5pPokusaji.length;
   const ukupnoBodova = kvizRezultati.reduce((s, r) => s + (r.bodovi || 0), 0);
   const kvizProsjek = kvizRezultati.length ? Math.round(kvizRezultati.reduce((s, r) => s + r.procenat, 0) / kvizRezultati.length) : null;
 
@@ -600,7 +640,7 @@ export default function UcenikPage() {
     "07": "Jul", "08": "Aug", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Dec",
   };
 
-  const validModules = ["pregled", "prisustvo", "ocjene", "zadace", "napamet", "h5p", "kvizovi", "interaktivno", "roditelji", "postavke", "etape"];
+  const validModules = ["pregled", "statistika", "prisustvo", "ocjene", "zadace", "napamet", "h5p", "kvizovi", "interaktivno", "roditelji", "postavke", "etape"];
   let rawModule = params.get("modul") || (hasH5pId ? "h5p" : "pregled");
   if (!validModules.includes(rawModule) || (rawModule === "etape" && etapaPokusaji.length === 0)) {
     rawModule = "pregled";
@@ -618,6 +658,7 @@ export default function UcenikPage() {
 
   const modules = [
     { key: "pregled", label: t("Pregled"), icon: User },
+    { key: "statistika", label: t("Statistika vježbi"), icon: TrendingUp },
     { key: "prisustvo", label: t("Prisustvo"), icon: CalendarCheck },
     { key: "ocjene", label: t("Ocjene"), icon: Star },
     { key: "zadace", label: t("Zadaće"), icon: ClipboardList, badge: utokuCount },
@@ -783,15 +824,43 @@ export default function UcenikPage() {
                           <div className="text-xs text-gray-500 mt-1">★ {zvjezdice.negativne} {t("negativnih")}</div>
                         )}
                       </div>
-                      {/* Naše vježbe + H5P */}
-                      <div className="bg-white border border-border/50 rounded-2xl p-4">
+                      {/* Vježbe — naše, H5P i etapne */}
+                      <button
+                        type="button"
+                        onClick={() => setModule("statistika")}
+                        className="rounded-2xl border border-border/50 bg-white p-4 text-left transition-colors hover:border-violet-300 hover:bg-violet-50/40"
+                        data-testid="card-vjezbe"
+                      >
                         <Sparkles className="w-5 h-5 text-violet-600 mb-2" />
-                        <div className="text-2xl font-extrabold text-violet-600">{naseVjezbePokusaji + h5pPokusaji.length || "—"}</div>
+                        <div className="text-2xl font-extrabold text-violet-600">{vjezbeUkupno || "—"}</div>
                         <div className="text-sm text-muted-foreground font-medium">{t("Vježbe")}</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          {t("Naše: {n} · H5P: {h}", { n: String(naseVjezbePokusaji), h: String(h5pPokusaji.length) })}
+                          {t("Naše: {n} · H5P: {h} · Etapne: {e}", {
+                            n: String(statistikaVjezbi?.naseVjezbe.zavrseno ?? 0),
+                            h: String(statistikaVjezbi?.h5p.pokusaji ?? h5pPokusaji.length),
+                            e: String(statistikaVjezbi?.etapneVjezbe.pokusaji ?? naseVjezbePokusaji),
+                          })}
                         </div>
-                      </div>
+                      </button>
+                      {/* Etapni kvizovi */}
+                      <button
+                        type="button"
+                        onClick={() => setModule("statistika")}
+                        className="rounded-2xl border border-border/50 bg-white p-4 text-left transition-colors hover:border-amber-300 hover:bg-amber-50/40"
+                        data-testid="card-etapni-kvizovi"
+                      >
+                        <Medal className="w-5 h-5 text-amber-600 mb-2" />
+                        <div className="text-2xl font-extrabold text-amber-600">
+                          {statistikaVjezbi && statistikaVjezbi.etapniKvizovi.etape > 0
+                            ? `${statistikaVjezbi.etapniKvizovi.polozeno}/${statistikaVjezbi.etapniKvizovi.etape}`
+                            : "—"}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium">{t("Etapni kvizovi")}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {t("{n} pokušaja", { n: String(statistikaVjezbi?.etapniKvizovi.pokusaji ?? 0) })}
+                          {statistikaVjezbi?.etapniKvizovi.najboljiProsjek != null && ` · Ø ${statistikaVjezbi.etapniKvizovi.najboljiProsjek}%`}
+                        </div>
+                      </button>
                     </div>
 
                     <div className="bg-white border border-border/50 rounded-2xl p-5">
@@ -1115,6 +1184,179 @@ export default function UcenikPage() {
                       </>
                       );
                     })()}
+                  </div>
+                )}
+
+                {activeModule === "statistika" && (
+                  <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300" data-testid="section-statistika-vjezbi">
+                    {!statistikaVjezbi ? (
+                      <div className="rounded-2xl border border-border/50 bg-white p-8 text-center text-sm text-muted-foreground">
+                        {t("Statistiku nije moguće učitati")}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                          <div className="rounded-2xl border border-border/50 bg-white p-4" data-testid="stat-card-nase-vjezbe">
+                            <Sparkles className="mb-2 h-5 w-5 text-violet-600" />
+                            <div className="text-2xl font-extrabold text-violet-600">{statistikaVjezbi.naseVjezbe.zavrseno || "—"}</div>
+                            <div className="text-sm font-medium text-muted-foreground">{t("Naše vježbe")}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {t("Urađeno bez ponavljanja")}
+                              {statistikaVjezbi.naseVjezbe.kapiMeda > 0 && ` · ${statistikaVjezbi.naseVjezbe.kapiMeda} ${t("kapi meda")}`}
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-border/50 bg-white p-4" data-testid="stat-card-h5p">
+                            <Sparkles className="mb-2 h-5 w-5 text-primary" />
+                            <div className="text-2xl font-extrabold text-primary">{statistikaVjezbi.h5p.vjezbe || "—"}</div>
+                            <div className="text-sm font-medium text-muted-foreground">{t("H5P vježbe")}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {t("{n} pokušaja", { n: String(statistikaVjezbi.h5p.pokusaji) })}
+                              {statistikaVjezbi.h5p.prosjekProcenat !== null && ` · Ø ${statistikaVjezbi.h5p.prosjekProcenat}%`}
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-border/50 bg-white p-4" data-testid="stat-card-etapne-vjezbe">
+                            <ClipboardList className="mb-2 h-5 w-5 text-teal-600" />
+                            <div className="text-2xl font-extrabold text-teal-600">{statistikaVjezbi.etapneVjezbe.vjezbe || "—"}</div>
+                            <div className="text-sm font-medium text-muted-foreground">{t("Etapne vježbe")}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {t("{n} pokušaja", { n: String(statistikaVjezbi.etapneVjezbe.pokusaji) })}
+                              {statistikaVjezbi.etapneVjezbe.prosjekProcenat !== null && ` · Ø ${statistikaVjezbi.etapneVjezbe.prosjekProcenat}%`}
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-border/50 bg-white p-4" data-testid="stat-card-etapni-kvizovi">
+                            <Medal className="mb-2 h-5 w-5 text-amber-600" />
+                            <div className="text-2xl font-extrabold text-amber-600">
+                              {statistikaVjezbi.etapniKvizovi.etape > 0
+                                ? `${statistikaVjezbi.etapniKvizovi.polozeno}/${statistikaVjezbi.etapniKvizovi.etape}`
+                                : "—"}
+                            </div>
+                            <div className="text-sm font-medium text-muted-foreground">{t("Etapni kvizovi")}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {t("Položeno · {n} pokušaja", { n: String(statistikaVjezbi.etapniKvizovi.pokusaji) })}
+                              {statistikaVjezbi.etapniKvizovi.najboljiProsjek !== null && ` · Ø ${statistikaVjezbi.etapniKvizovi.najboljiProsjek}%`}
+                            </div>
+                          </div>
+                        </div>
+
+                        {statistikaVjezbi.vanjskeVjezbe.zavrseno > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {t("Uz to, učenik je uradio {n} vježbi u vanjskim alatima (LearningApps, Wordwall).", { n: String(statistikaVjezbi.vanjskeVjezbe.zavrseno) })}
+                          </p>
+                        )}
+
+                        <div className="rounded-2xl border border-border/50 bg-white p-5">
+                          <h2 className="mb-3 flex items-center gap-2 font-extrabold text-foreground">
+                            <Medal className="h-5 w-5 text-amber-600" /> {t("Etapni kvizovi")}
+                          </h2>
+                          {statistikaVjezbi.etapniKvizovi.stavke.length === 0 ? (
+                            <p className="rounded-xl bg-muted/20 py-6 text-center text-sm text-muted-foreground">{t("Učenik još nije radio nijedan etapni kviz")}</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {statistikaVjezbi.etapniKvizovi.stavke.map(s => (
+                                <div key={`etapa-${s.id}`} className="flex flex-wrap items-center gap-3 rounded-xl border border-border/50 bg-muted/10 p-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate font-bold text-foreground">{s.naziv}</div>
+                                    <div className="mt-0.5 text-xs text-muted-foreground">
+                                      {s.nivo != null && `${t("Nivo {n}", { n: String(s.nivo) })} · `}
+                                      {t("{n} pokušaja", { n: String(s.pokusaji ?? 0) })}
+                                      {s.zadnjiDatum && ` · ${new Date(s.zadnjiDatum).toLocaleDateString("bs-BA")}`}
+                                    </div>
+                                  </div>
+                                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-black ${uspjehKlasa(s.najboljiProcenat ?? 0)}`}>
+                                    {s.najboljiProcenat ?? 0}%
+                                  </span>
+                                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${s.polozeno ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                                    {s.polozeno ? t("Položeno") : t("Nije položeno")}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-border/50 bg-white p-5">
+                          <h2 className="mb-3 flex items-center gap-2 font-extrabold text-foreground">
+                            <ClipboardList className="h-5 w-5 text-teal-600" /> {t("Etapne vježbe")}
+                          </h2>
+                          {statistikaVjezbi.etapneVjezbe.stavke.length === 0 ? (
+                            <p className="rounded-xl bg-muted/20 py-6 text-center text-sm text-muted-foreground">{t("Učenik još nije radio nijednu etapnu vježbu")}</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {statistikaVjezbi.etapneVjezbe.stavke.map(s => (
+                                <div key={`etapna-${s.id}`} className="flex flex-wrap items-center gap-3 rounded-xl border border-border/50 bg-muted/10 p-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate font-bold text-foreground">{s.naziv}</div>
+                                    <div className="mt-0.5 text-xs text-muted-foreground">
+                                      {t("{n} pokušaja", { n: String(s.pokusaji ?? 0) })}
+                                      {s.zadnjiDatum && ` · ${new Date(s.zadnjiDatum).toLocaleDateString("bs-BA")}`}
+                                    </div>
+                                  </div>
+                                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-black ${uspjehKlasa(s.najboljiProcenat ?? 0)}`}>
+                                    {s.najboljiProcenat ?? 0}%
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-border/50 bg-white p-5">
+                          <h2 className="mb-3 flex items-center gap-2 font-extrabold text-foreground">
+                            <Sparkles className="h-5 w-5 text-primary" /> {t("H5P vježbe")}
+                          </h2>
+                          {statistikaVjezbi.h5p.stavke.length === 0 ? (
+                            <p className="rounded-xl bg-muted/20 py-6 text-center text-sm text-muted-foreground">{t("Učenik još nije radio nijednu H5P vježbu")}</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {statistikaVjezbi.h5p.stavke.map(s => (
+                                <div key={`h5p-${s.id}`} className="flex flex-wrap items-center gap-3 rounded-xl border border-border/50 bg-muted/10 p-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate font-bold text-foreground">{String(s.naziv).replace(/\.h5p$/i, "")}</div>
+                                    <div className="mt-0.5 text-xs text-muted-foreground">
+                                      {s.lekcijaNaslov && `${s.lekcijaNaslov} · `}
+                                      {t("{n} pokušaja", { n: String(s.pokusaji ?? 0) })}
+                                      {s.zadnjiDatum && ` · ${new Date(s.zadnjiDatum).toLocaleDateString("bs-BA")}`}
+                                    </div>
+                                  </div>
+                                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-black ${uspjehKlasa(s.najboljiProcenat ?? 0)}`}>
+                                    {s.najboljiProcenat ?? 0}%
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-border/50 bg-white p-5">
+                          <h2 className="mb-3 flex items-center gap-2 font-extrabold text-foreground">
+                            <Sparkles className="h-5 w-5 text-violet-600" /> {t("Naše vježbe")}
+                          </h2>
+                          {statistikaVjezbi.naseVjezbe.stavke.length === 0 ? (
+                            <p className="rounded-xl bg-muted/20 py-6 text-center text-sm text-muted-foreground">{t("Učenik još nije uradio nijednu našu vježbu")}</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {statistikaVjezbi.naseVjezbe.stavke.map(s => (
+                                <div key={`nasa-${s.id}`} className="flex flex-wrap items-center gap-3 rounded-xl border border-border/50 bg-muted/10 p-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate font-bold text-foreground">{s.naziv}</div>
+                                    <div className="mt-0.5 text-xs text-muted-foreground">
+                                      {s.lekcijaNaslov && `${s.lekcijaNaslov} · `}
+                                      {s.zadnjiDatum ? new Date(s.zadnjiDatum).toLocaleDateString("bs-BA") : ""}
+                                    </div>
+                                  </div>
+                                  <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                                    {t("Urađeno")}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            {t("Naše vježbe se boduju jednom po vježbi, pa se ne prati procenat nego da li su urađene.")}
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { PlanLekcijaModul, MAX_CASOVA, nazivVrste } from "@/components/plan-lekcija-modul";
 import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -182,6 +183,8 @@ interface PlanLekcija {
   lekcijaNaslov: string;
   lekcijaTip: string;
   redoslijed: number;
+  // Redni broj časa tog dana (1-baziran); server ga izvodi iz `redoslijed`.
+  cas?: number;
 }
 
 interface IlmihalLekcija {
@@ -578,14 +581,6 @@ export default function MuallimPanel() {
   const [exportingSpisak, setExportingSpisak] = useState(false);
 
   const [planGrupaId, setPlanGrupaId] = useState<number | null>(null);
-  const [planLekcijaSep, setPlanLekcijaSep] = useState<PlanLekcija[]>([]);
-  const [planLekcijeLoading, setPlanLekcijeLoading] = useState(false);
-  const [showPlanForm, setShowPlanForm] = useState(false);
-  const [planDatum, setPlanDatum] = useState(new Date().toISOString().split("T")[0]);
-  const [planLekcijaNaslov, setPlanLekcijaNaslov] = useState("");
-  const [planAktivnostOpis, setPlanAktivnostOpis] = useState("");
-  const [planVrstaCasa, setPlanVrstaCasa] = useState("obrada");
-  const [savingPlanLekcija, setSavingPlanLekcija] = useState(false);
 
   const [zadGrupaId, setZadGrupaId] = useState<number | null>(null);
   const [zadace, setZadace] = useState<Zadaca[]>([]);
@@ -902,13 +897,21 @@ export default function MuallimPanel() {
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
   }
 
+  // Brzi upis iz kalendara ide na prvi slobodan čas tog dana, da ne prepiše
+  // čas koji je već upisan kroz modul Plan lekcija.
   async function addLekcija(datum: string, lekcijaNaslov: string, lekcijaTip: string) {
     if (!token || !selectedGrupaId) return;
+    const zauzeti = planLekcija.filter(p => p.datum === datum).map(p => p.cas ?? (p.redoslijed ?? 0) + 1);
+    const cas = Array.from({ length: MAX_CASOVA }, (_, i) => i + 1).find(broj => !zauzeti.includes(broj));
+    if (!cas) {
+      toast({ title: t("Svi časovi tog dana su već upisani"), variant: "destructive" });
+      return;
+    }
     try {
       const nova = await apiRequest<PlanLekcija>("POST", "/muallim/plan-lekcija", {
-        grupaId: selectedGrupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed: planLekcija.filter(p => p.datum === datum).length,
+        grupaId: selectedGrupaId, datum, lekcijaNaslov, lekcijaTip, cas,
       }, token);
-      setPlanLekcija(prev => [...prev, nova]);
+      setPlanLekcija(prev => [...prev.filter(p => p.id !== nova.id), nova]);
       setShowLekcijaSelect(false);
       toast({ title: t("Lekcija dodana!") });
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
@@ -951,45 +954,6 @@ export default function MuallimPanel() {
         if (requestId === statRequestRef.current) setStatLoading(false);
       });
   }, [token, statGrupaId]);
-
-  useEffect(() => {
-    if (!token || !planGrupaId) return;
-    setPlanLekcijeLoading(true);
-    Promise.all([
-      apiRequest<PlanLekcija[]>("GET", `/muallim/plan-lekcija?grupaId=${planGrupaId}`, undefined, token),
-      dostupneLekcije.length === 0
-        ? apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => [])
-        : Promise.resolve(dostupneLekcije),
-    ]).then(([p, l]) => {
-      setPlanLekcijaSep(p);
-      if (l !== dostupneLekcije) setDostupneLekcije(l as IlmihalLekcija[]);
-    }).catch(() => {}).finally(() => setPlanLekcijeLoading(false));
-  }, [token, planGrupaId]);
-
-  async function savePlanLekcija() {
-    const naslov = planLekcijaNaslov.trim() || planAktivnostOpis.trim();
-    if (!token || !planGrupaId || !naslov) return;
-    setSavingPlanLekcija(true);
-    try {
-      const nova = await apiRequest<PlanLekcija>("POST", "/muallim/plan-lekcija", {
-        grupaId: planGrupaId, datum: planDatum, lekcijaNaslov: naslov, lekcijaTip: planVrstaCasa, redoslijed: planLekcijaSep.filter(p => p.datum === planDatum).length,
-      }, token);
-      setPlanLekcijaSep(prev => [...prev, nova]);
-      setPlanLekcijaNaslov("");
-      setPlanAktivnostOpis("");
-      setShowPlanForm(false);
-      toast({ title: t("Stavka dodana u plan!") });
-    } catch { toast({ title: t("Greška"), variant: "destructive" }); }
-    finally { setSavingPlanLekcija(false); }
-  }
-
-  async function deletePlanLekcija(id: number) {
-    if (!token) return;
-    try {
-      await apiRequest("DELETE", `/muallim/plan-lekcija/${id}`, undefined, token);
-      setPlanLekcijaSep(prev => prev.filter(p => p.id !== id));
-    } catch { toast({ title: t("Greška"), variant: "destructive" }); }
-  }
 
   useEffect(() => {
     if (!token || !zadGrupaId) return;
@@ -2381,159 +2345,20 @@ export default function MuallimPanel() {
                       ))}
                     </div>
                   </div>
-                ) : planLekcijeLoading ? (
-                  <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="min-w-0 font-extrabold text-lg text-foreground flex items-center gap-2">
                         <BookOpen className="w-5 h-5 text-violet-600" />
                         {t("Plan lekcija:")} {grupe.find(g => g.id === planGrupaId)?.naziv}
                       </h3>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <button onClick={() => setShowPlanForm(!showPlanForm)}
-                          className="flex items-center gap-1.5 text-sm font-bold text-violet-600 hover:text-violet-800">
-                          <Plus className="w-4 h-4" /> {t("Dodaj lekciju")}
-                        </button>
-                        <button onClick={() => { setPlanGrupaId(null); setPlanLekcijaSep([]); }}
-                          className="text-sm text-muted-foreground hover:text-foreground font-medium">{t("← Promijeni grupu")}</button>
-                      </div>
+                      <button onClick={() => setPlanGrupaId(null)}
+                        className="text-sm text-muted-foreground hover:text-foreground font-medium">{t("← Promijeni grupu")}</button>
                     </div>
-
-                    {showPlanForm && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                        className="bg-violet-50 border border-violet-200 rounded-2xl p-5 space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Datum")}</label>
-                            <input type="date" value={planDatum} onChange={e => setPlanDatum(e.target.value)}
-                              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Vrsta časa")}</label>
-                            <select value={planVrstaCasa} onChange={e => setPlanVrstaCasa(e.target.value)}
-                              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300">
-                              <option value="obrada">{t("Obrada")}</option>
-                              <option value="ponavljanje">{t("Ponavljanje")}</option>
-                              <option value="test">{t("Test")}</option>
-                              <option value="prakticno">{t("Praktično")}</option>
-                              <option value="ilmihal">{t("Ilmihal")}</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
-                          <select value={planLekcijaNaslov} onChange={e => {
-                            setPlanLekcijaNaslov(e.target.value);
-                            if (e.target.value) setPlanAktivnostOpis("");
-                          }}
-                            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300">
-                            <option value="">{t("— Odaberi lekciju —")}</option>
-                            {[1, 2, 3, 4].map(nivo => {
-                              const nivoLekcije = dostupneLekcije.filter(l => l.nivo === nivo);
-                              if (nivoLekcije.length === 0) return null;
-                              return (
-                                <optgroup key={nivo} label={t("Nivo {n}", { n: String(nivo) })}>
-                                  {nivoLekcije.map(l => (
-                                    <option key={l.id} value={l.naslov}>{l.naslov}</option>
-                                  ))}
-                                </optgroup>
-                              );
-                            })}
-                          </select>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs font-bold text-muted-foreground">
-                          <div className="h-px flex-1 bg-violet-200" />
-                          {t("ILI")}
-                          <div className="h-px flex-1 bg-violet-200" />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Aktivnost / obnavljanje")}</label>
-                          <input
-                            type="text"
-                            placeholder={t("Npr. test, provjera gradiva, praktično klanjanje")}
-                            value={planAktivnostOpis}
-                            onChange={e => {
-                              setPlanAktivnostOpis(e.target.value);
-                              if (e.target.value) setPlanLekcijaNaslov("");
-                            }}
-                            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button onClick={savePlanLekcija} disabled={savingPlanLekcija || !(planLekcijaNaslov.trim() || planAktivnostOpis.trim())}
-                            className="rounded-xl font-bold text-sm bg-violet-600 hover:bg-violet-700">
-                            {savingPlanLekcija ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Sačuvaj")}
-                          </Button>
-                          <button onClick={() => setShowPlanForm(false)} className="text-sm text-muted-foreground hover:text-foreground font-medium px-3">{t("Otkaži")}</button>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    {(() => {
-                      const groupedByDate = planLekcijaSep.reduce<Record<string, PlanLekcija[]>>((acc, p) => {
-                        if (!acc[p.datum]) acc[p.datum] = [];
-                        acc[p.datum].push(p);
-                        return acc;
-                      }, {});
-                      const sortedDates = Object.keys(groupedByDate).sort((a, b) => b.localeCompare(a));
-
-                      if (sortedDates.length === 0) {
-                        return (
-                          <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
-                            <BookOpen className="w-10 h-10 mx-auto mb-2 text-muted-foreground/30" />
-                            <p className="text-sm text-muted-foreground">{t("Nema dodanih lekcija u planu")}</p>
-                          </div>
-                        );
-                      }
-
-                      const VRSTA_COLORS: Record<string, string> = {
-                        obrada: "bg-blue-100 text-blue-700",
-                        ponavljanje: "bg-amber-100 text-amber-700",
-                        test: "bg-red-100 text-red-700",
-                        prakticno: "bg-emerald-100 text-emerald-700",
-                        ilmihal: "bg-violet-100 text-violet-700",
-                      };
-
-                      return (
-                        <div className="space-y-4">
-                          {sortedDates.map(datum => (
-                            <div key={datum} className="bg-white border border-border/50 rounded-2xl overflow-hidden">
-                              <div className="bg-muted/30 px-4 py-2.5 border-b border-border/30 flex items-center justify-between">
-                                <span className="font-extrabold text-sm text-foreground flex items-center gap-2">
-                                  <Calendar className="w-4 h-4 text-violet-500" /> {datum}
-                                </span>
-                                <span className="text-xs text-muted-foreground">{groupedByDate[datum].length} {t("lekcija")}</span>
-                              </div>
-                              <div className="divide-y divide-border/30">
-                                {groupedByDate[datum].map(l => (
-                                  <div key={l.id} className="flex items-start justify-between gap-3 px-3 py-3 sm:px-4 hover:bg-muted/10 transition-colors">
-                                    <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${VRSTA_COLORS[l.lekcijaTip] || "bg-gray-100 text-gray-700"}`}>
-                                        {l.lekcijaTip === "obrada" ? t("Obrada") : l.lekcijaTip === "ponavljanje" ? t("Ponavljanje") : l.lekcijaTip === "test" ? t("Test") : l.lekcijaTip === "prakticno" ? t("Praktično") : l.lekcijaTip}
-                                      </span>
-                                      {(() => {
-                                        const matchSlug = dostupneLekcije.find(dl => dl.naslov === l.lekcijaNaslov)?.slug;
-                                        return matchSlug ? (
-                                          <Link href={`/ilmihal/${matchSlug}`} className="min-w-0 break-words font-medium text-primary hover:underline inline-flex items-start gap-1">
-                                            <BookOpen className="w-3.5 h-3.5" />{l.lekcijaNaslov}
-                                          </Link>
-                                        ) : (
-                                          <span className="min-w-0 break-words font-medium text-foreground">{l.lekcijaNaslov}</span>
-                                        );
-                                      })()}
-                                    </div>
-                                    <button onClick={() => deletePlanLekcija(l.id)} className="text-red-400 hover:text-red-600 p-1">
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })()}
+                    <PlanLekcijaModul
+                      grupaId={planGrupaId}
+                      onOtvoriKalendar={() => { setSelectedGrupaId(planGrupaId); setActiveTab("kalendar"); }}
+                    />
                   </div>
                 )}
               </motion.div>
@@ -4218,7 +4043,13 @@ export default function MuallimPanel() {
                                   {kalendarSve.planLekcija.filter(p => p.datum === selectedDate).map(l => (
                                     <div key={l.id} className="bg-violet-50 rounded-lg px-3 py-2">
                                       <div className="flex items-center justify-between gap-2">
-                                        <span className="text-sm font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                        <span className="min-w-0 text-sm font-medium text-foreground">
+                                          <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-violet-700">
+                                            {t("{n}. čas", { n: String(l.cas ?? l.redoslijed + 1) })}
+                                          </span>
+                                          {l.lekcijaNaslov}
+                                          <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t(nazivVrste(l.lekcijaTip))}</span>
+                                        </span>
                                         <button
                                           onClick={() => { setKalendarMode("grupa"); setSelectedGrupaId(l.grupaId); }}
                                           className="text-xs font-bold text-primary hover:underline whitespace-nowrap">
@@ -4569,19 +4400,26 @@ export default function MuallimPanel() {
                               <p className="text-sm text-muted-foreground text-center py-3">{t("Nema dodanih lekcija za ovaj dan")}</p>
                             ) : (
                               <div className="space-y-2 mb-3">
-                                {planLekcija.filter(p => p.datum === selectedDate).map(l => (
-                                  <div key={l.id} className="flex items-center justify-between bg-violet-50 rounded-lg px-3 py-2">
+                                {planLekcija.filter(p => p.datum === selectedDate)
+                                  .slice()
+                                  .sort((a, b) => (a.cas ?? a.redoslijed + 1) - (b.cas ?? b.redoslijed + 1))
+                                  .map(l => (
+                                  <div key={l.id} className="flex items-center justify-between gap-2 bg-violet-50 rounded-lg px-3 py-2">
+                                    <span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-violet-700">
+                                      {t("{n}. čas", { n: String(l.cas ?? l.redoslijed + 1) })}
+                                    </span>
                                     {(() => {
                                       const matchSlug = dostupneLekcije.find(dl => dl.naslov === l.lekcijaNaslov)?.slug;
                                       return matchSlug ? (
-                                        <Link href={`/ilmihal/${matchSlug}`} className="text-sm font-medium text-primary hover:underline inline-flex items-center gap-1">
-                                          <BookOpen className="w-3.5 h-3.5" />{l.lekcijaNaslov}
+                                        <Link href={`/ilmihal/${matchSlug}`} className="min-w-0 flex-1 text-sm font-medium text-primary hover:underline inline-flex items-center gap-1">
+                                          <BookOpen className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{l.lekcijaNaslov}</span>
                                         </Link>
                                       ) : (
-                                        <span className="text-sm font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{l.lekcijaNaslov}</span>
                                       );
                                     })()}
-                                    <button onClick={() => deleteLekcija(l.id)} className="text-red-400 hover:text-red-600">
+                                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t(nazivVrste(l.lekcijaTip))}</span>
+                                    <button onClick={() => deleteLekcija(l.id)} className="shrink-0 text-red-400 hover:text-red-600">
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
