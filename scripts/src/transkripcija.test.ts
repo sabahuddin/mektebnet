@@ -4,6 +4,7 @@ import { CJELINE } from "./transkripcija-podaci.js";
 import {
   dotjeraj,
   njemackiIzEngleskog,
+  kljucTranskripcije,
   normalizirajTranskripciju,
   primijeniEulogije,
   transkripcija,
@@ -182,8 +183,51 @@ test("nijedna transkripcija ne nosi naša slova", () => {
 });
 
 test("bosanski ključevi se ne ponavljaju", () => {
-  const kljucevi = CJELINE.flatMap((c) => c.redovi).map((r) => normalizirajTranskripciju(r.bs));
+  // Ključ ne gleda razmake, pa se i „Elhamdu lillahi" i „El-hamdu lillahi"
+  // svode na isto — zato provjera ide baš nad tim oblikom ključa.
+  const kljucevi = CJELINE.flatMap((c) => c.redovi).map((r) => kljucTranskripcije(r.bs));
   assert.equal(new Set(kljucevi).size, kljucevi.length, "ista bosanska transkripcija stoji dvaput");
+});
+
+test("El-Fatiha se prepoznaje tačno onako kako stoji u lekciji", () => {
+  // Prepisano sa mekteb.net/ilmihal/sura-el-fatiha: velika slova, redni broj
+  // ajeta, crtica u „EL-HAMDU" i apostrof za ajn. Prije ovoga se nijedan od
+  // ovih redova nije poklapao s tabelom, pa je dijete na njemačkom umjesto
+  // transkripcije dobijalo prevedeno značenje — dvaput, jer prijevod stoji
+  // ionako ispod.
+  const izLekcije: Array<[string, string]> = [
+    ["E'UZUBILLAHI MINEŠ-ŠEJTANIR-RADŽIM", "A'udhu billahi minash-shaytanir-rajim"],
+    ["BISMILLAHIR-RAHMANIR-RAHIM", "Bismillahir-Rahmanir-Rahim"],
+    ["1. EL-HAMDU LILLAHI RABBIL-'ALEMIN.", "1. Alhamdu lillahi Rabbil-alamin."],
+    ["2. ER-RAHMANIR-RAHIM.", "2. Ar-Rahmanir-Rahim."],
+    ["3. MALIKI JEVMID-DIN.", "3. Maliki yawmid-din."],
+    ["4. IJJAKE N'ABUDU VE IJJAKE NESTE'IN.", "4. Iyyaka na'budu wa iyyaka nasta'in."],
+    ["5. IHDINES-SIRATAL-MUSTEKIM.", "5. Ihdinas-siratal-mustaqim."],
+    ["6. SIRATAL-LEZINE EN'AMTE 'ALEJHIM.", "6. Siratal-ladhina an'amta alayhim."],
+    ["7. GAJRIL-MAGDUBI 'ALEJHIM VELED-DALLIN! AMIN!", "7. Ghayril-maghdubi alayhim wa lad-dallin! Amin!"],
+  ];
+  for (const [bs, en] of izLekcije) {
+    assert.equal(transkripcija(bs, "en"), en, bs);
+    assert.ok(transkripcija(bs, "de"), `njemački izostao: ${bs}`);
+  }
+});
+
+test("podjela na riječi i redni broj ne odlučuju o pogotku", () => {
+  const isti = [
+    "Elhamdu lillahi rabbil-alemin",
+    "El-hamdu lillahi rabbil-'alemin",
+    "EL-HAMDU LILLAHI RABBIL-ALEMIN",
+    "  el hamdu lillahi rabbil alemin  ",
+  ];
+  for (const oblik of isti) {
+    assert.equal(transkripcija(oblik, "en")?.replace(/\.$/, ""), "Alhamdu lillahi Rabbil-alamin", oblik);
+  }
+  // Redni broj se vraća onakav kakav je došao.
+  assert.match(String(transkripcija("12. Elhamdu lillahi rabbil-alemin", "en")), /^12\. /);
+  assert.equal(transkripcija("Euzu billahi mineš-šejtanir-radžim", "en"), "A'udhu billahi minash-shaytanir-rajim");
+  assert.equal(transkripcija("E'uzubillahi mineš-šejtanir-radžim", "en"), "A'udhu billahi minash-shaytanir-rajim");
+  // Broj koji nije redni broj ajeta ne smije se odsjeći.
+  assert.equal(transkripcija("1955. godina", "en"), null);
 });
 
 test("njemačka pretvorba poštuje velika slova", () => {

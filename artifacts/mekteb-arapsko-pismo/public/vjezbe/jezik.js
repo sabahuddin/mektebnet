@@ -453,12 +453,23 @@
     }
   }
 
+  /**
+   * Dopiši jezik na adresu s koje vježba čita svoj sadržaj. API vraća prevedeni
+   * sadržaj samo ako mu jezik stigne kroz upit — iframe ne može poslati
+   * `X-Lang` zaglavlje. Na bosanskom se adresa ne dira.
+   */
+  function saJezikom(adresa) {
+    var a = String(adresa || "");
+    if (!a || jezik === "bs" || /[?&]lang=/.test(a)) return a;
+    return a + (a.indexOf("?") > -1 ? "&" : "?") + "lang=" + encodeURIComponent(jezik);
+  }
+
   /** Ima li rječnik ovaj ključ? Koristi test koji pazi da nijedan ne izostane. */
   function ima(kljuc) {
     return !!rjecnik && Object.prototype.hasOwnProperty.call(rjecnik, kljuc);
   }
 
-  global.MektebJezik = { jezik: jezik, t: t, ima: ima };
+  global.MektebJezik = { jezik: jezik, t: t, ima: ima, saJezikom: saJezikom };
   if (document.body) prevediStatiku();
   else document.addEventListener("DOMContentLoaded", prevediStatiku);
 })(window);

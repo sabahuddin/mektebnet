@@ -19,7 +19,12 @@ const VJEZBE_DIR = path.resolve(
 const TIPOVI = ["osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji", "upisi"];
 
 /** Učitaj jezik.js kao što ga učita vježba otvorena sa ?lang=<jezik>. */
-interface Jezik { jezik: string; t: (k: string, p?: Record<string, unknown>) => string; ima: (k: string) => boolean }
+interface Jezik {
+  jezik: string;
+  t: (k: string, p?: Record<string, unknown>) => string;
+  ima: (k: string) => boolean;
+  saJezikom: (adresa: string) => string;
+}
 
 function ucitajJezik(jezik: string): Jezik {
   const kod = fs.readFileSync(path.join(VJEZBE_DIR, "jezik.js"), "utf8");
@@ -99,4 +104,28 @@ test("zamjene u tekstu se popunjavaju, a nepoznate ostaju vidljive", () => {
   const de = ucitajJezik("de");
   assert.equal(de.t("%broj% od %ukupno%", { broj: 3, ukupno: 7 }), "3 von 7");
   assert.equal(de.t("%broj% od %ukupno%", { broj: 3 }), "3 von %ukupno%");
+});
+
+test("vježba traži svoj sadržaj na jeziku djeteta", () => {
+  const de = ucitajJezik("de");
+  assert.equal(
+    de.saJezikom("/api/nase-vjezbe/podaci/spoji/pojmovi.json"),
+    "/api/nase-vjezbe/podaci/spoji/pojmovi.json?lang=de",
+  );
+  assert.equal(de.saJezikom("/x.json?a=1"), "/x.json?a=1&lang=de");
+  assert.equal(de.saJezikom("/x.json?lang=en"), "/x.json?lang=en", "već zadan jezik se ne dira");
+  assert.equal(de.saJezikom(""), "");
+  // Na bosanskom adresa ostaje kakva je spremljena u prilogu.
+  assert.equal(ucitajJezik("bs").saJezikom("/x.json"), "/x.json");
+});
+
+test("svaka vježba dopisuje jezik na zahtjev za podacima", () => {
+  for (const tip of TIPOVI) {
+    const html = fs.readFileSync(path.join(VJEZBE_DIR, tip, `${tip}.html`), "utf8");
+    assert.match(
+      html,
+      /fetch\(window\.MektebJezik\.saJezikom\(/,
+      `${tip}: sadržaj se traži bez jezika, pa bi ostao bosanski`,
+    );
+  }
 });
