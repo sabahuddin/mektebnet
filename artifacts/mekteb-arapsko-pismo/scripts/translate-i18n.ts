@@ -130,7 +130,8 @@ async function translateBatch(items: string[], targetName: string): Promise<Reco
 Prevedi sa BOSANSKOG na ${targetName}.
 Pravila:
 - Zadrži tačno sve placeholdere u vitičastim zagradama, npr. {name}, {broj} — NE prevodi ih.
-- Zadrži islamske/arapske termine i vlastita imena (npr. Allah, Kur'an, ezan, salavat, mekteb, muallim, ilmihal, sura, ajet) prirodno za ciljni jezik; ne izmišljaj.
+- Zadrži islamske/arapske termine (npr. Allah, Kur'an, ezan, salavat, mekteb, muallim, ilmihal, sura, ajet) prirodno za ciljni jezik; ne izmišljaj.
+- Arapski tekst pisan latinicom — naziv sure ili dove, transkripcija ajeta, arapsko vlastito ime — NE prevodi po značenju i NE ostavljaj u bosanskom obliku, nego ga prenesi u transkripciju ciljnog jezika. Njemački: El-Fatiha → Al-Fatiha, El-Ihlas → Al-Ichlas, El-Kurejš → Quraisch, El-Kevser → Al-Kauthar (sch, ch, dsch, au, ai; bez dijakritika). Engleski: El-Fatiha → Al-Fatihah, El-Ihlas → Al-Ikhlas, El-Kurejš → Quraysh, El-Kevser → Al-Kawthar (sh, kh, j, aw, ay; bez dijakritika).
 - Zadrži interpunkciju, velika/mala slova i HTML/markup ako postoji.
 - Vrati ISKLJUČIVO validan JSON objekt: ključ = originalni bosanski tekst, vrijednost = prijevod. Bez objašnjenja.`;
   const user = JSON.stringify(items);

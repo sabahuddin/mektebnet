@@ -215,7 +215,7 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
                           {ocjena ? <Check className="w-4 h-4" aria-hidden="true" /> : <Circle className="w-3 h-3" aria-hidden="true" />}
                         </span>
                         <span className="flex-1 min-w-0">
-                          <span className={`block text-sm font-bold ${ocjena ? "text-foreground" : "text-slate-400"}`}>{stavka.naziv}</span>
+                          <span className={`block text-sm font-bold ${ocjena ? "text-foreground" : "text-slate-400"}`}>{t(stavka.naziv)}</span>
                           {ocjena && (
                             <span className="block text-xs text-muted-foreground mt-0.5">
                               {ocjena.datum}{ocjena.napomena ? ` · ${ocjena.napomena}` : ""}
