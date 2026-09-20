@@ -69,6 +69,11 @@ interface Nacrt {
   parovi: Par[];
   // upiši odgovor
   pitanjaZaUpis: Pitanje[];
+  /**
+   * Njemački i engleski prijevod sadržaja vježbe. Ne uređuje se u ovoj formi,
+   * ali se nosi kroz nacrt da ga spremanje ne bi obrisalo.
+   */
+  prijevodi?: unknown;
 }
 
 const PRAZAN_NACRT: Omit<Nacrt, "tip" | "id" | "noviUnos"> = {
@@ -113,6 +118,7 @@ function nacrtIzPodataka(tip: string, id: string, podaci: Record<string, unknown
     noviUnos: false,
     naslov: String(podaci.naslov ?? ""),
     uputa: String(podaci.uputa ?? ""),
+    prijevodi: podaci.prijevodi,
     velicina: Number(podaci.velicina ?? 10) || 10,
     tezina: (["lako", "srednje", "tesko"].includes(String(podaci.tezina)) ? String(podaci.tezina) : "srednje") as Nacrt["tezina"],
     prikaz: (String(podaci.prikaz) === "opisi" ? "opisi" : "rijeci") as Nacrt["prikaz"],
@@ -156,6 +162,11 @@ function stavkeIzTeksta(tekst: string): string[] {
 }
 
 function podaciIzNacrta(n: Nacrt): Record<string, unknown> {
+  const polja = poljaIzNacrta(n);
+  return n.prijevodi ? { ...polja, prijevodi: n.prijevodi } : polja;
+}
+
+function poljaIzNacrta(n: Nacrt): Record<string, unknown> {
   if (n.tip === "osmosmjerka") {
     return {
       id: n.id,
