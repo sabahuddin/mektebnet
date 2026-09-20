@@ -28,6 +28,7 @@ import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import { dotjeraj, type CiljniJezik } from "./transkripcija.js";
 
 const BASE_URL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
 const API_KEY = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
@@ -139,21 +140,28 @@ async function callOpenAI(body: Record<string, unknown>): Promise<any> {
  * isti arapski zvuk, samo drugim pravopisom — pa u njemačkom i engleskom mora
  * pratiti njihov pravopis, a ne ostati u bosanskom obliku.
  */
+/**
+ * Njemački i engleski prolaze kroz determinističku doradu: poznata kur'anska
+ * transkripcija dobija međunarodni oblik, a eulogije puni izraz ciljnog jezika.
+ * Ostali jezici ostaju na onome što je vratio prevodilac.
+ */
+function ciljniJezik(jezik: string): CiljniJezik | null {
+  return jezik === "de" || jezik === "en" ? jezik : null;
+}
+
 const TRANSKRIPCIJA_PRIMJERI: Record<string, string> = {
-  "Njemački (Deutsch)":
-    "El-Fatiha → Al-Fatiha, El-Ihlas → Al-Ichlas, El-Kurejš → Quraisch, El-Kevser → Al-Kauthar, Eš-Šems → Asch-Schams, El-Bekara → Al-Baqara; njemački pravopis koristi sch, ch, dsch, au i ai, bez dijakritika",
-  "Engleski (English)":
-    "El-Fatiha → Al-Fatihah, El-Ihlas → Al-Ikhlas, El-Kurejš → Quraysh, El-Kevser → Al-Kawthar, Eš-Šems → Ash-Shams, El-Bekara → Al-Baqarah; engleski pravopis koristi sh, kh, j, aw i ay, bez dijakritika",
+  "Njemački (Deutsch)": "El-Fatiha → Al-Fatiha, El-Ihlas → Al-Ichlas, El-Kurejš → Quraisch, El-Kevser → Al-Kauthar (njemački pravopis: sch, ch, dsch, au, ai; bez dijakritika)",
+  "Engleski (English)": "El-Fatiha → Al-Fatihah, El-Ihlas → Al-Ikhlas, El-Kurejš → Quraysh, El-Kevser → Al-Kawthar (engleski pravopis: sh, kh, j, aw, ay; bez dijakritika)",
 };
 
 function transkripcijaPravilo(targetName: string): string {
   const primjeri = TRANSKRIPCIJA_PRIMJERI[targetName];
-  if (!primjeri) {
-    return "- Arapski tekst pisan latinicom (naziv sure ili dove, transkripcija ajeta) NE prevodi po značenju; zapiši ga u transkripciji uobičajenoj za ciljni jezik, a ako za taj jezik nemaš ustaljenu transkripciju, ostavi bosanski oblik.";
-  }
   return [
-    `- Arapski tekst pisan latinicom (naziv sure ili dove, transkripcija ajeta, arapsko vlastito ime) NE prevodi po značenju i NE ostavljaj u bosanskom obliku — prenesi ga u transkripciju ciljnog jezika: ${primjeri}.`,
-    "- Transkripciju izvedi IZ ARAPSKOG TEKSTA koji stoji uz nju u istom odlomku, a ne prepisivanjem bosanskih slova. Bosanska transkripcija sažima više arapskih glasova u jedno slovo (ث, س i ص su sve „s“; ذ, ز i ظ su sve „z“; ق i ك su „k“; ح i ه su „h“; ت i ط su „t“), pa se iz nje ne može pogoditi tačan oblik u ciljnom jeziku. Ako uz transkripciju NEMA arapskog teksta, radije ostavi bosanski oblik nego da nagađaš.",
+    "- Kur'anski tekst pisan latinicom (ajet, dova, formula) NE prevodi po značenju i NE prepisuj bosanska slova jedno po jedno. Napiši USTALJENU MEĐUNARODNU transkripciju, onakvu kakva stoji u dječijim knjigama i udžbenicima — npr. „Elhamdu lillahi rabbil-alemin“ → „Alhamdu lillahi Rabbil-alamin“, „Euzu billahi mineš-šejtanir-radžim“ → „A'udhu billahi minash-shaytanir-rajim“. Međunarodni oblik je isti za njemački i engleski.",
+    "- Bosanska transkripcija sažima više arapskih glasova u jedno slovo (ث, س i ص su sve „s“; ذ, ز i ظ su sve „z“; ق i ك su „k“), pa prepisivanje slova daje pogrešan oblik. Oslanjaj se na poznati oblik formule, a ako ga ne znaš pouzdano, ostavi bosanski zapis nepromijenjen.",
+    primjeri
+      ? `- NAZIV sure ili dove prati pravopis ciljnog jezika: ${primjeri}.`
+      : "- NAZIV sure ili dove zapiši u transkripciji uobičajenoj za ciljni jezik; ako je nemaš, ostavi bosanski oblik.",
   ].join("\n");
 }
 
@@ -166,7 +174,7 @@ ${transkripcijaPravilo(targetName)}
 - Generički izraz "dova/dove" NIJE naziv dove: na njemačkom piši "Bittgebet (dova)" ili gramatički odgovarajući oblik. "Odijevanje" je običan bosanski izraz: prevedi ga kao "Kleidung (odijevanje)" kada je potreban stručni kontekst, nikada ga ne ostavljaj samog.
 - Prevedi svu običnu bosansku formulaciju, i kada je pisana velikim slovima ili je bosanski prijevod dove, ajeta ili citata. Netaknuto ostaje samo arapsko pismo; latinična transkripcija arapskog prati pravopis ciljnog jezika.
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
-- Ne dodaji arapsko pismo, salavat/salam simbole ili počasne izraze koji ne postoje u izvorniku. Svaki postojeći počasni oblik (npr. "a.s.", "alejhis-selam", ﷺ ili arapski tekst) sačuvaj DOSLOVNO, bez proširivanja, zamjene ili pretvaranja u drugi oblik.
+- Ne dodaji arapsko pismo, salavat/salam simbole ni počasne izraze kojih nema u izvorniku.\n- Postojeću eulogiju za Poslanika i vjerovjesnike ("s.a.v.s.", "a.s.", "alejhis-selam") napiši punim izrazom ciljnog jezika: engleski "(peace be upon him)", njemački "(Friede sei mit ihm)". Arapski znak ﷺ NE koristi — ni kad stoji u izvorniku. "dž.š." (za Allaha) i "r.a." (za ashabe) ostavi kako jesu.
 - Za njemački odgovor upotrijebi njemački za sav prevedivi tekst; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
 - Zadrži placeholdere u vitičastim zagradama {ovako} i HTML/markup ako postoji.
 - Vrati ISKLJUČIVO validan JSON objekt oblika {"prijevodi": [...]} gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz. Bez objašnjenja.`;
@@ -232,13 +240,13 @@ Stroga pravila:
 - Bosanski prijevod ajeta, dove ili citata MORAŠ prevesti na njemački, čak i kada je cijeli tekst pisan velikim slovima. Netaknuto ostaje samo arapsko pismo; latinična transkripcija arapskog prati pravopis ciljnog jezika.
 - Zadrži islamske/arapske termine kako jesu.
 ${transkripcijaPravilo(targetName)}
-- Ne dodaji arapsko pismo, salavat/salam simbole ili počasne izraze koji ne postoje u izvorniku. Svaki postojeći počasni oblik (npr. "a.s.", "alejhis-selam", ﷺ ili arapski tekst) sačuvaj DOSLOVNO, bez proširivanja, zamjene ili pretvaranja u drugi oblik.
+- Ne dodaji arapsko pismo, salavat/salam simbole ni počasne izraze kojih nema u izvorniku.\n- Postojeću eulogiju za Poslanika i vjerovjesnike ("s.a.v.s.", "a.s.", "alejhis-selam") napiši punim izrazom ciljnog jezika: engleski "(peace be upon him)", njemački "(Friede sei mit ihm)". Arapski znak ﷺ NE koristi — ni kad stoji u izvorniku. "dž.š." (za Allaha) i "r.a." (za ashabe) ostavi kako jesu.
 - Ako je ciljni jezik njemački, sav prevedivi tekst mora biti na njemačkom; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
 - Za stručni islamski termin s prirodnim njemačkim ekvivalentom koristi njemački izraz uz bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ne radi to za nazive sura/dova, arapske transliteracije ni vlastita imena.
 - Generički izraz "dova/dove" prevedi kao "Bittgebet (dova)" (ili odgovarajući njemački padež); to nije naziv pojedinačne dove. "Odijevanje" prevedi kao "Kleidung (odijevanje)" i ne ostavljaj ga samog na bosanskom.
 - NE umotavaj odgovor u markdown (bez \`\`\`). Vrati ČISTO HTML, ništa drugo.`;
 
-async function translateHtml(html: string, targetName: string): Promise<string> {
+async function translateHtml(html: string, targetName: string, jezik: string): Promise<string> {
   // HTML ne šaljemo kao cjelinu: kod dugih lekcija model ponekad vrati samo
   // djelimično preveden sadržaj ili promijeni markup. Lokalno ga dijelimo na
   // tagove i tekstualne čvorove, pa prevodimo samo čvorove i ponovo sastavimo
@@ -301,11 +309,13 @@ async function translateHtml(html: string, targetName: string): Promise<string> 
     }
   }
 
+  const ciljni = ciljniJezik(jezik);
   for (const index of textIndexes) {
     const source = parts[index];
     const leading = source.match(/^\s*/)?.[0] ?? "";
     const trailing = source.match(/\s*$/)?.[0] ?? "";
-    const translated = translations[source].trim();
+    const prevedeno = translations[source].trim();
+    const translated = ciljni ? dotjeraj(source.trim(), prevedeno, ciljni) : prevedeno;
     parts[index] = `${leading}${translated}${trailing}`;
   }
   return parts.join("");
@@ -646,6 +656,12 @@ async function run() {
         const uniq = Array.from(new Set(chunk.flatMap((j) => j.strings)));
         try {
           const dict = await translateTexts(uniq, LANG_NAMES[jezik]);
+          const ciljni = ciljniJezik(jezik);
+          if (ciljni) {
+            for (const izvor of uniq) {
+              if (typeof dict[izvor] === "string") dict[izvor] = dotjeraj(izvor, dict[izvor], ciljni);
+            }
+          }
           for (const j of chunk) {
             if (j.type === "kvizPitanja") {
               // Svi stringovi moraju biti prevedeni, inače preskoči (retry idući
@@ -693,10 +709,10 @@ async function run() {
       while (hi < hjobs.length && !timeUp()) {
         const j = hjobs[hi++];
         try {
-          let tr = await translateHtml(j.html, LANG_NAMES[j.jezik]);
+          let tr = await translateHtml(j.html, LANG_NAMES[j.jezik], j.jezik);
           let issue = htmlTranslationIssue(j.html, tr, j.jezik);
           if (issue) {
-            tr = await translateHtml(j.html, LANG_NAMES[j.jezik]);
+            tr = await translateHtml(j.html, LANG_NAMES[j.jezik], j.jezik);
             issue = htmlTranslationIssue(j.html, tr, j.jezik);
           }
           if (issue) { failed++; console.error(`  [${j.jezik}] html ${j.tabela}#${j.redId} nije prošao provjeru: ${issue} — preskačem`); continue; }
