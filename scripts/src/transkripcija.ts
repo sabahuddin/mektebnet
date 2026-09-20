@@ -65,12 +65,28 @@ export function njemackiIzEngleskog(engleski: string): string {
   });
 }
 
+/**
+ * Ključ pod kojim se traži transkripcija — normalizirano i BEZ razmaka.
+ *
+ * Bosanska transkripcija nema ustaljenu podjelu na riječi: ista rečenica u
+ * lekciji stoji kao „El-hamdu lillahi", u katalogu kao „Elhamdu lillahi", a
+ * euzu-dova čas kao „Euzu billahi", čas kao „E'uzubillahi". Razmak, crtica i
+ * apostrof su ukras, a ne glas, pa ne smiju odlučivati hoće li dijete dobiti
+ * transkripciju ili prevedeno značenje.
+ */
+export function kljucTranskripcije(tekst: string): string {
+  return normalizirajTranskripciju(tekst).replace(/\s+/g, "");
+}
+
 const TRANSKRIPCIJA_MAPA = new Map(
   CJELINE.flatMap((cjelina) => cjelina.redovi).map((red) => [
-    normalizirajTranskripciju(red.bs),
+    kljucTranskripcije(red.bs),
     { de: njemackiIzEngleskog(red.en), en: red.en },
   ]),
 );
+
+/** Redni broj ajeta na početku reda („1. "). Ne ulazi u ključ, ali se vraća u izlaz. */
+const REDNI_BROJ = /^(\d{1,3})\s*[.)]\s+/;
 
 /**
  * Ako je cijeli čvor poznata transkripcija, vrati oblik za taj jezik. Inače
@@ -78,13 +94,16 @@ const TRANSKRIPCIJA_MAPA = new Map(
  */
 export function transkripcija(tekst: string, jezik: CiljniJezik): string | null {
   const jezgro = tekst.trim().replace(/^[„"'‘“]+/, "").replace(/[”"'’“]+$/, "");
-  const zavrsnaTacka = /[.!?]$/.test(jezgro);
-  const kljuc = normalizirajTranskripciju(jezgro);
+  const broj = REDNI_BROJ.exec(jezgro);
+  const prefiks = broj ? `${broj[1]}. ` : "";
+  const jezgroBezBroja = broj ? jezgro.slice(broj[0].length) : jezgro;
+  const zavrsnaTacka = /[.!?]$/.test(jezgroBezBroja);
+  const kljuc = kljucTranskripcije(jezgroBezBroja);
   if (!kljuc) return null;
   const zapis = TRANSKRIPCIJA_MAPA.get(kljuc);
   if (!zapis) return null;
   const oblik = zapis[jezik];
-  return zavrsnaTacka && !/[.!?]$/.test(oblik) ? `${oblik}.` : oblik;
+  return prefiks + (zavrsnaTacka && !/[.!?]$/.test(oblik) ? `${oblik}.` : oblik);
 }
 
 const POSLANIK: Record<CiljniJezik, string> = {

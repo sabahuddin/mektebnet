@@ -47,6 +47,17 @@ export const CJELINE: Cjelina[] = [
         bs: "Siratallezine en'amte alejhim gajril-magdubi alejhim ve led-dallin",
         en: "Siratal-ladhina an'amta alayhim, ghayril-maghdubi alayhim wa lad-dallin",
       },
+      // Lekcija na mekteb.net dijeli 6. i 7. ajet u dva reda, a zadnji nosi i
+      // „Amin!". Oba oblika stoje ovdje da se transkripcija nađe kako god je
+      // lekcija prelomljena.
+      { bs: "Siratal-lezine en'amte alejhim", en: "Siratal-ladhina an'amta alayhim" },
+      {
+        bs: "Gajril-magdubi alejhim veled-dallin! Amin!",
+        en: "Ghayril-maghdubi alayhim wa lad-dallin! Amin!",
+      },
+      { bs: "Gajril-magdubi alejhim veled-dallin", en: "Ghayril-maghdubi alayhim wa lad-dallin" },
+      // Kad „Amin!" stoji u svom redu, ne smije postati „Amen".
+      { bs: "Amin!", en: "Amin!" },
     ],
   },
   {

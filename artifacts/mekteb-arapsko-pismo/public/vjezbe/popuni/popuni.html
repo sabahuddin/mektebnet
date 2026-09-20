@@ -399,7 +399,7 @@ body{
       console.warn('Popuni prazninu: podaci moraju biti na istoj domeni. Koristim ugrađeni primjer.');
       return Promise.resolve(ugradjeni());
     }
-    return fetch(url.href, { credentials: 'same-origin' })
+    return fetch(window.MektebJezik.saJezikom(url.href), { credentials: 'same-origin' })
       .then(function (o) { if (!o.ok) throw new Error('HTTP ' + o.status); return o.json(); })
       .catch(function (g) {
         console.warn('Popuni prazninu: podaci se nisu učitali (' + g.message + '). Koristim ugrađeni primjer.');

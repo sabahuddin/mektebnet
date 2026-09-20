@@ -361,7 +361,7 @@ body{
     var putanja = new URLSearchParams(location.search).get('podaci');
     // Samo relativna putanja s naše domene — nikakav vanjski zahtjev.
     if (!putanja || !/^\/[^/]/.test(putanja)) return Promise.resolve(ugradjeni());
-    return fetch(putanja, { credentials: 'same-origin' })
+    return fetch(window.MektebJezik.saJezikom(putanja), { credentials: 'same-origin' })
       .then(function (o) { if (!o.ok) throw new Error('HTTP ' + o.status); return o.json(); })
       .catch(function () { return ugradjeni(); });
   }
