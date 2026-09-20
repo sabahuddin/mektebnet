@@ -194,6 +194,69 @@ test("etapni kviz se broji jednom, sa najboljim rezultatom i ishodom", async () 
   assert.equal(stat.etapniKvizovi.stavke[0].polozeno, true);
 });
 
+interface StatistikaGrupe {
+  ucenici: Array<{
+    id: number;
+    ime: string;
+    naseVjezbe: number;
+    h5pVjezbe: number;
+    h5pPokusaji: number;
+    h5pProsjek: number | null;
+    etapneVjezbe: number;
+    etapnePokusaji: number;
+    etapeUkupno: number;
+    etapePolozeno: number;
+    etapePokusaji: number;
+    etapeProsjek: number | null;
+  }>;
+  ukupno: {
+    naseVjezbe: number;
+    h5pPokusaji: number;
+    h5pProsjek: number | null;
+    etapnePokusaji: number;
+    etapePolozeno: number;
+    etapeUkupno: number;
+    etapeProsjek: number | null;
+  };
+}
+
+test("statistika grupe sabira vježbe svih učenika", async () => {
+  const odgovor = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/statistika-vjezbi`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  assert.equal(odgovor.status, 200);
+  const stat = await odgovor.json() as StatistikaGrupe;
+
+  assert.equal(stat.ucenici.length, 1);
+  const red = stat.ucenici[0];
+  assert.equal(red.id, ucenikId);
+  assert.equal(red.naseVjezbe, 1);
+  assert.equal(red.h5pVjezbe, 1);
+  assert.equal(red.h5pPokusaji, 2);
+  assert.equal(red.h5pProsjek, 75);
+  assert.equal(red.etapneVjezbe, 1);
+  assert.equal(red.etapnePokusaji, 1);
+  assert.equal(red.etapeUkupno, 1);
+  assert.equal(red.etapePolozeno, 1);
+  assert.equal(red.etapePokusaji, 2);
+  // Za etapu je mjerodavan najbolji pokušaj, ne prosjek svih.
+  assert.equal(red.etapeProsjek, 90);
+
+  assert.equal(stat.ukupno.naseVjezbe, 1);
+  assert.equal(stat.ukupno.h5pPokusaji, 2);
+  assert.equal(stat.ukupno.etapnePokusaji, 1);
+  assert.equal(stat.ukupno.etapePolozeno, 1);
+  assert.equal(stat.ukupno.etapeUkupno, 1);
+  assert.equal(stat.ukupno.etapeProsjek, 90);
+});
+
+test("statistika tuđe grupe nije dostupna", async () => {
+  const odgovor = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/statistika-vjezbi`, {
+    headers: { Authorization: `Bearer ${straniToken}` },
+  });
+  assert.equal(odgovor.status, 403);
+});
+
 test("tuđi učenik nije dostupan", async () => {
   const odgovor = await fetch(`${baseUrl}/api/muallim/ucenik/${ucenikId}/statistika-vjezbi`, {
     headers: { Authorization: `Bearer ${straniToken}` },
