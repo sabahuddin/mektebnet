@@ -148,11 +148,6 @@ function KvizoviAdminRoute() {
   return user?.role === "admin" ? <KvizoviPage /> : <NotFound />;
 }
 
-function KvizAdminRoute() {
-  const { user } = useAuth();
-  return user?.role === "admin" ? <KvizPage /> : <NotFound />;
-}
-
 function Router() {
   return (
     <Switch>
@@ -195,7 +190,7 @@ function Router() {
 
       {/* Kvizovi */}
       <Route path="/kvizovi" component={KvizoviAdminRoute} />
-      <Route path="/kvizovi/:slug" component={KvizAdminRoute} />
+      <Route path="/kvizovi/:slug" component={KvizPage} />
 
       {/* Čitaonica */}
       <Route path="/citaonica" component={CitaonicaPage} />
