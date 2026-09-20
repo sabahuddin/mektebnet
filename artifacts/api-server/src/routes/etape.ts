@@ -19,6 +19,7 @@ import {
   etapaPassThreshold,
 } from "../lib/hasanat-rewards.js";
 import { evaluateAndPersistBadges } from "../lib/badges.js";
+import { getLang, overlayOne, overlayRows } from "../lib/content-translatable.js";
 
 const router = Router();
 const ETAPA_RETRY_WAIT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -209,23 +210,26 @@ router.get("/medaljon/:slug", async (req, res) => {
       : null;
 
     const ids = await resolveEtapaPitanjaIds(medaljon);
+    // Prijevod sadržaja: naziv/opis etape i naslovi lekcija koje pokriva.
+    const lang = getLang(req);
+    const medaljonOut = await overlayOne({
+      id: medaljon.id,
+      slug: medaljon.slug,
+      nivo: medaljon.nivo,
+      naziv: medaljon.naziv,
+      opis: medaljon.opis,
+      ikona: medaljon.ikona,
+      boja: medaljon.boja,
+      contentHtml: medaljon.contentHtml,
+      posAfterRedoslijed: medaljon.posAfterRedoslijed,
+      pragProlazaPercent: etapaPassThreshold(medaljon.pragProlazaPercent),
+      isGating: medaljon.isGating,
+      brojPitanja: ids.length,
+      imaKviz: ids.length > 0,
+    }, "medaljoni", lang);
     res.json({
-      medaljon: {
-        id: medaljon.id,
-        slug: medaljon.slug,
-        nivo: medaljon.nivo,
-        naziv: medaljon.naziv,
-        opis: medaljon.opis,
-        ikona: medaljon.ikona,
-        boja: medaljon.boja,
-        contentHtml: medaljon.contentHtml,
-        posAfterRedoslijed: medaljon.posAfterRedoslijed,
-        pragProlazaPercent: etapaPassThreshold(medaljon.pragProlazaPercent),
-        isGating: medaljon.isGating,
-        brojPitanja: ids.length,
-        imaKviz: ids.length > 0,
-      },
-      lekcije: lekcijeEtape,
+      medaljon: medaljonOut,
+      lekcije: await overlayRows(lekcijeEtape, "ilmihal_lekcije", lang),
       polozeno: polozeno
         ? {
             id: polozeno.id,
@@ -277,9 +281,18 @@ router.post("/medaljon/:slug/start", requireAuth, requireRole("ucenik"), async (
     // Sortiraj prema redoslijedu iz `kvizPitanjaIds`
     const order = new Map(ids.map((id, i) => [id, i]));
     pitanja.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    // Pitanja etapnog ispita dolaze iz banke pitanja, pa se prevode isto kao
+    // pitanja u običnom kvizu.
+    const lang = getLang(req);
+    await overlayRows(pitanja, "pitanja_banka", lang);
+    const { naziv } = await overlayOne(
+      { id: medaljon.id, naziv: medaljon.naziv },
+      "medaljoni",
+      lang,
+    );
     res.json({
       medaljonId: medaljon.id,
-      naziv: medaljon.naziv,
+      naziv,
       pragProlazaPercent: etapaPassThreshold(medaljon.pragProlazaPercent),
       pitanja: pitanja.map((p) => ({
         id: p.id,
