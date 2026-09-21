@@ -4,6 +4,7 @@ import {
   existingQuizNeedsRepair,
   existingTextNeedsRepair,
   htmlTranslationIssue,
+  objasniOdbijanje,
 } from "./translate-content";
 
 test("ne šalje ponovo bankovno pitanje koje prevodi termin i čuva ga u zagradi", () => {
@@ -80,4 +81,29 @@ test("čuva dugu arapsku transliteraciju u HTML-u", () => {
   const source = "<p>ALLAHU LA-ILAHE ILLA-HU, EL-HAJJUL-KAJJUM. LA TE'HUZUHU SINETUN VVE-LA NEVM.</p>";
 
   assert.equal(htmlTranslationIssue(source, source, "de"), null);
+});
+
+test("ispis odbijenog reda kaže razlog i pokaže sporni string", () => {
+  // Najčešći slučaj: prevodilac je jedan string izostavio iz dugog odgovora.
+  // Prije se u ispisu vidjelo samo „neispravan tekstualni prijevod", pa se
+  // nije moglo razaznati je li kriv prevodilac ili provjera.
+  const izostavljen = objasniOdbijanje(["Koliko puta se klanja?"], {}, "de");
+  assert.match(izostavljen, /prevodilac nije vratio prijevod/);
+  assert.match(izostavljen, /Koliko puta se klanja\?/);
+
+  const prazan = objasniOdbijanje(["Pitanje"], { Pitanje: "   " }, "de");
+  assert.match(prazan, /prevodilac nije vratio prijevod/);
+
+  // Kad provjera odbije sadržaj, razlog dolazi iz nje same.
+  const dodanaEulogija = objasniOdbijanje(
+    ["Muhammed je rekao"],
+    { "Muhammed je rekao": "Muhammed sallallahu alejhi ve sellem sagte" },
+    "de",
+  );
+  assert.match(dodanaEulogija, /počasni oblik/);
+
+  // Broj spornih stringova ide u ispis, da se vidi je li kviz pao na jednom
+  // odgovoru ili na cijelom nizu.
+  assert.match(objasniOdbijanje(["a", "b", "c"], {}, "de"), /3 stringa/);
+  assert.match(objasniOdbijanje(["a"], {}, "de"), /1 string\b/);
 });

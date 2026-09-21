@@ -428,6 +428,20 @@ function textTranslationIssue(source: string, translation: string, jezik: string
   return null;
 }
 
+/**
+ * Zašto je red odbijen, ljudskim riječima i s primjerom. Bez ovoga se u
+ * ispisu vidjelo samo „neispravan tekstualni prijevod", pa se nije moglo
+ * razaznati je li prevodilac nešto izostavio ili je provjera nešto odbila.
+ */
+export function objasniOdbijanje(sporni: string[], dict: Record<string, string>, jezik: string): string {
+  const prvi = sporni[0] ?? "";
+  const razlog = typeof dict[prvi] !== "string" || !dict[prvi]?.trim()
+    ? "prevodilac nije vratio prijevod"
+    : textTranslationIssue(prvi, dict[prvi], jezik) ?? "nepoznat razlog";
+  const primjer = prvi.replace(/\s+/g, " ").slice(0, 90);
+  return `${razlog} — preskačem (${sporni.length} ${sporni.length === 1 ? "string" : "stringa"}) · „${primjer}"`;
+}
+
 function bosnianMarkerCount(value: string) {
   return [...value].filter((character) => /[žđćČĆĐŽ]/u.test(character)).length;
 }
@@ -678,6 +692,16 @@ async function run(): Promise<IshodProlaza> {
         const uniq = Array.from(new Set(chunk.flatMap((j) => j.strings)));
         try {
           const dict = await translateTexts(uniq, LANG_NAMES[jezik]);
+          // Model povremeno izostavi poneki string iz dugog JSON odgovora.
+          // HTML put takve već ponavlja pojedinačno; tekstualni nije, pa je
+          // jedan izostavljen odgovor odbacivao cijeli kviz — i to u svakom
+          // narednom pokretu iznova, jer se pola prevedenog kviza ne smije
+          // upisati. Ponovi samo ono što nedostaje.
+          for (const izvor of uniq) {
+            if (typeof dict[izvor] === "string" && dict[izvor].trim()) continue;
+            const ponovo = await translateTexts([izvor], LANG_NAMES[jezik]);
+            if (typeof ponovo[izvor] === "string" && ponovo[izvor].trim()) dict[izvor] = ponovo[izvor];
+          }
           const ciljni = ciljniJezik(jezik);
           if (ciljni) {
             for (const izvor of uniq) {
@@ -688,9 +712,10 @@ async function run(): Promise<IshodProlaza> {
             if (j.type === "kvizPitanja") {
               // Svi stringovi moraju biti prevedeni, inače preskoči (retry idući
               // pokret) — pola-prevedeni kviz bi razbio poklapanje odgovora.
-              if (j.strings.some((s) => typeof dict[s] !== "string" || textTranslationIssue(s, dict[s], jezik))) {
+              const sporni = j.strings.filter((s) => typeof dict[s] !== "string" || textTranslationIssue(s, dict[s], jezik));
+              if (sporni.length > 0) {
                 failed++;
-                console.error(`  [${jezik}] ${j.tabela}#${j.redId}/${j.polje}: neispravan tekstualni prijevod — preskačem`);
+                console.error(`  [${jezik}] ${j.tabela}#${j.redId}/${j.polje}: ${objasniOdbijanje(sporni, dict, jezik)}`);
                 continue;
               }
               const rebuilt = (j.arr ?? []).map((item: any) => ({
@@ -704,9 +729,10 @@ async function run(): Promise<IshodProlaza> {
               continue;
             }
             const parts = j.strings.map((s) => dict[s]);
-            if (parts.some((p, index) => typeof p !== "string" || textTranslationIssue(j.strings[index], p, jezik))) {
+            const sporniTekst = j.strings.filter((s) => typeof dict[s] !== "string" || textTranslationIssue(s, dict[s], jezik));
+            if (sporniTekst.length > 0) {
               failed++;
-              console.error(`  [${jezik}] ${j.tabela}#${j.redId}/${j.polje}: neispravan tekstualni prijevod — preskačem`);
+              console.error(`  [${jezik}] ${j.tabela}#${j.redId}/${j.polje}: ${objasniOdbijanje(sporniTekst, dict, jezik)}`);
               continue;
             }
             const prijevod = j.type === "jsonbArray" ? JSON.stringify(parts) : (parts[0] as string);
