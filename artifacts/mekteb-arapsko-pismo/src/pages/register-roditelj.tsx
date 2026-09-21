@@ -210,6 +210,13 @@ export default function RegisterRoditeljPage() {
   if (success && credentials) {
     const trialDate = new Date(credentials.trialUntil);
     const trialDateStr = trialDate.toLocaleDateString("bs-BA", { day: "numeric", month: "long", year: "numeric" });
+    const subscriptionUntil = new Date(trialDate);
+    subscriptionUntil.setFullYear(subscriptionUntil.getFullYear() + 1);
+    const subscriptionUntilStr = subscriptionUntil.toLocaleDateString("bs-BA", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
     const copyText = `Korisničko ime: ${credentials.username}\nLozinka: ${credentials.password}`;
     const paymentLink = bmacRegistrationProductLink(
       activeTab,
@@ -264,9 +271,13 @@ export default function RegisterRoditeljPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
               <Calendar className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
               <div className="text-sm">
-                <div className="font-bold text-amber-900">{t("30 dana besplatnog probnog perioda")}</div>
+                <div className="font-bold text-amber-900">
+                  {t("30 dana besplatno + 12 mjeseci pretplate")}
+                </div>
                 <div className="text-amber-800 mt-0.5">
-                  {t("Probni period traje do")} <strong>{trialDateStr}</strong>. {t("Da biste nastavili koristiti platformu i poslije, obavite uplatu pretplate.")}
+                  {t("Probni period traje do")} <strong>{trialDateStr}</strong>.{" "}
+                  {t("Godišnja pretplata počinje nakon probnog perioda, pa uplatom tokom triala pristup traje do")}{" "}
+                  <strong>{subscriptionUntilStr}</strong>.
                 </div>
               </div>
             </div>
@@ -285,10 +296,10 @@ export default function RegisterRoditeljPage() {
                   {t("Potrebno dodatnih muallimskih računa:")} {mektebAddon.addonCount}
                 </div>
                 <div className="text-blue-800 mt-1">
-                  {mektebAddon.addonCount} × {mektebAddon.addonPriceLabel} / {t("godišnje")}
+                  {mektebAddon.addonCount} × {mektebAddon.addonPriceLabel} / {t("12 mjeseci nakon triala")}
                 </div>
                 <div className="font-bold text-blue-900 mt-1">
-                  {t("Ukupna godišnja cijena:")}{" "}
+                  {t("Ukupna cijena za 12 mjeseci nakon probnog perioda:")}{" "}
                   {formatMektebTotalPrice(
                     mektebForm.paket,
                     isBiH === true,
@@ -330,7 +341,9 @@ export default function RegisterRoditeljPage() {
         <div className="text-center mb-6">
           <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-3" />
           <h1 className="text-xl font-extrabold text-foreground">Otvorite svoj Mekteb račun</h1>
-          <p className="text-muted-foreground font-medium mt-1">30 dana besplatnog pristupa za učenike, roditelje i mektebe.</p>
+          <p className="text-muted-foreground font-medium mt-1">
+            30 dana besplatno + 12 mjeseci pretplate za učenike, porodice i mektebe.
+          </p>
           <button
             type="button"
             onClick={() => setLocation("/login")}
@@ -369,10 +382,11 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="ucenik" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>{t("Pojedinačna pretplata")}</strong> — {t("pristup svim sadržajima za jednu osobu.")} <strong>{t("30 dana besplatnog probnog perioda")}</strong>, {t("pa pretplata.")}
+                      <strong>{t("Pojedinačna pretplata")}</strong> — {t("pristup svim sadržajima za jednu osobu.")}{" "}
+                      <strong>{t("30 dana besplatno + 12 mjeseci pretplate.")}</strong>
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
-                      {t("Pretplata:")} {isBiH === null ? "..." : ucenikPrice} / {t("godišnje")}
+                      {t("Pretplata:")} {isBiH === null ? "..." : ucenikPrice} / {t("12 mjeseci nakon triala")}
                     </p>
                   </div>
 
@@ -416,7 +430,7 @@ export default function RegisterRoditeljPage() {
                       {isLoading ? t("Obrada...") : t("Otvori račun (30 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 30 dana.")}
+                      {t("Odmah dobijate korisničko ime i lozinku. Uplatite tokom 30 dana triala; plaćenih 12 mjeseci počinje nakon triala.")}
                     </p>
                   </form>
                 </motion.div>
@@ -426,10 +440,11 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="roditelj" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>{t("Porodična pretplata")}</strong> — {t("pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon prijave.")} <strong>{t("30 dana besplatnog probnog perioda")}</strong>.
+                      <strong>{t("Porodična pretplata")}</strong> — {t("pristup svim sadržajima za roditelja + 4 djece. Djecu dodajete nakon prijave.")}{" "}
+                      <strong>{t("30 dana besplatno + 12 mjeseci pretplate.")}</strong>
                     </p>
                     <p className="text-sm text-primary font-bold mt-1.5">
-                      {t("Pretplata:")} {isBiH === null ? "..." : roditeljPrice} / {t("godišnje")}
+                      {t("Pretplata:")} {isBiH === null ? "..." : roditeljPrice} / {t("12 mjeseci nakon triala")}
                     </p>
                   </div>
 
@@ -461,7 +476,7 @@ export default function RegisterRoditeljPage() {
                       {isLoading ? t("Obrada...") : t("Otvori račun (30 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 30 dana.")}
+                      {t("Odmah dobijate korisničko ime i lozinku. Uplatite tokom 30 dana triala; plaćenih 12 mjeseci počinje nakon triala.")}
                     </p>
                   </form>
                 </motion.div>
@@ -471,7 +486,9 @@ export default function RegisterRoditeljPage() {
                 <motion.div key="mekteb" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
                   <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 mb-5">
                     <p className="text-sm text-foreground">
-                      <strong>{t("Registracija mekteba")}</strong> — {t("odmah dobijate muallimski račun.")} <strong>{t("30 dana besplatnog probnog perioda")}</strong>, {t("učenike dodajete nakon prijave.")}
+                      <strong>{t("Registracija mekteba")}</strong> — {t("odmah dobijate muallimski račun.")}{" "}
+                      <strong>{t("30 dana besplatno + 12 mjeseci pretplate.")}</strong>{" "}
+                      {t("Učenike dodajete nakon prijave.")}
                     </p>
                   </div>
 
@@ -569,7 +586,9 @@ export default function RegisterRoditeljPage() {
                                     isBiH,
                                     mektebForm.koliko_muallima,
                                   )}
-                              <div className="text-[10px] font-normal text-muted-foreground">/ {t("godišnje")}</div>
+                              <div className="text-[10px] font-normal text-muted-foreground">
+                                / {t("12 mjeseci nakon triala")}
+                              </div>
                             </span>
                           </button>
                         ))}
@@ -577,8 +596,8 @@ export default function RegisterRoditeljPage() {
                       {isBiH !== null && (
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                           {isBiH
-                            ? t("Dodatni muallim: 30 BAM (15 €) godišnje.")
-                            : t("Dodatni muallim: 30 € godišnje.")}
+                            ? t("Dodatni muallim: 30 BAM (15 €) za 12 mjeseci nakon triala.")
+                            : t("Dodatni muallim: 30 € za 12 mjeseci nakon triala.")}
                         </p>
                       )}
                     </div>
@@ -602,7 +621,7 @@ export default function RegisterRoditeljPage() {
                       {isLoading ? t("Obrada...") : t("Otvori muallimski račun (30 dana besplatno)")}
                     </Button>
                     <p className="text-xs text-muted-foreground text-center">
-                      {t("Odmah dobijate korisničko ime i lozinku. Pretplatu možete uplatiti u toku 30 dana.")}
+                      {t("Odmah dobijate korisničko ime i lozinku. Uplatite tokom 30 dana triala; plaćenih 12 mjeseci počinje nakon triala.")}
                     </p>
                   </form>
                 </motion.div>
