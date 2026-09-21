@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { BMAC_MEMBERSHIP_LINK, trialDaysLeft } from "@/lib/billing";
+import { BMAC_SHOP_LINK, trialDaysLeft } from "@/lib/billing";
 import { Clock, ExternalLink } from "lucide-react";
 
 /**
@@ -49,7 +49,7 @@ export function TrialBanner() {
           {message}
         </span>
         <a
-          href={BMAC_MEMBERSHIP_LINK}
+          href={BMAC_SHOP_LINK}
           target="_blank"
           rel="noopener noreferrer"
           data-testid="trial-pay-btn"

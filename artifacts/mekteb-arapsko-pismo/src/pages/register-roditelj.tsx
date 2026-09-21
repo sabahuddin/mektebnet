@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
+import { BMAC_SHOP_LINK } from "@/lib/billing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,10 +12,6 @@ import {
   GraduationCap, Users, Building2, MapPin, ExternalLink, ShieldCheck, Globe,
   Calendar, KeyRound, Copy
 } from "lucide-react";
-
-// Jedinstveni Buy Me a Coffee membership link — korisnik na BMAC stranici
-// bira nivo pretplate (pojedinačna, porodična, mektebska, mektebska XL).
-const BMAC_MEMBERSHIP_LINK = "https://buymeacoffee.com/mekteb/membership";
 
 // Cijena za pojedinačnu (učeničku) pretplatu — fiksno godišnje.
 const UCENIK_PRICE_BIH = "20 BAM (12 €)";
@@ -263,7 +260,7 @@ export default function RegisterRoditeljPage() {
               </div>
             </div>
 
-            <a href={BMAC_MEMBERSHIP_LINK} target="_blank" rel="noopener noreferrer"
+            <a href={BMAC_SHOP_LINK} target="_blank" rel="noopener noreferrer"
               className="block w-full text-center bg-primary/5 border border-primary/20 hover:bg-primary/10 transition rounded-xl px-4 py-3 mb-3 text-sm font-bold text-primary flex items-center justify-center gap-2">
               <ExternalLink className="w-4 h-4" /> {t("Plati pretplatu")}
             </a>

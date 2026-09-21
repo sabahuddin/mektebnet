@@ -1,8 +1,8 @@
-// Centralizirana billing konfiguracija (Buy Me a Coffee membership) i pomoćne
-// funkcije za probni period. Korisnik plaća pretplatu preko BMAC membership
-// stranice; admin nakon provjere uplate ručno aktivira nalog u admin panelu.
+// Centralizirana billing konfiguracija (Buy Me a Coffee Shop) i pomoćne
+// funkcije za probni period. Korisnik bira odgovarajući paket u BMAC Shopu;
+// admin nakon provjere uplate ručno aktivira nalog u admin panelu.
 
-export const BMAC_MEMBERSHIP_LINK = "https://buymeacoffee.com/mekteb/membership";
+export const BMAC_SHOP_LINK = "https://buymeacoffee.com/mekteb/extras";
 
 /**
  * Broj preostalih dana probnog perioda (zaokruženo naviše). Vraća `null` ako
