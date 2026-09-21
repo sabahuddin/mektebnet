@@ -4,7 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
-import { bmacRegistrationProductLink } from "@/lib/billing";
+import {
+  bmacMektebAddonDetails,
+  bmacRegistrationProductLink,
+  formatMektebTotalPrice,
+  type MektebPaket,
+} from "@/lib/billing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,27 +27,20 @@ const RODITELJ_PRICE_BIH = "50 BAM (25 €)";
 const RODITELJ_PRICE_EUR = "50 €";
 
 // Mektebski paketi — 2 opcije.
-type MektebPaketId = "do100" | "vise100";
 const MEKTEB_PAKETI: Array<{
-  id: MektebPaketId;
+  id: MektebPaket;
   naziv: string;
   opis: string;
-  cijenaBih: string;
-  cijenaEur: string;
 }> = [
   {
     id: "do100",
-    naziv: "Mektebska pretplata",
-    opis: "Do 100 učenika",
-    cijenaBih: "200 BAM (100 €)",
-    cijenaEur: "200 €",
+    naziv: "Mekteb Standard",
+    opis: "Do 100 učenika · uključuje 1 muallima",
   },
   {
     id: "vise100",
-    naziv: "Mektebska pretplata XL",
-    opis: "Više od 100 učenika",
-    cijenaBih: "300 BAM (150 €)",
-    cijenaEur: "300 €",
+    naziv: "Mekteb Pro",
+    opis: "Do 500 učenika · uključuje 5 muallima",
   },
 ];
 
@@ -107,7 +105,7 @@ export default function RegisterRoditeljPage() {
     drzava: string;
     grad: string;
     nazivMekteba: string;
-    paket: MektebPaketId;
+    paket: MektebPaket;
     koliko_muallima: number;
   }>({
     email: "", korisnickoIme: "", displayName: "", drzava: "", grad: "", nazivMekteba: "",
@@ -218,6 +216,14 @@ export default function RegisterRoditeljPage() {
       isBiH === true,
       mektebForm.paket,
     );
+    const mektebAddon =
+      activeTab === "mekteb"
+        ? bmacMektebAddonDetails(
+            mektebForm.paket,
+            isBiH === true,
+            mektebForm.koliko_muallima,
+          )
+        : null;
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"
         style={{ backgroundImage: "radial-gradient(circle at 50% 0%, hsl(var(--primary)/0.08) 0%, transparent 70%)" }}>
@@ -267,8 +273,39 @@ export default function RegisterRoditeljPage() {
 
             <a href={paymentLink} target="_blank" rel="noopener noreferrer"
               className="block w-full text-center bg-primary/5 border border-primary/20 hover:bg-primary/10 transition rounded-xl px-4 py-3 mb-3 text-sm font-bold text-primary flex items-center justify-center gap-2">
-              <ExternalLink className="w-4 h-4" /> {t("Plati odabranu pretplatu")}
+              <ExternalLink className="w-4 h-4" />
+              {activeTab === "mekteb"
+                ? t("Plati osnovni paket")
+                : t("Plati odabranu pretplatu")}
             </a>
+
+            {mektebAddon && mektebAddon.addonCount > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3 text-sm">
+                <div className="font-bold text-blue-900">
+                  {t("Potrebno dodatnih muallimskih računa:")} {mektebAddon.addonCount}
+                </div>
+                <div className="text-blue-800 mt-1">
+                  {mektebAddon.addonCount} × {mektebAddon.addonPriceLabel} / {t("godišnje")}
+                </div>
+                <div className="font-bold text-blue-900 mt-1">
+                  {t("Ukupna godišnja cijena:")}{" "}
+                  {formatMektebTotalPrice(
+                    mektebForm.paket,
+                    isBiH === true,
+                    mektebForm.koliko_muallima,
+                  )}
+                </div>
+                <a
+                  href={mektebAddon.addonLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-bold px-4 py-2.5 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {t("Dodaj Addon za dodatne muallime")}
+                </a>
+              </div>
+            )}
 
             <Button onClick={() => setLocation("/login")} size="lg" className="w-full rounded-xl">
               {t("Prijavite se sada")}
@@ -512,16 +549,26 @@ export default function RegisterRoditeljPage() {
                             <div className="min-w-0 flex-1 pr-2">
                               <div className="font-bold text-foreground text-sm">{p.naziv}</div>
                               <div className="text-xs text-muted-foreground">{p.opis}</div>
-                              {isBiH !== null && (
+                              {isBiH !== null && mektebForm.paket === p.id && (
                                 <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                                  {isBiH
-                                    ? t("1 učenik + 1 roditelj = 2 KM godišnje.")
-                                    : t("1 učenik + 1 roditelj = 2 € godišnje.")}
+                                  {bmacMektebAddonDetails(
+                                    p.id,
+                                    isBiH,
+                                    mektebForm.koliko_muallima,
+                                  ).addonCount > 0
+                                    ? t("U cijenu su dodani Addoni za dodatne muallime.")
+                                    : t("Nije potreban dodatni Addon.")}
                                 </div>
                               )}
                             </div>
                             <span className="text-xs font-bold text-primary shrink-0 ml-2 text-right">
-                              {isBiH === null ? "..." : (isBiH ? p.cijenaBih : p.cijenaEur)}
+                              {isBiH === null
+                                ? "..."
+                                : formatMektebTotalPrice(
+                                    p.id,
+                                    isBiH,
+                                    mektebForm.koliko_muallima,
+                                  )}
                               <div className="text-[10px] font-normal text-muted-foreground">/ {t("godišnje")}</div>
                             </span>
                           </button>
@@ -530,7 +577,7 @@ export default function RegisterRoditeljPage() {
                       {isBiH !== null && (
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                           {isBiH
-                            ? t("Dodatni muallim: 30 KM godišnje.")
+                            ? t("Dodatni muallim: 30 BAM (15 €) godišnje.")
                             : t("Dodatni muallim: 30 € godišnje.")}
                         </p>
                       )}

@@ -24,7 +24,25 @@ const BMAC_PRODUCT_IDS = {
 } as const;
 
 type RegistrationType = "ucenik" | "roditelj" | "mekteb";
-type MektebPaket = "do100" | "vise100";
+export type MektebPaket = "do100" | "vise100";
+
+const MEKTEB_PRICING = {
+  do100: {
+    includedMuallims: 1,
+    bih: { baseBam: 200, baseEur: 100 },
+    dijaspora: { baseEur: 200 },
+  },
+  vise100: {
+    includedMuallims: 5,
+    bih: { baseBam: 300, baseEur: 150 },
+    dijaspora: { baseEur: 300 },
+  },
+} as const;
+
+const ADDON_PRICING = {
+  bih: { bam: 30, eur: 15, productId: 547355 },
+  dijaspora: { eur: 30, productId: 547356 },
+} as const;
 
 /**
  * Direktan BMAC proizvod za odabranu registraciju. BMAC koristi `B` proizvode
@@ -46,6 +64,46 @@ export function bmacRegistrationProductLink(
           : BMAC_PRODUCT_IDS.mektebPro[region];
 
   return `https://buymeacoffee.com/mekteb/e/${productId}`;
+}
+
+export function bmacMektebAddonDetails(
+  mektebPaket: MektebPaket,
+  isBiH: boolean,
+  requestedMuallims: number,
+) {
+  const includedMuallims = MEKTEB_PRICING[mektebPaket].includedMuallims;
+  const addonCount = Math.max(0, requestedMuallims - includedMuallims);
+  const addon = isBiH ? ADDON_PRICING.bih : ADDON_PRICING.dijaspora;
+
+  return {
+    includedMuallims,
+    addonCount,
+    addonLink: `https://buymeacoffee.com/mekteb/e/${addon.productId}`,
+    addonPriceLabel: isBiH
+      ? `${ADDON_PRICING.bih.bam} BAM (${ADDON_PRICING.bih.eur} €)`
+      : `${ADDON_PRICING.dijaspora.eur} €`,
+  };
+}
+
+export function formatMektebTotalPrice(
+  mektebPaket: MektebPaket,
+  isBiH: boolean,
+  requestedMuallims: number,
+): string {
+  const { addonCount } = bmacMektebAddonDetails(
+    mektebPaket,
+    isBiH,
+    requestedMuallims,
+  );
+
+  if (isBiH) {
+    const packagePrice = MEKTEB_PRICING[mektebPaket].bih;
+    const addon = ADDON_PRICING.bih;
+    return `${packagePrice.baseBam + addonCount * addon.bam} BAM (${packagePrice.baseEur + addonCount * addon.eur} €)`;
+  }
+
+  const packagePrice = MEKTEB_PRICING[mektebPaket].dijaspora;
+  return `${packagePrice.baseEur + addonCount * ADDON_PRICING.dijaspora.eur} €`;
 }
 
 /**
