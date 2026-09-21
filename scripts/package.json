@@ -31,7 +31,9 @@
     "test:translate-content": "tsx --test ./src/translate-content.test.ts",
     "transfer-content": "tsx ./src/transfer-content.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "vrati-sadrzaj": "tsx ./src/vrati-sadrzaj.ts"
+    "vrati-sadrzaj": "tsx ./src/vrati-sadrzaj.ts",
+    "test": "tsx --test ./src/transkripcija.test.ts ./src/translate-content.test.ts ./src/translate-content-force.test.ts",
+    "test:frontend-lib": "tsx --test ../artifacts/mekteb-arapsko-pismo/src/lib/*.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

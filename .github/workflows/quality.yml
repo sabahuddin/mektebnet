@@ -84,5 +84,14 @@ jobs:
       - name: API tests
         run: pnpm --filter @workspace/api-server test
 
+      # Testovi skripti i frontend biblioteka do sada nisu radili u CI-ju, pa
+      # regresije u transkripciji, prevođenju i vježbama nije imao ko uhvatiti.
+      # Oba skupa se pokreću kroz `scripts`, jer je tsx samo tamo.
+      - name: Script tests
+        run: pnpm --filter @workspace/scripts test
+
+      - name: Frontend library tests
+        run: pnpm --filter @workspace/scripts run test:frontend-lib
+
       - name: Build
         run: pnpm run build
