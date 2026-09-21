@@ -480,6 +480,15 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
             </span>
           )}
           <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSaving}
+            className="rounded-xl px-6 font-bold"
+          >
+            {t("Izađi")}
+          </Button>
+          <Button
             onClick={handleSave}
             disabled={isSaving || !isDirty}
             className="rounded-xl px-6 font-bold flex items-center gap-2"
