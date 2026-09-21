@@ -332,7 +332,7 @@ export default function UcenikProfilPage() {
   const [isLoading, setIsLoading] = useState(true);
   // Odabrana mektebska godina (null = default/tekuća; server vraća odabranu).
   const [selectedGodina, setSelectedGodina] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"moj-put" | "profil" | "ocjene" | "napamet" | "kalendar" | "zadace" | "kvizovi" | "zvjezdice" | "dokumenti" | "postavke">("moj-put");
+  const [activeTab, setActiveTab] = useState<"moj-put" | "profil" | "ocjene" | "napamet" | "kalendar" | "zadace" | "kvizovi" | "zvjezdice" | "dokumenti">("moj-put");
   const [napamet, setNapamet] = useState<NapametResponse | null>(null);
   const [dokumenti, setDokumenti] = useState<MektebDokument[] | null>(null);
   const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene" | "neuradjene">("aktivne");
@@ -432,7 +432,6 @@ export default function UcenikProfilPage() {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
 
-  const prisutnih = profil ? profil.prisustvo.filter(p => p.status === "prisutan").length : 0;
   const brojcaneOcjene = profil?.ocjene.filter((o): o is typeof o & { ocjena: number } => o.ocjena !== null) ?? [];
   const prosjecnaOcjena = brojcaneOcjene.length
     ? (brojcaneOcjene.reduce((s, o) => s + o.ocjena, 0) / brojcaneOcjene.length).toFixed(1)
@@ -943,6 +942,34 @@ export default function UcenikProfilPage() {
 
             {activeTab === "profil" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <div className="mb-6 rounded-2xl border border-border/50 bg-white p-5">
+                  <h2 className="mb-4 flex items-center gap-2 text-lg font-extrabold text-foreground">
+                    <User className="h-5 w-5 text-primary" /> {t("Lični podaci")}
+                  </h2>
+                  <dl className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("Ime i prezime")}</dt>
+                      <dd className="mt-1 font-extrabold text-foreground">{profil.user.displayName}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("Korisničko ime")}</dt>
+                      <dd className="mt-1 font-extrabold text-foreground">{profil.user.username}</dd>
+                    </div>
+                    {profil.grupa && (
+                      <div>
+                        <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("Grupa")}</dt>
+                        <dd className="mt-1 font-extrabold text-foreground">{profil.grupa.naziv}</dd>
+                      </div>
+                    )}
+                    {profil.muallim && (
+                      <div>
+                        <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{t("Muallim")}</dt>
+                        <dd className="mt-1 font-extrabold text-foreground">{profil.muallim.displayName}</dd>
+                      </div>
+                    )}
+                  </dl>
+                </div>
+
                 {profil.mektebskaGodina && profil.mektebskaGodina.godine.length > 0 && (
                   <div className="mb-6 rounded-2xl border border-border/50 bg-white p-5">
                     <label htmlFor="mektebska-godina" className="mb-2 block text-sm font-extrabold text-foreground">
@@ -962,146 +989,39 @@ export default function UcenikProfilPage() {
                   </div>
                 )}
 
-                {profil.napredak && (
-                  <div className="mb-6 bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50 border border-primary/20 rounded-3xl p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Trophy className="w-5 h-5 text-primary" />
-                      <h2 className="text-lg font-extrabold text-foreground">{t("Moj put učenja")}</h2>
+                <div className="rounded-2xl border border-border/50 bg-white p-5">
+                  <h3 className="mb-4 flex items-center gap-2 font-extrabold text-foreground">
+                    <Settings className="h-5 w-5 text-primary" /> {t("Postavke")}
+                  </h3>
+                  <div className="flex items-start gap-4 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${soundEnabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
+                      {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
                     </div>
-                    <div className="grid grid-cols-3 gap-3 mb-5">
-                      <div className="bg-white border border-orange-200 rounded-2xl p-4 text-center">
-                        <Flame className="w-6 h-6 text-orange-500 mx-auto mb-1" />
-                        <div className="text-3xl font-extrabold text-orange-600">{profil.napredak.streakDays}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.streakDays === 1 ? t("dan zaredom") : t("dana zaredom")}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <label htmlFor="sound-toggle" className="cursor-pointer font-extrabold text-foreground">{t("Zvučni efekti")}</label>
+                        <button
+                          id="sound-toggle"
+                          role="switch"
+                          aria-checked={soundEnabled}
+                          aria-label={t("Zvučni efekti")}
+                          data-testid="toggle-sound-effects"
+                          onClick={handleToggleSound}
+                          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40 ${soundEnabled ? "bg-emerald-500" : "bg-gray-300"}`}
+                        >
+                          <span className={`inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${soundEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                        </button>
                       </div>
-                      <div className="bg-white border border-amber-200 rounded-2xl p-4 text-center">
-                        <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
-                        <div className="text-3xl font-extrabold text-amber-600">{profil.napredak.totalHasanat}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.totalHasanat === 1 ? t("kap meda") : t("kapi meda")}</div>
-                      </div>
-                      <div className="bg-white border border-emerald-200 rounded-2xl p-4 text-center">
-                        <BookOpen className="w-6 h-6 text-emerald-600 mx-auto mb-1" />
-                        <div className="text-3xl font-extrabold text-emerald-700">{profil.napredak.completedCount}</div>
-                        <div className="text-xs text-muted-foreground font-semibold mt-0.5">{profil.napredak.completedCount === 1 ? t("lekcija") : t("lekcija završeno")}</div>
-                      </div>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {t("Kratki zvuk pohvale kad završiš novu lekciju.")} {reducedMotion && (
+                          <span className="mt-1 block font-medium text-amber-700">{t("Sistem je u režimu „smanjene animacije\" — zvuk je trenutno isključen.")}</span>
+                        )}
+                      </p>
                     </div>
-                    <div className="space-y-2.5">
-                      {[1, 2, 3].map(nivo => {
-                        const stats = profil.napredak!.poNivou[nivo];
-                        if (!stats || stats.ukupno === 0) return null;
-                        const procenat = stats.ukupno > 0 ? Math.round((stats.gotov / stats.ukupno) * 100) : 0;
-                        return (
-                          <div key={nivo}>
-                            <div className="flex justify-between text-xs font-bold text-foreground mb-1">
-                              <span>{t("Ilmihal — Nivo {nivo}", { nivo: String(nivo) })}</span>
-                              <span className="text-primary">{stats.gotov}/{stats.ukupno} ({procenat}%)</span>
-                            </div>
-                            <div className="h-2.5 bg-white border border-primary/15 rounded-full overflow-hidden">
-                              <div className="h-full bg-gradient-to-r from-primary to-violet-500 transition-all duration-500" style={{ width: `${procenat}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {profil.napredak.bedzevi && profil.napredak.bedzevi.length > 0 && (() => {
-                      const earnedCount = profil.napredak!.bedzevi!.filter(b => b.earned).length;
-                      const totalCount = profil.napredak!.bedzevi!.length;
-                      return (
-                        <div className="mt-5 pt-5 border-t border-primary/15">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Award className="w-4 h-4 text-primary" />
-                            <h3 className="text-sm font-extrabold text-foreground">{t("Moji bedževi ({earned}/{total})", { earned: String(earnedCount), total: String(totalCount) })}</h3>
-                          </div>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                            {profil.napredak!.bedzevi!.map(b => (
-                              <button
-                                key={b.id}
-                                type="button"
-                                onClick={() => setSelectedBadge(b)}
-                                aria-label={b.earned ? `${b.naziv}: ${b.opis}` : t("{naziv} (zaključan, uslov: {uslov})", { naziv: b.naziv, uslov: b.uslov })}
-                                title={`${b.naziv} — ${b.opis}${b.earned ? "" : t(" (uslov: {uslov})", { uslov: b.uslov })}`}
-                                className="group relative w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl"
-                                data-testid={`badge-pregled-${b.id}`}
-                              >
-                                <div className={`aspect-square rounded-2xl flex items-center justify-center transition-all ${b.earned ? "hover:scale-105 cursor-pointer" : "grayscale opacity-50 cursor-pointer"}`}>
-                                  <img
-                                    src={`${import.meta.env.BASE_URL}bedzevi/${b.id}.png?v=4`}
-                                    alt={b.naziv}
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                                  />
-                                </div>
-                                <div className={`text-[10px] text-center font-bold mt-1 truncate ${b.earned ? "text-foreground/70" : "text-muted-foreground"}`}>{b.naziv}</div>
-                              </button>
-                            ))}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground mt-3 italic">
-                            {t("Sivi bedževi su zaključani — nastavi učiti da ih osvojiš!")}
-                          </p>
-                        </div>
-                      );
-                    })()}
                   </div>
-                )}
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  {[
-                    { label: t("Prosječna ocjena"), value: prosjecnaOcjena, icon: Star, color: "text-amber-600", bg: "bg-amber-50" },
-                    { label: t("Prisustvo"), value: profil.prisustvo.length ? `${prisutnih}/${profil.prisustvo.length}` : "—", icon: CalendarCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-                    { label: t("Kvizova završeno"), value: profil.kvizovi.length, icon: ClipboardList, color: "text-primary", bg: "bg-primary/5" },
-                    { label: t("Ukupno ocjena"), value: profil.ocjene.length, icon: BookOpen, color: "text-violet-600", bg: "bg-violet-50" },
-                  ].map(stat => (
-                    <div key={stat.label} className={`${stat.bg} border border-border/50 rounded-2xl p-4`}>
-                      <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />
-                      <div className={`text-2xl font-extrabold ${stat.color}`}>{stat.value}</div>
-                      <div className="text-xs text-muted-foreground font-medium mt-0.5">{stat.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-white border border-border/50 rounded-2xl p-5">
-                    <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-3">
-                      <Star className="w-4 h-4 text-amber-500" /> {t("Posljednje ocjene")}
-                    </h3>
-                    {profil.ocjene.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">{t("Nema ocjena")}</p>
-                    ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {profil.ocjene.slice(0, 8).map(o => (
-                          <div key={o.id} className="flex items-center justify-between text-sm">
-                            <div>
-                              <span className="font-medium text-foreground">{o.predmet || t("Nije određeno")}</span>
-                              {o.lekcijaNaziv && <span className="text-primary text-xs ml-1">({o.lekcijaNaziv})</span>}
-                              <div className="text-xs text-muted-foreground">{o.datum}</div>
-                            </div>
-                            <span className={`font-extrabold px-2.5 py-0.5 rounded-full text-sm ${o.ocjena !== null ? OCJENA_COLORS[o.ocjena] : o.ocjenaOpisna === "uradjeno" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                              {o.ocjenaOpisna === "uradjeno" ? t("Urađeno") : o.ocjenaOpisna === "neuradjeno" ? t("Neurađeno") : o.ocjena}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="bg-white border border-border/50 rounded-2xl p-5">
-                    <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-3">
-                      <CalendarCheck className="w-4 h-4 text-primary" /> {t("Posljednje prisustvo")}
-                    </h3>
-                    {profil.prisustvo.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">{t("Nema evidencije")}</p>
-                    ) : (
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {profil.prisustvo.slice(0, 10).map(p => (
-                          <div key={p.id} className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">{p.datum}</span>
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${STATUS_COLORS[p.status] || "bg-gray-100"}`}>{p.status}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <div className="mt-3"><PushToggle /></div>
+                  <SelamSetting />
+                  <div className="mt-3"><ChangePasswordCard /></div>
                 </div>
               </motion.div>
             )}
@@ -1441,62 +1361,6 @@ export default function UcenikProfilPage() {
                         <p className="text-sm text-muted-foreground">{t("Klikni na dan za detalje")}</p>
                       </div>
                     )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTab === "postavke" && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="bg-white border border-border/50 rounded-2xl p-5 max-w-xl">
-                  <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
-                    <Settings className="w-5 h-5 text-primary" /> {t("Postavke")}
-                  </h3>
-
-                  <div className="flex items-start gap-4 p-4 rounded-2xl border border-border/60 bg-muted/20">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${soundEnabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
-                      {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-3">
-                        <label htmlFor="sound-toggle" className="font-extrabold text-foreground cursor-pointer">
-                          {t("Zvučni efekti")}
-                        </label>
-                        <button
-                          id="sound-toggle"
-                          role="switch"
-                          aria-checked={soundEnabled}
-                          aria-label={t("Zvučni efekti")}
-                          data-testid="toggle-sound-effects"
-                          onClick={handleToggleSound}
-                          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-                            soundEnabled ? "bg-emerald-500" : "bg-gray-300"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              soundEnabled ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1.5">
-                        {t("Kratki zvuk pohvale kad završiš novu lekciju.")} {reducedMotion && (
-                          <span className="block mt-1 text-amber-700 font-medium">
-                            {t("Sistem je u režimu „smanjene animacije\" — zvuk je trenutno isključen.")}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3">
-                    <PushToggle />
-                  </div>
-                  <SelamSetting />
-
-                  <div className="mt-3">
-                    <ChangePasswordCard />
                   </div>
                 </div>
               </motion.div>
