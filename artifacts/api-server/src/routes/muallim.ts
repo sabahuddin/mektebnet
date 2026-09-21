@@ -1844,6 +1844,70 @@ router.post("/ucenici", async (req, res) => {
   }
 });
 
+// PUT /api/muallim/ucenici/:id - ispravi ime i prezime učenika.
+// Korisničko ime i pristupni podaci ostaju nepromijenjeni.
+router.put("/ucenici/:id", async (req, res): Promise<void> => {
+  try {
+    const ucenikId = Number.parseInt(String(req.params.id), 10);
+    const displayName = typeof req.body?.displayName === "string" ? req.body.displayName.trim() : "";
+    if (!Number.isInteger(ucenikId) || ucenikId <= 0) {
+      res.status(400).json({ error: "Neispravan učenik" });
+      return;
+    }
+    if (displayName.length < 2 || displayName.length > 120) {
+      res.status(400).json({ error: "Ime i prezime mora imati između 2 i 120 znakova" });
+      return;
+    }
+
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.role === "admin";
+    const ctx = await getMektebCtx(userId);
+    const [profil] = await db
+      .select()
+      .from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.userId, ucenikId));
+    if (!profil) {
+      res.status(404).json({ error: "Učenik nije pronađen" });
+      return;
+    }
+
+    const isOwner = profil.muallimId === userId;
+    let isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId && profil.mektebId === ctx.mektebId);
+    if (!isGlavniInSameMekteb && ctx?.isGlavni && ctx.mektebId) {
+      const check = await db.execute(sql`
+        SELECT 1
+        FROM ucenik_profili up
+        JOIN muallim_profili mp ON mp.user_id = up.muallim_id
+        WHERE up.user_id = ${ucenikId} AND mp.mekteb_id = ${ctx.mektebId}
+        LIMIT 1
+      `);
+      isGlavniInSameMekteb = check.rows.length > 0;
+    }
+    if (!isAdmin && !isOwner && !isGlavniInSameMekteb) {
+      res.status(403).json({ error: "Učenik ne pripada vama" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(usersTable)
+      .set({ displayName })
+      .where(eq(usersTable.id, ucenikId))
+      .returning({
+        id: usersTable.id,
+        displayName: usersTable.displayName,
+        username: usersTable.username,
+      });
+    if (!updated) {
+      res.status(404).json({ error: "Učenik nije pronađen" });
+      return;
+    }
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update student display name");
+    res.status(500).json({ error: "Nije moguće sačuvati ime učenika" });
+  }
+});
+
 // POST /api/muallim/ucenici/bulk - create multiple students at once,
 // optionally each with a parent.
 // Body shape (preferirano): { entries: Array<{ ucenik: string; roditelj?: string }>, grupaId? }

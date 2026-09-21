@@ -5,9 +5,12 @@ import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
-import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal, Trash2, TrendingUp } from "lucide-react";
+import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal, Trash2, TrendingUp, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { isOnline, formatScreentime } from "@/lib/utils";
 import { goBackOr } from "@/lib/back-navigation";
@@ -200,6 +203,9 @@ export default function UcenikPage() {
   const [resettingPass, setResettingPass] = useState(false);
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [copiedPass, setCopiedPass] = useState(false);
+  const [showEditName, setShowEditName] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   // Roditelji
   const [roditelji, setRoditelji] = useState<RoditeljVeza[]>([]);
@@ -286,6 +292,41 @@ export default function UcenikPage() {
       });
     } finally {
       setApprovingEtapaId(null);
+    }
+  }
+
+  function openEditName() {
+    if (!ucenik) return;
+    setEditName(ucenik.displayName);
+    setShowEditName(true);
+  }
+
+  async function saveStudentName() {
+    if (!token || !ucenik) return;
+    const displayName = editName.trim();
+    if (displayName.length < 2) {
+      toast({ title: t("Unesite ime i prezime učenika"), variant: "destructive" });
+      return;
+    }
+    setSavingName(true);
+    try {
+      const updated = await apiRequest<{ id: number; displayName: string; username: string }>(
+        "PUT",
+        `/muallim/ucenici/${ucenik.id}`,
+        { displayName },
+        token,
+      );
+      setUcenik((current) => current ? { ...current, displayName: updated.displayName } : current);
+      setShowEditName(false);
+      toast({ title: t("Ime učenika je sačuvano") });
+    } catch (error) {
+      toast({
+        title: t("Ime nije sačuvano"),
+        description: error instanceof Error ? error.message : t("Pokušaj ponovo."),
+        variant: "destructive",
+      });
+    } finally {
+      setSavingName(false);
     }
   }
 
@@ -690,6 +731,16 @@ export default function UcenikPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">{ucenik.displayName}</h1>
+                  <button
+                    type="button"
+                    onClick={openEditName}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    title={t("Uredi ime i prezime")}
+                    aria-label={t("Uredi ime i prezime")}
+                    data-testid="btn-edit-student-name"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   {isOnline(ucenik.lastSeenAt) && (
                     <span className="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">{t("online")}</span>
                   )}
@@ -710,6 +761,44 @@ export default function UcenikPage() {
                 </Button>
               </div>
             </div>
+
+            <Dialog open={showEditName} onOpenChange={(open) => !savingName && setShowEditName(open)}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>{t("Uredi ime i prezime učenika")}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2 py-2">
+                  <Label htmlFor="student-display-name">{t("Ime i prezime")}</Label>
+                  <Input
+                    id="student-display-name"
+                    value={editName}
+                    onChange={(event) => setEditName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void saveStudentName();
+                      }
+                    }}
+                    autoFocus
+                    maxLength={120}
+                    disabled={savingName}
+                    data-testid="input-student-display-name"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("Korisničko ime i lozinka učenika ostaju isti.")}
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowEditName(false)} disabled={savingName}>
+                    {t("Odustani")}
+                  </Button>
+                  <Button type="button" onClick={() => void saveStudentName()} disabled={savingName || editName.trim().length < 2}>
+                    {savingName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {t("Sačuvaj")}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <div className="grid lg:grid-cols-[1fr_280px] xl:grid-cols-[1fr_300px] items-start gap-6">
               <div className="lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1">
