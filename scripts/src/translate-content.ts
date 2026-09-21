@@ -23,6 +23,8 @@
  *   ... --types text                      (samo tekst, preskoči HTML)
  *   ... --dry                             (samo prebroji, bez OpenAI poziva)
  *   ... --dry --list-jobs                 (ispiši tačne preostale redove)
+ *   ... --do-kraja                        (ponavljaj prolaze dok ima posla)
+ *   ... --do-kraja --pauza 120            (duža pauza kad servis vraća 429)
  */
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -78,10 +80,16 @@ const MODEL = argVal("--model", "gpt-5-mini");
 const CHUNK = parseInt(argVal("--chunk", "30"), 10);
 const CONCURRENCY = parseInt(argVal("--concurrency", "8"), 10);
 const MAX_SECONDS = parseInt(argVal("--max-seconds", "0"), 10); // 0 = bez limita
+// „Do kraja": ponavljaj prolaze dok ima posla. Skripta je idempotentna (pamti
+// po hešu), pa svaki novi prolaz pokupi samo ono što je prošli ostavio —
+// obično zato što je AI servis vratio 429.
+const DO_KRAJA = args.includes("--do-kraja");
+const PAUZA = parseInt(argVal("--pauza", "60"), 10); // sekunde između prolaza
+const MAX_PROLAZA = parseInt(argVal("--max-prolaza", "20"), 10);
 const LIMIT = parseInt(argVal("--limit", "0"), 10); // max poslova ovog pokreta (0 = bez)
 const HTML_BATCH_SIZE = Math.max(1, Math.min(20, parseInt(argVal("--html-batch-size", "4"), 10) || 4));
 
-const startMs = Date.now();
+let startMs = Date.now();
 function timeUp() {
   return MAX_SECONDS > 0 && (Date.now() - startMs) / 1000 >= MAX_SECONDS;
 }
@@ -123,7 +131,14 @@ async function callOpenAI(body: Record<string, unknown>): Promise<any> {
       clearTimeout(to);
     }
     if (res.status === 429 || res.status >= 500) {
-      await new Promise((r) => setTimeout(r, Math.min(2000 * 2 ** attempt, 30000) + Math.random() * 1000));
+      // Kod 429 servis često sam kaže koliko treba čekati; to je tačnije od
+      // našeg udvostručavanja. Prozor ograničenja zna biti cijela minuta, pa
+      // je gornja granica čekanja veća nego kod ostalih grešaka.
+      const kazeServis = Number(res.headers.get("retry-after"));
+      const cekanje = res.status === 429 && Number.isFinite(kazeServis) && kazeServis > 0
+        ? Math.min(kazeServis * 1000 + 1000, 120000)
+        : Math.min(2000 * 2 ** attempt, res.status === 429 ? 90000 : 30000) + Math.random() * 1000;
+      await new Promise((r) => setTimeout(r, cekanje));
       continue;
     }
     break;
@@ -512,7 +527,15 @@ interface TextJob { tabela: string; redId: number; polje: string; jezik: string;
 interface HtmlJob { tabela: string; redId: number; polje: string; jezik: string; html: string; hash: string; }
 interface ExistingTranslation { hash: string; prijevod: string; }
 
-async function run() {
+interface IshodProlaza {
+  /** Koliko je poslova ovaj prolaz zatekao (0 = nema više šta prevesti). */
+  poslova: number;
+  urađeno: number;
+  neuspjelo: number;
+}
+
+async function run(): Promise<IshodProlaza> {
+  startMs = Date.now();
   if (!DRY && (!BASE_URL || !API_KEY)) {
     console.error("Nedostaju AI_INTEGRATIONS_OPENAI_BASE_URL / _API_KEY u okruženju.");
     process.exit(1);
@@ -629,10 +652,11 @@ async function run() {
       html: htmlJobs.map(({ tabela, redId, polje, jezik }) => ({ tabela, redId, polje, jezik, type: "html" })),
     }));
   }
+  const poslova = textJobs.length + htmlJobs.length;
   if (DRY) {
     const totalChars = [...textJobs.flatMap((j) => j.strings), ...htmlJobs.map((j) => j.html)].reduce((a, s) => a + s.length, 0);
     console.log(`Procjena znakova za prijevod ovog pokreta: ~${totalChars.toLocaleString()} (≈${Math.round(totalChars / 4).toLocaleString()} tokena ulaza)`);
-    return;
+    return { poslova, urađeno: 0, neuspjelo: 0 };
   }
 
   let failed = 0;
@@ -730,13 +754,45 @@ async function run() {
   console.log(`\nUpsertano: ${doneJobs} | neuspjelo: ${failed}${timeUp() ? " | (zaustavljeno na vremenskom limitu)" : ""}`);
   console.log(`Tokeni: ulaz=${usage.in} izlaz=${usage.out} | ~$${cost.toFixed(4)} (gruba procjena)`);
   if (failed > 0 || timeUp()) {
-    console.error(`Pokreni skriptu ponovo (idempotentna je) da popuni ostatak.`);
+    if (!DO_KRAJA) console.error(`Pokreni skriptu ponovo (idempotentna je) da popuni ostatak.`);
     process.exitCode = 2;
   }
+  return { poslova, urađeno: doneJobs, neuspjelo: failed };
+}
+
+/**
+ * Ponavljaj prolaze dok ima posla. Svaki prolaz iznova pročita šta nedostaje,
+ * pa se ne ponavlja ništa već urađeno. Staje kad posla više nema, kad dva
+ * prolaza zaredom ne pomaknu ništa (npr. red koji uvijek padne na provjeri)
+ * ili kad se potroši dozvoljeni broj prolaza.
+ */
+async function doKraja(): Promise<void> {
+  let bezNapretka = 0;
+  for (let prolaz = 1; prolaz <= MAX_PROLAZA; prolaz++) {
+    console.log(`\n──── prolaz ${prolaz}/${MAX_PROLAZA} ────`);
+    process.exitCode = 0;
+    const ishod = await run();
+    if (ishod.poslova === 0) {
+      console.log(`\nGotovo: nema više šta prevesti (${prolaz}. prolaz).`);
+      process.exitCode = 0;
+      return;
+    }
+    bezNapretka = ishod.urađeno > 0 ? 0 : bezNapretka + 1;
+    if (bezNapretka >= 2) {
+      console.error(`\nDva prolaza bez ijednog upisa — prekidam da ne vrtim ukrug.`);
+      console.error(`Preostalo poslova: ${ishod.poslova}. Pogledaj greške iznad.`);
+      process.exitCode = 2;
+      return;
+    }
+    console.log(`Pauza ${PAUZA}s prije idućeg prolaza…`);
+    await new Promise((r) => setTimeout(r, PAUZA * 1000));
+  }
+  console.error(`\nDosegnut je limit od ${MAX_PROLAZA} prolaza. Pokreni ponovo ako je ostalo posla.`);
+  process.exitCode = 2;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  run()
+  (DO_KRAJA ? doKraja() : run().then(() => undefined))
     .then(() => process.exit(process.exitCode ?? 0))
     .catch((e) => { console.error(e); process.exit(1); });
 }
