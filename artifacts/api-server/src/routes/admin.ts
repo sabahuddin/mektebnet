@@ -2257,8 +2257,19 @@ router.put("/mekteb/:id/pretplata", async (req, res) => {
   try {
     const mektebId = Number(req.params.id);
     const paid = req.body.paid === true;
+    const metadataOnly = req.body.metadataOnly === true;
     const iznos = Number(req.body.iznos);
     const valuta = String(req.body.valuta ?? "").toUpperCase();
+    const billingPaket = String(req.body.billingPaket ?? "");
+    const billingRegion = String(req.body.billingRegion ?? "");
+    const licencesPurchased = Number(req.body.licencesPurchased);
+    const parseDate = (value: unknown) => {
+      if (value === null || value === undefined || value === "") return null;
+      const date = new Date(String(value));
+      return Number.isNaN(date.getTime()) ? undefined : date;
+    };
+    const requestedStart = parseDate(req.body.licenceStart);
+    const requestedEnd = parseDate(req.body.licenceEnd);
     if (!Number.isInteger(mektebId) || mektebId < 1) {
       res.status(400).json({ error: "Nevažeći ID džemata" });
       return;
@@ -2269,6 +2280,26 @@ router.put("/mekteb/:id/pretplata", async (req, res) => {
     }
     if (!["BAM", "EUR"].includes(valuta)) {
       res.status(400).json({ error: "Valuta mora biti BAM ili EUR" });
+      return;
+    }
+    if (!["do100", "vise100"].includes(billingPaket)) {
+      res.status(400).json({ error: "Paket mora biti Mekteb Standard ili Mekteb Pro" });
+      return;
+    }
+    if (!["bih", "dijaspora"].includes(billingRegion)) {
+      res.status(400).json({ error: "Regija naplate mora biti BiH ili Dijaspora" });
+      return;
+    }
+    if (!Number.isInteger(licencesPurchased) || licencesPurchased < 1 || licencesPurchased > 100000) {
+      res.status(400).json({ error: "Broj licenci mora biti pozitivan cijeli broj" });
+      return;
+    }
+    if (requestedStart === undefined || requestedEnd === undefined) {
+      res.status(400).json({ error: "Unesite ispravan datum početka i kraja licence" });
+      return;
+    }
+    if (requestedStart && requestedEnd && requestedEnd <= requestedStart) {
+      res.status(400).json({ error: "Kraj licence mora biti nakon početka licence" });
       return;
     }
 
@@ -2298,21 +2329,49 @@ router.put("/mekteb/:id/pretplata", async (req, res) => {
       .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
       .limit(1);
 
-    const planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
-    const licencesPurchased = mekteb.billingPaket === "vise100" ? 500 : 100;
+    const planType = billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
     const now = new Date();
 
     const subscription = await db.transaction(async (tx) => {
       let saved;
-      if (paid) {
+      await tx.update(mektebiTable).set({
+        billingPaket,
+        billingRegion,
+      }).where(eq(mektebiTable.id, mektebId));
+
+      if (metadataOnly) {
+        if (latest) {
+          [saved] = await tx.update(pretplateTable).set({
+            planType,
+            iznos,
+            valuta,
+            licencesPurchased,
+            activatedAt: requestedStart,
+            expiresAt: requestedEnd,
+          }).where(eq(pretplateTable.id, latest.id)).returning();
+        } else {
+          [saved] = await tx.insert(pretplateTable).values({
+            userId: glavniId,
+            planType,
+            iznos,
+            valuta,
+            status: "pending",
+            licencesPurchased,
+            activatedAt: requestedStart,
+            expiresAt: requestedEnd,
+          }).returning();
+        }
+        return { saved, studentIds: [] as number[] };
+      } else if (paid) {
         const currentExpiry = latest?.status === "active" && latest.expiresAt
           ? new Date(latest.expiresAt)
           : null;
         const baseCandidates = [now, glavni.trialUntil, currentExpiry]
           .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()));
         const base = new Date(Math.max(...baseCandidates.map((d) => d.getTime())));
-        const expiresAt = new Date(base);
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        const activatedAt = requestedStart ?? now;
+        const expiresAt = requestedEnd ?? new Date(base);
+        if (!requestedEnd) expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
         if (latest?.status === "pending") {
           [saved] = await tx.update(pretplateTable).set({
@@ -2322,7 +2381,7 @@ router.put("/mekteb/:id/pretplata", async (req, res) => {
             status: "active",
             licencesPurchased,
             paidAt: now,
-            activatedAt: now,
+            activatedAt,
             expiresAt,
           }).where(eq(pretplateTable.id, latest.id)).returning();
         } else {
@@ -2334,7 +2393,7 @@ router.put("/mekteb/:id/pretplata", async (req, res) => {
             status: "active",
             licencesPurchased,
             paidAt: now,
-            activatedAt: now,
+            activatedAt,
             expiresAt,
           }).returning();
         }
@@ -4374,8 +4433,8 @@ router.get("/dzemati-pregled", async (_req, res) => {
         dozvoljenoMuallima: mekteb.dozvoljenoMuallima,
         brojMuallima: mMuallimi.length,
         aktivnihMuallima: mMuallimi.filter((m) => m.isActive).length,
-        ukupnoLicenci: aktivnaPretplata?.licencesPurchased
-          ? aktivnaPretplata.licencesPurchased
+        ukupnoLicenci: latestPretplata?.licencesPurchased
+          ? latestPretplata.licencesPurchased
           : dodijeljeneLicence,
         dodijeljeneLicence,
         evidentiranoIskoristenihLicenci: mMuallimi.reduce((sum, m) => sum + m.licencesUsed, 0),
@@ -4390,6 +4449,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
         pretplata: latestPretplata ? {
           status: latestPretplata.status,
           planType: latestPretplata.planType,
+          licencesPurchased: latestPretplata.licencesPurchased ?? 0,
           iznos: latestPretplata.iznos,
           valuta: latestPretplata.valuta,
           paidAt: latestPretplata.paidAt,

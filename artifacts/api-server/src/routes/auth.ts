@@ -13,7 +13,7 @@ import {
   pretplateTable,
   passwordResetTokensTable,
 } from "@workspace/db/schema";
-import { eq, and, isNull, gt, desc } from "drizzle-orm";
+import { eq, and, isNull, gt, desc, inArray } from "drizzle-orm";
 import { signToken, requireAuth } from "../middlewares/auth.js";
 import { sendRegistrationNotification, sendPasswordResetEmail } from "../lib/email.js";
 
@@ -633,13 +633,80 @@ router.get("/subscription", requireAuth, async (req, res) => {
     }
 
     let coverage: "self" | "family" | "mekteb" | "none" = "none";
-    let planType: "individual" | "family" | null = null;
+    let planType: "individual" | "family" | "mekteb-standard" | "mekteb-pro" | null = null;
+    let subscriptionOwnerId: number | null = null;
+    let canRenew = false;
+    let storedBillingRegion: "bih" | "dijaspora" | null = null;
 
     if (role === "roditelj") {
-      coverage = "self";
-      planType = "family";
+      const links = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
+        .from(roditeljUcenikTable)
+        .where(and(
+          eq(roditeljUcenikTable.roditeljId, userId),
+          eq(roditeljUcenikTable.status, "approved"),
+        ));
+      const childIds = links.map((link) => link.ucenikId);
+      const childProfiles = childIds.length
+        ? await db.select({
+            mektebId: ucenikProfiliTable.mektebId,
+            muallimId: ucenikProfiliTable.muallimId,
+          }).from(ucenikProfiliTable)
+            .where(inArray(ucenikProfiliTable.userId, childIds))
+        : [];
+      let mektebId = childProfiles.find((profile) => profile.mektebId)?.mektebId ?? null;
+      if (!mektebId) {
+        const teacherIds = childProfiles
+          .map((profile) => profile.muallimId)
+          .filter((id): id is number => id !== null);
+        const [teacherProfile] = teacherIds.length
+          ? await db.select({ mektebId: muallimProfiliTable.mektebId })
+              .from(muallimProfiliTable)
+              .where(inArray(muallimProfiliTable.userId, teacherIds))
+              .limit(1)
+          : [];
+        mektebId = teacherProfile?.mektebId ?? null;
+      }
+      const [mekteb] = mektebId
+        ? await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId)).limit(1)
+        : [];
+      if (mekteb) {
+        coverage = "mekteb";
+        planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
+        subscriptionOwnerId = mekteb.glavniMuallimId;
+        storedBillingRegion =
+          mekteb.billingRegion === "bih" || mekteb.billingRegion === "dijaspora"
+            ? mekteb.billingRegion
+            : null;
+      } else {
+        coverage = "self";
+        planType = "family";
+        subscriptionOwnerId = userId;
+        canRenew = true;
+      }
+    } else if (role === "muallim") {
+      const [profile] = await db.select({
+        mektebId: muallimProfiliTable.mektebId,
+        isGlavni: muallimProfiliTable.isGlavni,
+      }).from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
+      const [mekteb] = profile?.mektebId
+        ? await db.select().from(mektebiTable)
+            .where(eq(mektebiTable.id, profile.mektebId))
+            .limit(1)
+        : [];
+      if (mekteb) {
+        coverage = "mekteb";
+        planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
+        subscriptionOwnerId = mekteb.glavniMuallimId ?? userId;
+        canRenew = profile?.isGlavni === true && subscriptionOwnerId === userId;
+        storedBillingRegion =
+          mekteb.billingRegion === "bih" || mekteb.billingRegion === "dijaspora"
+            ? mekteb.billingRegion
+            : null;
+      }
     } else if (role === "ucenik") {
-      const [familyLink] = await db.select({ id: roditeljUcenikTable.id })
+      const [familyLink] = await db.select({
+        roditeljId: roditeljUcenikTable.roditeljId,
+      })
         .from(roditeljUcenikTable)
         .where(and(
           eq(roditeljUcenikTable.ucenikId, userId),
@@ -654,19 +721,35 @@ router.get("/subscription", requireAuth, async (req, res) => {
             .where(eq(muallimProfiliTable.userId, profile.muallimId))
             .limit(1)
         : [];
-      const hasMektebCoverage = Boolean(profile?.mektebId || muallimProfile?.mektebId);
+      const mektebId = profile?.mektebId ?? muallimProfile?.mektebId ?? null;
+      const [mekteb] = mektebId
+        ? await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId)).limit(1)
+        : [];
 
-      if (hasMektebCoverage) coverage = "mekteb";
-      else if (familyLink) coverage = "family";
+      if (mekteb) {
+        coverage = "mekteb";
+        planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
+        subscriptionOwnerId = mekteb.glavniMuallimId;
+        storedBillingRegion =
+          mekteb.billingRegion === "bih" || mekteb.billingRegion === "dijaspora"
+            ? mekteb.billingRegion
+            : null;
+      } else if (familyLink) {
+        coverage = "family";
+        planType = "family";
+        subscriptionOwnerId = familyLink.roditeljId;
+      }
       else {
         coverage = "self";
         planType = "individual";
+        subscriptionOwnerId = userId;
+        canRenew = true;
       }
     }
 
-    const [subscription] = planType
+    const [subscription] = subscriptionOwnerId
       ? await db.select().from(pretplateTable)
-          .where(eq(pretplateTable.userId, userId))
+          .where(eq(pretplateTable.userId, subscriptionOwnerId))
           .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
           .limit(1)
       : [];
@@ -678,11 +761,16 @@ router.get("/subscription", requireAuth, async (req, res) => {
     res.json({
       coverage,
       planType,
+      canRenew,
       isActive: account.isActive,
       trialUntil: account.trialUntil,
-      billingRegion: currency === "BAM" ? "bih" : currency === "EUR" ? "dijaspora" : null,
+      billingRegion: storedBillingRegion
+        ?? (currency === "BAM" ? "bih" : currency === "EUR" ? "dijaspora" : null),
       expectedAmount: subscription?.iznos ?? defaultAmount,
       currency,
+      licenceCount: subscription?.licencesPurchased ?? null,
+      licenceStart: subscription?.activatedAt ?? null,
+      licenceEnd: subscription?.expiresAt ?? null,
       subscription: subscription ?? null,
     });
   } catch (err) {
@@ -704,15 +792,17 @@ router.post("/register-mekteb", async (req, res) => {
       return;
     }
 
-    const billingPaket =
-      paket === "vise100" ? "vise100" : "do100";
+    if (paket !== "do100" && paket !== "vise100") {
+      res.status(400).json({ error: "Odaberite ispravan Standard ili Pro paket" });
+      return;
+    }
+    const billingPaket: "do100" | "vise100" = paket;
     const billingRegion =
       drzava.trim() === "Bosna i Hercegovina" ? "bih" : "dijaspora";
-    const paketNaziv =
-      paket === "do100" ? "Mektebska pretplata (do 100 učenika)" :
-      paket === "vise100" ? "Mektebska pretplata XL (više od 100 učenika)" :
-      String(paket);
-    const licenceCount = paket === "vise100" ? 500 : 100;
+    const paketNaziv = billingPaket === "do100"
+      ? "Mektebska pretplata (do 100 učenika)"
+      : "Mektebska pretplata XL (više od 100 učenika)";
+    const licenceCount = billingPaket === "vise100" ? 500 : 100;
 
     const usernameClean = String(korisnickoIme).trim().toLowerCase().replace(/\s+/g, ".");
     const existing = await db.select().from(usersTable).where(eq(usersTable.username, usernameClean));

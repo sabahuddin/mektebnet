@@ -151,6 +151,7 @@ interface DzematPregled {
   pretplata: {
     status: string;
     planType: string;
+    licencesPurchased: number;
     iznos: number | null;
     valuta: string | null;
     paidAt: string | null;
@@ -1926,22 +1927,46 @@ export default function AdminPage() {
     }
   };
 
-  const sacuvajPretplatu = async (d: DzematPregled, paid: boolean) => {
+  const sacuvajPretplatu = async (d: DzematPregled, paid: boolean, metadataOnly = false) => {
     if (!token) return;
     const iznosEl = document.getElementById(`pretplata-iznos-${d.id}`) as HTMLInputElement | null;
     const valutaEl = document.getElementById(`pretplata-valuta-${d.id}`) as HTMLSelectElement | null;
+    const paketEl = document.getElementById(`pretplata-paket-${d.id}`) as HTMLSelectElement | null;
+    const regionEl = document.getElementById(`pretplata-region-${d.id}`) as HTMLSelectElement | null;
+    const licenceEl = document.getElementById(`pretplata-licence-${d.id}`) as HTMLInputElement | null;
+    const startEl = document.getElementById(`pretplata-pocetak-${d.id}`) as HTMLInputElement | null;
+    const endEl = document.getElementById(`pretplata-kraj-${d.id}`) as HTMLInputElement | null;
     const iznos = Number(iznosEl?.value);
     const valuta = valutaEl?.value || "EUR";
+    const licencesPurchased = Number(licenceEl?.value);
     if (!Number.isInteger(iznos) || iznos < 0) {
       toast({ title: t("Greška"), description: t("Unesite ispravan iznos"), variant: "destructive" });
       return;
     }
+    if (!Number.isInteger(licencesPurchased) || licencesPurchased < 1) {
+      toast({ title: t("Greška"), description: t("Unesite ispravan broj licenci"), variant: "destructive" });
+      return;
+    }
     setMuallimAkcija(d.id);
     try {
-      await apiRequest("PUT", `/admin/mekteb/${d.id}/pretplata`, { paid, iznos, valuta }, token);
+      await apiRequest("PUT", `/admin/mekteb/${d.id}/pretplata`, {
+        paid,
+        metadataOnly,
+        iznos,
+        valuta,
+        billingPaket: paketEl?.value || "do100",
+        billingRegion: regionEl?.value || "dijaspora",
+        licencesPurchased,
+        licenceStart: startEl?.value || null,
+        licenceEnd: endEl?.value || null,
+      }, token);
       toast({
         title: t("Sačuvano"),
-        description: paid ? t("Pretplata je označena kao plaćena i aktivirana") : t("Pretplata je označena kao neplaćena"),
+        description: metadataOnly
+          ? t("Podaci licence su ažurirani")
+          : paid
+            ? t("Pretplata je označena kao plaćena i aktivirana")
+            : t("Pretplata je označena kao neplaćena"),
       });
       await Promise.all([loadDzematiPregled(), loadData()]);
     } catch (e: any) {
@@ -2279,6 +2304,44 @@ export default function AdminPage() {
 
                       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
+                          <label htmlFor={`pretplata-paket-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {t("Paket")}
+                          </label>
+                          <select
+                            id={`pretplata-paket-${d.id}`}
+                            defaultValue={d.billingPaket ?? (d.ukupnoLicenci >= 500 ? "vise100" : "do100")}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
+                          >
+                            <option value="do100">Mekteb Standard</option>
+                            <option value="vise100">Mekteb Pro</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor={`pretplata-region-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {t("Regija naplate")}
+                          </label>
+                          <select
+                            id={`pretplata-region-${d.id}`}
+                            defaultValue={d.billingRegion ?? "dijaspora"}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
+                          >
+                            <option value="bih">BiH</option>
+                            <option value="dijaspora">{t("Dijaspora")}</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor={`pretplata-licence-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {t("Ukupno licenci")}
+                          </label>
+                          <input
+                            id={`pretplata-licence-${d.id}`}
+                            type="number"
+                            min={1}
+                            defaultValue={d.pretplata?.licencesPurchased || d.ukupnoLicenci || (d.billingPaket === "vise100" ? 500 : 100)}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
+                          />
+                        </div>
+                        <div>
                           <label htmlFor={`pretplata-iznos-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                             {t("Cijena")}
                           </label>
@@ -2306,24 +2369,32 @@ export default function AdminPage() {
                             <option value="EUR">EUR</option>
                           </select>
                         </div>
+                        <div>
+                          <label htmlFor={`pretplata-pocetak-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {t("Početak licence")}
+                          </label>
+                          <input
+                            id={`pretplata-pocetak-${d.id}`}
+                            type="date"
+                            defaultValue={d.pretplata?.activatedAt?.slice(0, 10) ?? ""}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor={`pretplata-kraj-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {t("Kraj licence")}
+                          </label>
+                          <input
+                            id={`pretplata-kraj-${d.id}`}
+                            type="date"
+                            defaultValue={d.pretplata?.expiresAt?.slice(0, 10) ?? ""}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
+                          />
+                        </div>
                         <div className="rounded-lg bg-white/70 p-2.5 text-xs">
                           <div className="font-bold text-muted-foreground">{t("Plaćeno datum")}</div>
                           <div className="mt-1 font-extrabold text-foreground">
                             {d.pretplata?.paidAt ? new Date(d.pretplata.paidAt).toLocaleString("bs-BA") : "—"}
-                          </div>
-                        </div>
-                        <div className="rounded-lg bg-white/70 p-2.5 text-xs">
-                          <div className="font-bold text-muted-foreground">{t("Licenca aktivna od")}</div>
-                          <div className="mt-1 font-extrabold text-foreground">
-                            {d.pretplata?.status === "active" && d.pretplata.activatedAt
-                              ? new Date(d.pretplata.activatedAt).toLocaleString("bs-BA")
-                              : "—"}
-                          </div>
-                        </div>
-                        <div className="rounded-lg bg-white/70 p-2.5 text-xs">
-                          <div className="font-bold text-muted-foreground">{t("Licenca važi do")}</div>
-                          <div className="mt-1 font-extrabold text-foreground">
-                            {d.pretplata?.expiresAt ? new Date(d.pretplata.expiresAt).toLocaleDateString("bs-BA") : "—"}
                           </div>
                         </div>
                         <div className="rounded-lg bg-white/70 p-2.5 text-xs">
@@ -2335,6 +2406,15 @@ export default function AdminPage() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={muallimAkcija === d.id}
+                          onClick={() => sacuvajPretplatu(d, d.pretplata?.status === "active", true)}
+                        >
+                          {muallimAkcija === d.id && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                          {t("Sačuvaj podatke licence")}
+                        </Button>
                         <Button
                           size="sm"
                           disabled={muallimAkcija === d.id || d.pretplata?.status === "active"}
