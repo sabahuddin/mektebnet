@@ -346,7 +346,12 @@ async function translateHtml(html: string, targetName: string, jezik: string): P
     const leading = source.match(/^\s*/)?.[0] ?? "";
     const trailing = source.match(/\s*$/)?.[0] ?? "";
     const prevedeno = translations[source].trim();
-    const translated = ciljni ? dotjeraj(source.trim(), prevedeno, ciljni) : prevedeno;
+    // `dotjeraj` umeće transkripciju i eulogije, a one dolaze pisane malim
+    // slovima. U prvih dvadeset lekcija sve je velikim slovima, jer ih čitaju
+    // djeca koja mala slova još ne znaju — zato se veličina slova usklađuje
+    // POSLIJE dotjerivanja, a ne samo poslije prijevoda.
+    const dotjerano = ciljni ? dotjeraj(source.trim(), prevedeno, ciljni) : prevedeno;
+    const translated = preserveSourceCasing(source.trim(), dotjerano);
     parts[index] = `${leading}${translated}${trailing}`;
   }
   return parts.join("");
@@ -392,19 +397,34 @@ function isProtectedIslamicName(text: string) {
     || /^(?:sabah|podne|ikindija|akšam|jacija)(?:\s+namaz|\s*\(\d+\))?$/iu.test(value);
 }
 
-function findUntranslatedBosnianNode(source: string, translation: string) {
+/**
+ * Pasus koji je ostao bosanski usred prevedene lekcije.
+ *
+ * Ranije se tražio samo čvor koji je DOSLOVNO isti kao izvornik. To promašuje
+ * dva česta slučaja, a oba su viđena na produkciji:
+ *
+ *  - model prevede jednu riječ („dova" → „Bittgebet (dova)"), a ostatak
+ *    rečenice ostavi bosanski — pa čvor više nije doslovno isti;
+ *  - eulogija se dotjeruje poslije prijevoda („s.a.v.s." → „(Friede sei mit
+ *    ihm)"), pa i potpuno neprevedeni čvor izgleda izmijenjeno.
+ *
+ * Provjera nad cijelom lekcijom tu ne pomaže: ostatak teksta je njemački, pa
+ * je udio bosanskih slova nizak. Zato se ista mjera primjenjuje ČVOR PO ČVOR.
+ */
+function findUntranslatedBosnianNode(source: string, translation: string, jezik: string) {
   const sourceParts = source.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
   const translatedParts = translation.split(/(<(?:"[^"]*"|'[^']*'|[^'">])*>)/g);
   if (sourceParts.length !== translatedParts.length) return "različit broj dijelova HTML-a";
-  const node = sourceParts.find((part, index) =>
-    !part.startsWith("<") &&
-    part.trim().length > 8 &&
-    part.trim() === translatedParts[index].trim() &&
-    !/^(?:https?:\/\/|www\.)\S+$/iu.test(part.trim()) &&
-    !isLikelyPersonalName(part) &&
-    !isProtectedArabicContent(part) &&
-    containsBosnianProse(part),
-  );
+  const node = sourceParts.find((part, index) => {
+    if (part.startsWith("<")) return false;
+    const izvor = part.trim();
+    const prevedeno = (translatedParts[index] ?? "").trim();
+    if (izvor.length <= 8) return false;
+    if (/^(?:https?:\/\/|www\.)\S+$/iu.test(izvor)) return false;
+    if (isLikelyPersonalName(part) || isProtectedArabicContent(part)) return false;
+    if (!containsBosnianProse(part)) return false;
+    return izvor === prevedeno || hasLikelyUntranslatedBosnian(izvor, prevedeno, jezik);
+  });
   return node?.trim() ?? null;
 }
 
@@ -461,7 +481,9 @@ export function objasniOdbijanje(sporni: string[], dict: Record<string, string>,
 }
 
 function bosnianMarkerCount(value: string) {
-  return [...value].filter((character) => /[žđćČĆĐŽ]/u.test(character)).length;
+  // „š", „Š" i malo „č" su ranije nedostajali, pa su rečenice koje nose baš
+  // njih prolazile kao prevedene.
+  return [...value].filter((character) => /[čćžšđČĆŽŠĐ]/u.test(character)).length;
 }
 
 function hasLikelyUntranslatedBosnian(source: string, translation: string, jezik: string) {
@@ -477,7 +499,11 @@ function hasLikelyUntranslatedBosnian(source: string, translation: string, jezik
   // česte riječi ciljnog jezika; precizna provjera nepromijenjenih čvorova
   // ispod i dalje hvata stvarno neprevedenu prozu.
   if (targetLanguageWordCount >= 3) return false;
-  if (source.trim() === translation.trim() && isLikelyPersonalName(source)) return false;
+  // Ime se mjeri po tekstu, ne po markupu: "<p>DERVIŠ SUŠIĆ</p>" je ime kao i
+  // "DERVIŠ SUŠIĆ", a s oznakama oko sebe ne bi prošlo kao ime.
+  const goliIzvor = source.replace(/<[^>]*>/g, " ").trim();
+  const goliPrijevod = translation.replace(/<[^>]*>/g, " ").trim();
+  if (goliIzvor === goliPrijevod && isLikelyPersonalName(goliIzvor)) return false;
   return sourceCount >= 2 && bosnianMarkerCount(translation) > sourceCount * 0.30;
 }
 
@@ -540,7 +566,7 @@ export function htmlTranslationIssue(source: string, translation: string, jezik:
   const textIssue = textTranslationIssue(source, translation, jezik);
   if (textIssue) return textIssue;
   if (hasLikelyUntranslatedBosnian(source, translation, jezik)) return "prijevod zadržava previše bosanskih ortografskih markera";
-  const untranslatedNode = findUntranslatedBosnianNode(source, translation);
+  const untranslatedNode = findUntranslatedBosnianNode(source, translation, jezik);
   if (untranslatedNode) return `ostao je nepreveden bosanski tekst: ${untranslatedNode.slice(0, 120)}`;
   return null;
 }
@@ -752,7 +778,11 @@ async function run(): Promise<IshodProlaza> {
           const ciljni = ciljniJezik(jezik);
           if (ciljni) {
             for (const izvor of uniq) {
-              if (typeof dict[izvor] === "string") dict[izvor] = dotjeraj(izvor, dict[izvor], ciljni);
+              if (typeof dict[izvor] === "string") {
+                // Isto kao u HTML-u: transkripcija i eulogije ne smiju
+                // razbiti velika slova lekcije.
+                dict[izvor] = preserveSourceCasing(izvor, dotjeraj(izvor, dict[izvor], ciljni));
+              }
             }
           }
           for (const j of chunk) {

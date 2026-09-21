@@ -9,6 +9,7 @@ import {
   opisiGresku,
   preserveSourceCasing,
 } from "./translate-content";
+import { dotjeraj } from "./transkripcija.js";
 
 test("ne šalje ponovo bankovno pitanje koje prevodi termin i čuva ga u zagradi", () => {
   const source = "Šta je šart u namazu?";
@@ -156,5 +157,67 @@ test("čuva uppercase format lekcije kada čvor sadrži mixed-case naziv sure", 
   assert.equal(
     preserveSourceCasing("Dova za znanje", "Bittgebet für Wissen"),
     "Bittgebet für Wissen",
+  );
+});
+
+test("pasus koji je ostao bosanski usred njemačke lekcije se hvata", () => {
+  // Doslovno sa mekteb.net/ilmihal/sura-el-fatiha na njemačkom: prva dva
+  // pasusa su prevedena, treći nije. Ranije je ovo prolazilo kao ispravan
+  // prijevod — provjera je gledala udio bosanskih slova u CIJELOJ lekciji, a
+  // ostatak je njemački, pa je udio nizak.
+  const izvor = [
+    "<p>Jeste li se ikad zapitali koju suru muslimani najčešće izgovaraju u životu?</p>",
+    "<p>To je sura El-Fatiha! Ona je toliko posebna da je svakodnevno učimo mnogo puta.</p>",
+    "<p>Naš Poslanik Muhammed, s.a.v.s., rekao je da je sura El-Fatiha najbolja dova i da je ona majka cijelog Kur'ana. Zamislite koliko je ona važna kada je nazivamo majkom svih drugih sura!</p>",
+  ].join("");
+  // Model je preveo samo „dova", a eulogija je dotjerana poslije prijevoda —
+  // zato čvor više nije doslovno isti kao izvornik i stara provjera ga nije
+  // prepoznala.
+  const polovican = [
+    "<p>Haben Sie sich schon einmal gefragt, welche Sura Muslime im Laufe ihres Lebens am häufigsten aussprechen?</p>",
+    "<p>Das ist Sura Al-Fatiha! Sie ist so besonders, dass wir sie tagtäglich vielfach lernen und rezitieren.</p>",
+    "<p>Naš Poslanik Muhammed, (Friede sei mit ihm), rekao je da je sura Al-Fatiha najbolja Bittgebet (dova) i da je ona majka cijelog Kur'ana. Zamislite koliko je ona važna kada je nazivamo majkom svih drugih sura!</p>",
+  ].join("");
+  assert.match(String(htmlTranslationIssue(izvor, polovican, "de")), /ostao je nepreveden bosanski tekst/);
+
+  const potpun = [
+    "<p>Haben Sie sich schon einmal gefragt, welche Sura Muslime im Laufe ihres Lebens am häufigsten aussprechen?</p>",
+    "<p>Das ist Sura Al-Fatiha! Sie ist so besonders, dass wir sie tagtäglich vielfach lernen und rezitieren.</p>",
+    "<p>Unser Gesandter Muhammed, (Friede sei mit ihm), sagte, dass die Sura Al-Fatiha das beste Bittgebet ist und dass sie die Mutter des ganzen Korans ist. Stellt euch vor, wie wichtig sie ist, wenn wir sie die Mutter aller anderen Suren nennen!</p>",
+  ].join("");
+  assert.equal(htmlTranslationIssue(izvor, potpun, "de"), null);
+});
+
+test("stručni termin u zagradi ne proglašava pasus neprevedenim", () => {
+  // Granica u drugom smjeru: njemačka rečenica smije zadržati bosanski termin.
+  const izvor = "<p>Šta je šart u namazu i koliko ih ima?</p>";
+  const prijevod = "<p>Was ist eine Bedingung (šart) im Gebet und wie viele gibt es?</p>";
+  assert.equal(htmlTranslationIssue(izvor, prijevod, "de"), null);
+});
+
+test("transkripcija i eulogija ne razbijaju velika slova lekcije", () => {
+  // Prvih dvadeset lekcija piše se velikim slovima, jer ih čitaju djeca koja
+  // mala slova još ne znaju. Transkripcija i eulogije dolaze pisane malim
+  // slovima, pa se veličina slova mora uskladiti POSLIJE dotjerivanja.
+  const ajet = "1. EL-HAMDU LILLAHI RABBIL-'ALEMIN.";
+  assert.equal(
+    preserveSourceCasing(ajet, dotjeraj(ajet, ajet, "de")),
+    "1. ALHAMDU LILLAHI RABBIL-ALAMIN.",
+  );
+
+  const eulogija = "NAŠ POSLANIK MUHAMMED, S.A.V.S., REKAO JE...";
+  assert.equal(
+    preserveSourceCasing(eulogija, dotjeraj(eulogija, eulogija, "de")),
+    "NAŠ POSLANIK MUHAMMED (FRIEDE SEI MIT IHM), REKAO JE...",
+  );
+
+  const naziv = "SURA EL-IHLAS";
+  assert.equal(preserveSourceCasing(naziv, "Sura Al-Ichlas"), "SURA AL-ICHLAS");
+
+  // Lekcija pisana običnim slovima ostaje kakva jeste.
+  const obicna = "Naš Poslanik Muhammed, s.a.v.s., rekao je...";
+  assert.equal(
+    preserveSourceCasing(obicna, dotjeraj(obicna, obicna, "de")),
+    "Naš Poslanik Muhammed (Friede sei mit ihm), rekao je...",
   );
 });
