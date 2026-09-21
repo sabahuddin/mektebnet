@@ -106,12 +106,23 @@ function sha(s: string) {
 
 const usage = { in: 0, out: 0 };
 
-function preserveSourceCasing(source: string, translation: string) {
+export function preserveSourceCasing(source: string, translation: string) {
   // Ilmihal 1–20 intentionally use uppercase lesson typography. Preserve it
   // after translating instead of asking the model to infer a CSS/editor choice.
-  const letters = [...source].filter((character) => /\p{L}/u.test(character));
-  const hasCasedLetter = letters.some((letter) => letter.toLowerCase() !== letter.toUpperCase());
-  const isUppercase = hasCasedLetter && letters.every((letter) => letter.toUpperCase() === letter);
+  // Mixed-case proper names such as "El-Fatiha" do not cancel an otherwise
+  // uppercase node ("SURA El-Fatiha JE PRVA SURA...").
+  const words = source.match(/\p{L}[\p{L}'’‘-]*/gu) ?? [];
+  let uppercaseWords = 0;
+  let lowercaseWords = 0;
+  for (const word of words) {
+    const letters = [...word].filter((character) => /\p{L}/u.test(character));
+    if (letters.length === 0) continue;
+    const hasCasedLetter = letters.some((letter) => letter.toLowerCase() !== letter.toUpperCase());
+    if (!hasCasedLetter) continue;
+    if (letters.every((letter) => letter === letter.toUpperCase())) uppercaseWords++;
+    else if (letters.every((letter) => letter === letter.toLowerCase())) lowercaseWords++;
+  }
+  const isUppercase = uppercaseWords > 0 && lowercaseWords === 0;
   return isUppercase ? translation.toLocaleUpperCase("de-DE") : translation;
 }
 

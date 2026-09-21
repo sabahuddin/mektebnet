@@ -7,6 +7,7 @@ import {
   objasniOdbijanje,
   ocistiZaBazu,
   opisiGresku,
+  preserveSourceCasing,
 } from "./translate-content";
 
 test("ne šalje ponovo bankovno pitanje koje prevodi termin i čuva ga u zagradi", () => {
@@ -137,4 +138,23 @@ test("ispis greške kaže Postgresov razlog, ne cijeli SQL", () => {
   const obicna = new Error("nešto\nje\npuklo");
   assert.equal(opisiGresku(obicna), "nešto je puklo");
   assert.ok(opisiGresku(new Error("x".repeat(400))).length <= 200);
+});
+
+test("čuva uppercase format lekcije kada čvor sadrži mixed-case naziv sure", () => {
+  const source = "SURA El-Fatiha JE PRVA SURA U KUR’ANU. El-Fatiha GLASI:";
+  const german = "Die Sure Al-Fatiha ist die erste Sure im Koran. Al-Fatiha lautet:";
+  const english = "Surah Al-Fatihah is the first surah in the Qur'an. Al-Fatihah reads:";
+
+  assert.equal(
+    preserveSourceCasing(source, german),
+    "DIE SURE AL-FATIHA IST DIE ERSTE SURE IM KORAN. AL-FATIHA LAUTET:",
+  );
+  assert.equal(
+    preserveSourceCasing(source, english),
+    "SURAH AL-FATIHAH IS THE FIRST SURAH IN THE QUR'AN. AL-FATIHAH READS:",
+  );
+  assert.equal(
+    preserveSourceCasing("Dova za znanje", "Bittgebet für Wissen"),
+    "Bittgebet für Wissen",
+  );
 });
