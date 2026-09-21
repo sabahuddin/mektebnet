@@ -2067,6 +2067,206 @@ router.post("/mektebi", async (req, res) => {
   }
 });
 
+// PUT /api/admin/mekteb/:id/pretplata — evidentiraj uplatu ili vrati na neplaćeno.
+router.put("/mekteb/:id/pretplata", async (req, res) => {
+  try {
+    const mektebId = Number(req.params.id);
+    const paid = req.body.paid === true;
+    const iznos = Number(req.body.iznos);
+    const valuta = String(req.body.valuta ?? "").toUpperCase();
+    if (!Number.isInteger(mektebId) || mektebId < 1) {
+      res.status(400).json({ error: "Nevažeći ID džemata" });
+      return;
+    }
+    if (!Number.isInteger(iznos) || iznos < 0 || iznos > 100000) {
+      res.status(400).json({ error: "Unesite ispravan iznos" });
+      return;
+    }
+    if (!["BAM", "EUR"].includes(valuta)) {
+      res.status(400).json({ error: "Valuta mora biti BAM ili EUR" });
+      return;
+    }
+
+    const [mekteb] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId));
+    if (!mekteb) {
+      res.status(404).json({ error: "Džemat nije pronađen" });
+      return;
+    }
+    const profili = await db.select({ userId: muallimProfiliTable.userId })
+      .from(muallimProfiliTable)
+      .where(eq(muallimProfiliTable.mektebId, mektebId));
+    const muallimIds = profili.map((p) => p.userId);
+    const glavniId = mekteb.glavniMuallimId ?? muallimIds[0];
+    if (!glavniId) {
+      res.status(409).json({ error: "Džemat nema glavnog muallima" });
+      return;
+    }
+    const [glavni] = await db.select({
+      trialUntil: usersTable.trialUntil,
+    }).from(usersTable).where(eq(usersTable.id, glavniId));
+    if (!glavni) {
+      res.status(409).json({ error: "Glavni muallim nije pronađen" });
+      return;
+    }
+    const [latest] = await db.select().from(pretplateTable)
+      .where(eq(pretplateTable.userId, glavniId))
+      .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
+      .limit(1);
+
+    const planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
+    const licencesPurchased = mekteb.billingPaket === "vise100" ? 500 : 100;
+    const now = new Date();
+
+    const subscription = await db.transaction(async (tx) => {
+      let saved;
+      if (paid) {
+        const currentExpiry = latest?.status === "active" && latest.expiresAt
+          ? new Date(latest.expiresAt)
+          : null;
+        const baseCandidates = [now, glavni.trialUntil, currentExpiry]
+          .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()));
+        const base = new Date(Math.max(...baseCandidates.map((d) => d.getTime())));
+        const expiresAt = new Date(base);
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
+        if (latest?.status === "pending") {
+          [saved] = await tx.update(pretplateTable).set({
+            planType,
+            iznos,
+            valuta,
+            status: "active",
+            licencesPurchased,
+            paidAt: now,
+            activatedAt: now,
+            expiresAt,
+          }).where(eq(pretplateTable.id, latest.id)).returning();
+        } else {
+          [saved] = await tx.insert(pretplateTable).values({
+            userId: glavniId,
+            planType,
+            iznos,
+            valuta,
+            status: "active",
+            licencesPurchased,
+            paidAt: now,
+            activatedAt: now,
+            expiresAt,
+          }).returning();
+        }
+      } else if (latest) {
+        [saved] = await tx.update(pretplateTable).set({
+          planType,
+          iznos,
+          valuta,
+          status: "pending",
+          licencesPurchased,
+          paidAt: null,
+          activatedAt: null,
+          expiresAt: null,
+        }).where(eq(pretplateTable.id, latest.id)).returning();
+      } else {
+        [saved] = await tx.insert(pretplateTable).values({
+          userId: glavniId,
+          planType,
+          iznos,
+          valuta,
+          status: "pending",
+          licencesPurchased,
+        }).returning();
+      }
+
+      if (muallimIds.length > 0) {
+        await tx.update(usersTable).set({ isActive: paid }).where(inArray(usersTable.id, muallimIds));
+      }
+      const studentProfiles = await tx.select({ userId: ucenikProfiliTable.userId })
+        .from(ucenikProfiliTable)
+        .where(or(
+          eq(ucenikProfiliTable.mektebId, mektebId),
+          muallimIds.length > 0
+            ? inArray(ucenikProfiliTable.muallimId, muallimIds)
+            : sql`false`,
+        ));
+      const studentIds = studentProfiles.map((p) => p.userId);
+      if (studentIds.length > 0) {
+        await tx.update(usersTable).set({ isActive: paid }).where(inArray(usersTable.id, studentIds));
+      }
+      return { saved, studentIds };
+    });
+
+    for (const id of [...muallimIds, ...subscription.studentIds]) {
+      invalidateUserStatusCache(id);
+    }
+    res.json(subscription.saved);
+  } catch (err) {
+    console.error("Pretplata džemata error:", err);
+    res.status(500).json({ error: "Nije moguće sačuvati pretplatu" });
+  }
+});
+
+// DELETE /api/admin/mekteb/:id — samo potpuno prazan džemat.
+router.delete("/mekteb/:id", async (req, res) => {
+  try {
+    const mektebId = Number(req.params.id);
+    if (!Number.isInteger(mektebId) || mektebId < 1) {
+      res.status(400).json({ error: "Nevažeći ID džemata" });
+      return;
+    }
+    const [mekteb] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId));
+    if (!mekteb) {
+      res.status(404).json({ error: "Džemat nije pronađen" });
+      return;
+    }
+    const profili = await db.select({ userId: muallimProfiliTable.userId })
+      .from(muallimProfiliTable)
+      .where(eq(muallimProfiliTable.mektebId, mektebId));
+    const muallimIds = profili.map((p) => p.userId);
+    const [grupa] = muallimIds.length > 0
+      ? await db.select({ id: grupeTable.id }).from(grupeTable)
+          .where(inArray(grupeTable.muallimId, muallimIds)).limit(1)
+      : [];
+    const [ucenik] = await db.select({ userId: ucenikProfiliTable.userId })
+      .from(ucenikProfiliTable)
+      .where(or(
+        eq(ucenikProfiliTable.mektebId, mektebId),
+        muallimIds.length > 0
+          ? inArray(ucenikProfiliTable.muallimId, muallimIds)
+          : sql`false`,
+      ))
+      .limit(1);
+    if (grupa || ucenik) {
+      res.status(409).json({
+        error: "Džemat nije prazan. Prvo arhivirajte ili premjestite učenike i grupe; trajno brisanje je blokirano.",
+      });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      if (muallimIds.length > 0) {
+        await tx.delete(porukeTable).where(or(
+          inArray(porukeTable.posiljateljId, muallimIds),
+          inArray(porukeTable.primateljId, muallimIds),
+        ));
+        await tx.delete(pretplateTable).where(inArray(pretplateTable.userId, muallimIds));
+        await tx.execute(sql`
+          DELETE FROM obavjestenja
+          WHERE muallim_id IN (${sql.join(muallimIds.map((id) => sql`${id}`), sql`, `)})
+        `);
+        await tx.delete(muallimProfiliTable).where(inArray(muallimProfiliTable.userId, muallimIds));
+      }
+      await tx.execute(sql`DELETE FROM mekteb_dokumenti WHERE mekteb_id = ${mektebId}`);
+      await tx.delete(mektebiTable).where(eq(mektebiTable.id, mektebId));
+      if (muallimIds.length > 0) {
+        await tx.delete(usersTable).where(inArray(usersTable.id, muallimIds));
+      }
+    });
+    for (const id of muallimIds) invalidateUserStatusCache(id);
+    res.json({ success: true, obrisanoMuallima: muallimIds.length });
+  } catch (err) {
+    console.error("Brisanje džemata error:", err);
+    res.status(500).json({ error: "Nije moguće obrisati džemat" });
+  }
+});
+
 // POST /api/admin/reset-password
 router.post("/reset-password", async (req, res) => {
   try {
@@ -3906,7 +4106,7 @@ router.get("/muallim-pregled", async (req, res) => {
 // GET /api/admin/dzemati-pregled — consolidated congregation, subscription and licence overview
 router.get("/dzemati-pregled", async (_req, res) => {
   try {
-    const [mektebi, muallimi, ucenici, roditeljskeVeze, pretplate] = await Promise.all([
+    const [mektebi, muallimi, ucenici, roditeljskeVeze, pretplate, grupe] = await Promise.all([
       db.select().from(mektebiTable),
       db.select({
         userId: muallimProfiliTable.userId,
@@ -3916,6 +4116,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
         licencesUsed: muallimProfiliTable.licencesUsed,
         displayName: usersTable.displayName,
         isActive: usersTable.isActive,
+        trialUntil: usersTable.trialUntil,
       }).from(muallimProfiliTable)
         .innerJoin(usersTable, eq(usersTable.id, muallimProfiliTable.userId)),
       db.select({
@@ -3937,6 +4138,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
           eq(usersTable.isActive, true),
         )),
       db.select().from(pretplateTable),
+      db.select({ id: grupeTable.id, muallimId: grupeTable.muallimId }).from(grupeTable),
     ]);
 
     const sada = new Date();
@@ -3969,7 +4171,14 @@ router.get("/dzemati-pregled", async (_req, res) => {
           b.id - a.id
         );
       const aktivnaPretplata = aktivnePretplate[0] ?? null;
+      const latestPretplata = pretplate
+        .filter((p) => p.userId === glavni?.userId)
+        .sort((a, b) =>
+          new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime() ||
+          b.id - a.id
+        )[0] ?? null;
       const dodijeljeneLicence = mMuallimi.reduce((sum, m) => sum + m.licenceCount, 0);
+      const brojGrupa = grupe.filter((g) => muallimIds.has(g.muallimId)).length;
 
       return {
         id: mekteb.id,
@@ -3988,9 +4197,27 @@ router.get("/dzemati-pregled", async (_req, res) => {
         brojUcenika: mUcenici.length,
         aktivnihUcenika: mUcenici.filter((u) => u.isActive).length,
         brojRoditelja: roditeljIds.size,
+        brojGrupa,
+        mozeSeObrisati: brojGrupa === 0 && mUcenici.length === 0,
+        trialUntil: glavni?.trialUntil ?? null,
+        billingPaket: mekteb.billingPaket,
+        billingRegion: mekteb.billingRegion,
+        pretplata: latestPretplata ? {
+          status: latestPretplata.status,
+          planType: latestPretplata.planType,
+          iznos: latestPretplata.iznos,
+          valuta: latestPretplata.valuta,
+          paidAt: latestPretplata.paidAt,
+          activatedAt: latestPretplata.activatedAt ?? latestPretplata.createdAt,
+          expiresAt: latestPretplata.expiresAt,
+        } : null,
         aktivnaPretplata: aktivnaPretplata ? {
           planType: aktivnaPretplata.planType,
           licencesPurchased: aktivnaPretplata.licencesPurchased ?? 0,
+          iznos: aktivnaPretplata.iznos,
+          valuta: aktivnaPretplata.valuta,
+          paidAt: aktivnaPretplata.paidAt,
+          activatedAt: aktivnaPretplata.activatedAt ?? aktivnaPretplata.createdAt,
           expiresAt: aktivnaPretplata.expiresAt,
         } : null,
         muallimi: mMuallimi

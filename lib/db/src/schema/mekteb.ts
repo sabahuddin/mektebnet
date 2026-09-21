@@ -14,6 +14,10 @@ export const mektebiTable = pgTable("mektebi", {
   glavniMuallimId: integer("glavni_muallim_id"),
   // Koliko muallimskih naloga je dozvoljeno (uključujući glavnog).
   dozvoljenoMuallima: integer("dozvoljeno_muallima").notNull().default(1),
+  // BMC proizvod odabran pri registraciji. Čuva se da Profil glavnog muallima
+  // i nakon ponovne prijave vodi na tačan Standard/Pro i BiH/dijaspora proizvod.
+  billingPaket: varchar("billing_paket", { length: 20 }),
+  billingRegion: varchar("billing_region", { length: 20 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -88,6 +92,8 @@ export const pretplateTable = pgTable("pretplate", {
   valuta: varchar("valuta", { length: 10 }).default("EUR"),
   status: varchar("status", { length: 20 }).notNull().default("active"),
   licencesPurchased: integer("licences_purchased").default(0),
+  paidAt: timestamp("paid_at"),
+  activatedAt: timestamp("activated_at"),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

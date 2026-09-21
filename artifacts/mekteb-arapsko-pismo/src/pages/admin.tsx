@@ -132,9 +132,27 @@ interface DzematPregled {
   brojUcenika: number;
   aktivnihUcenika: number;
   brojRoditelja: number;
+  brojGrupa: number;
+  mozeSeObrisati: boolean;
+  trialUntil: string | null;
+  billingPaket: "do100" | "vise100" | null;
+  billingRegion: "bih" | "dijaspora" | null;
+  pretplata: {
+    status: string;
+    planType: string;
+    iznos: number | null;
+    valuta: string | null;
+    paidAt: string | null;
+    activatedAt: string | null;
+    expiresAt: string | null;
+  } | null;
   aktivnaPretplata: {
     planType: string;
     licencesPurchased: number;
+    iznos: number | null;
+    valuta: string | null;
+    paidAt: string | null;
+    activatedAt: string | null;
     expiresAt: string | null;
   } | null;
   muallimi: {
@@ -1896,6 +1914,66 @@ export default function AdminPage() {
     }
   };
 
+  const sacuvajPretplatu = async (d: DzematPregled, paid: boolean) => {
+    if (!token) return;
+    const iznosEl = document.getElementById(`pretplata-iznos-${d.id}`) as HTMLInputElement | null;
+    const valutaEl = document.getElementById(`pretplata-valuta-${d.id}`) as HTMLSelectElement | null;
+    const iznos = Number(iznosEl?.value);
+    const valuta = valutaEl?.value || "EUR";
+    if (!Number.isInteger(iznos) || iznos < 0) {
+      toast({ title: t("Greška"), description: t("Unesite ispravan iznos"), variant: "destructive" });
+      return;
+    }
+    setMuallimAkcija(d.id);
+    try {
+      await apiRequest("PUT", `/admin/mekteb/${d.id}/pretplata`, { paid, iznos, valuta }, token);
+      toast({
+        title: t("Sačuvano"),
+        description: paid ? t("Pretplata je označena kao plaćena i aktivirana") : t("Pretplata je označena kao neplaćena"),
+      });
+      await Promise.all([loadDzematiPregled(), loadData()]);
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće sačuvati pretplatu"), variant: "destructive" });
+    } finally {
+      setMuallimAkcija(null);
+    }
+  };
+
+  const obrisiPrazanDzemat = async (d: DzematPregled) => {
+    if (!token) return;
+    if (!d.mozeSeObrisati) {
+      toast({
+        title: t("Brisanje je blokirano"),
+        description: t("Džemat ima učenike ili grupe i ne može se trajno obrisati."),
+        variant: "destructive",
+      });
+      return;
+    }
+    const confirmed = window.confirm(
+      `${t("Trajno obrisati džemat")} „${d.naziv}“ ${t("i svih")} ${d.brojMuallima} ${t("muallimskih naloga? Ova radnja se ne može poništiti.")}`,
+    );
+    if (!confirmed) return;
+    setMuallimAkcija(d.id);
+    try {
+      const result = await apiRequest<{ success: boolean; obrisanoMuallima: number }>(
+        "DELETE",
+        `/admin/mekteb/${d.id}`,
+        undefined,
+        token,
+      );
+      toast({
+        title: t("Džemat je obrisan"),
+        description: `${t("Obrisano muallimskih naloga:")} ${result.obrisanoMuallima}`,
+      });
+      setExpandedMuallim(null);
+      await Promise.all([loadDzematiPregled(), loadMuallimPregled(), loadMektebiOpcije(), loadData()]);
+    } catch (e: any) {
+      toast({ title: t("Brisanje nije uspjelo"), description: e?.message, variant: "destructive" });
+    } finally {
+      setMuallimAkcija(null);
+    }
+  };
+
   const kreirajIDodijeliDzemat = async (userId: number) => {
     if (!token) return;
     const naziv = noviDzematNaziv.trim();
@@ -2106,8 +2184,10 @@ export default function AdminPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${d.aktivnaPretplata ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
-                        {d.aktivnaPretplata ? `${t("Aktivna pretplata")} · ${d.aktivnaPretplata.planType}` : t("Nema aktivne pretplate")}
+                      <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${d.pretplata?.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
+                        {d.pretplata?.status === "active"
+                          ? `${t("Plaćeno")} · ${d.pretplata.planType}`
+                          : t("Nije plaćeno")}
                       </span>
                       <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expandedMuallim === d.id ? "rotate-90" : ""}`} />
                     </div>
@@ -2131,6 +2211,111 @@ export default function AdminPage() {
 
                 {expandedMuallim === d.id && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="border-t border-border/40 px-5 py-4">
+                    <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h5 className="font-extrabold text-amber-950">{t("Licenca i plaćanje")}</h5>
+                          <p className="mt-0.5 text-xs text-amber-800">
+                            {d.pretplata?.status === "active"
+                              ? t("Pretplata je plaćena i licenca je aktivna.")
+                              : d.trialUntil
+                                ? (() => {
+                                    const days = Math.ceil((new Date(d.trialUntil).getTime() - Date.now()) / 86400000);
+                                    return days > 0
+                                      ? `${t("Nije plaćeno. Preostalo triala:")} ${days} ${days === 1 ? t("dan") : t("dana")}.`
+                                      : t("Nije plaćeno. Probni period je istekao.");
+                                  })()
+                                : t("Nije plaćeno.")}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-extrabold ${
+                          d.pretplata?.status === "active"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-white text-amber-800 border border-amber-300"
+                        }`}>
+                          {d.pretplata?.status === "active" ? t("Plaćeno") : t("Nije plaćeno")}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <label htmlFor={`pretplata-iznos-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {t("Cijena")}
+                          </label>
+                          <input
+                            id={`pretplata-iznos-${d.id}`}
+                            type="number"
+                            min={0}
+                            defaultValue={d.pretplata?.iznos ?? (
+                              (d.billingPaket === "vise100" ? 300 : 200) +
+                              Math.max(0, d.dozvoljenoMuallima - (d.billingPaket === "vise100" ? 5 : 1)) * 30
+                            )}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor={`pretplata-valuta-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                            {t("Valuta")}
+                          </label>
+                          <select
+                            id={`pretplata-valuta-${d.id}`}
+                            defaultValue={d.pretplata?.valuta ?? (d.billingRegion === "bih" ? "BAM" : "EUR")}
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
+                          >
+                            <option value="BAM">BAM</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                        </div>
+                        <div className="rounded-lg bg-white/70 p-2.5 text-xs">
+                          <div className="font-bold text-muted-foreground">{t("Plaćeno datum")}</div>
+                          <div className="mt-1 font-extrabold text-foreground">
+                            {d.pretplata?.paidAt ? new Date(d.pretplata.paidAt).toLocaleString("bs-BA") : "—"}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-white/70 p-2.5 text-xs">
+                          <div className="font-bold text-muted-foreground">{t("Licenca aktivna od")}</div>
+                          <div className="mt-1 font-extrabold text-foreground">
+                            {d.pretplata?.status === "active" && d.pretplata.activatedAt
+                              ? new Date(d.pretplata.activatedAt).toLocaleString("bs-BA")
+                              : "—"}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-white/70 p-2.5 text-xs">
+                          <div className="font-bold text-muted-foreground">{t("Licenca važi do")}</div>
+                          <div className="mt-1 font-extrabold text-foreground">
+                            {d.pretplata?.expiresAt ? new Date(d.pretplata.expiresAt).toLocaleDateString("bs-BA") : "—"}
+                          </div>
+                        </div>
+                        <div className="rounded-lg bg-white/70 p-2.5 text-xs">
+                          <div className="font-bold text-muted-foreground">{t("Paket / regija")}</div>
+                          <div className="mt-1 font-extrabold text-foreground">
+                            {d.billingPaket === "vise100" ? "Mekteb Pro" : "Mekteb Standard"} · {d.billingRegion === "bih" ? "BiH" : d.billingRegion === "dijaspora" ? t("Dijaspora") : "—"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          disabled={muallimAkcija === d.id || d.pretplata?.status === "active"}
+                          onClick={() => sacuvajPretplatu(d, true)}
+                          className="bg-emerald-600 hover:bg-emerald-700"
+                        >
+                          {muallimAkcija === d.id && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                          {t("Označi plaćeno i aktiviraj")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={muallimAkcija === d.id || d.pretplata?.status !== "active"}
+                          onClick={() => sacuvajPretplatu(d, false)}
+                          className="border-amber-400 text-amber-800"
+                        >
+                          {t("Vrati na neplaćeno")}
+                        </Button>
+                      </div>
+                    </div>
+
                     <div className="mb-4 flex flex-wrap items-end gap-3">
                       <div>
                         <label htmlFor={`dozv-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("Dozvoljeno muallima")}</label>
@@ -2142,9 +2327,6 @@ export default function AdminPage() {
                         const value = Number(el?.value);
                         if (value) postaviDozvoljeno(d.id, value);
                       }}>{t("Sačuvaj")}</Button>
-                      {d.aktivnaPretplata?.expiresAt && (
-                        <p className="text-xs text-muted-foreground">{t("Pretplata važi do:")} {new Date(d.aktivnaPretplata.expiresAt).toLocaleDateString("bs-BA")}</p>
-                      )}
                     </div>
                     <div className="overflow-x-auto rounded-xl border border-border/40">
                       <table className="w-full text-sm">
@@ -2170,6 +2352,23 @@ export default function AdminPage() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-red-100 pt-4">
+                      <p className="text-xs text-muted-foreground">
+                        {d.mozeSeObrisati
+                          ? t("Džemat je prazan i može se trajno obrisati zajedno sa svim muallimskim nalozima.")
+                          : `${t("Trajno brisanje je blokirano:")} ${d.brojGrupa} ${t("grupa")}, ${d.brojUcenika} ${t("učenika")}.`}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!d.mozeSeObrisati || muallimAkcija === d.id}
+                        onClick={() => obrisiPrazanDzemat(d)}
+                        className="border-red-300 text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="mr-1.5 h-4 w-4" />
+                        {t("Obriši prazan džemat i muallime")}
+                      </Button>
                     </div>
                   </motion.div>
                 )}

@@ -457,6 +457,16 @@ router.get("/mekteb/info", async (req, res) => {
       dozvoljenoMuallima: m?.dozvoljenoMuallima ?? 1,
       brojMuallima: muallimi.length,
       slobodnoMjesta: Math.max(0, (m?.dozvoljenoMuallima ?? 1) - muallimi.length),
+      billingPaket:
+        m?.billingPaket === "vise100" || m?.billingPaket === "do100"
+          ? m.billingPaket
+          : ctx.licenceCount >= 500
+            ? "vise100"
+            : "do100",
+      billingRegion:
+        m?.billingRegion === "bih" || m?.billingRegion === "dijaspora"
+          ? m.billingRegion
+          : null,
     });
   } catch (err) {
     console.error("Mekteb info error:", err);

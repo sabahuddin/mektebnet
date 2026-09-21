@@ -10,6 +10,7 @@ import {
   roditeljProfiliTable,
   roditeljUcenikTable,
   grupeTable,
+  pretplateTable,
   passwordResetTokensTable,
 } from "@workspace/db/schema";
 import { eq, and, isNull, gt } from "drizzle-orm";
@@ -608,6 +609,10 @@ router.post("/register-mekteb", async (req, res) => {
       return;
     }
 
+    const billingPaket =
+      paket === "vise100" ? "vise100" : "do100";
+    const billingRegion =
+      drzava.trim() === "Bosna i Hercegovina" ? "bih" : "dijaspora";
     const paketNaziv =
       paket === "do100" ? "Mektebska pretplata (do 100 učenika)" :
       paket === "vise100" ? "Mektebska pretplata XL (više od 100 učenika)" :
@@ -626,6 +631,11 @@ router.post("/register-mekteb", async (req, res) => {
     const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const dozvoljenoMuallima = Math.max(1, parseInt(String(koliko_muallima), 10) || 1);
+    const includedMuallims = billingPaket === "vise100" ? 5 : 1;
+    const addonCount = Math.max(0, dozvoljenoMuallima - includedMuallims);
+    const subscriptionAmount =
+      (billingPaket === "vise100" ? 300 : 200) + addonCount * 30;
+    const subscriptionCurrency = billingRegion === "bih" ? "BAM" : "EUR";
 
     // Atomarno: mekteb + glavni muallim user + muallim profil. Glavni muallim je
     // onaj ko registruje mekteb; jedino on kreira/briše ostale muallime i vidi
@@ -647,6 +657,8 @@ router.post("/register-mekteb", async (req, res) => {
         kontaktEmail: email.trim(),
         glavniMuallimId: u.id,
         dozvoljenoMuallima,
+        billingPaket,
+        billingRegion,
       }).returning();
       await tx.insert(muallimProfiliTable).values({
         userId: u.id,
@@ -654,6 +666,14 @@ router.post("/register-mekteb", async (req, res) => {
         isGlavni: true,
         licenceCount,
         licencesUsed: 0,
+      });
+      await tx.insert(pretplateTable).values({
+        userId: u.id,
+        planType: billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard",
+        iznos: subscriptionAmount,
+        valuta: subscriptionCurrency,
+        status: "pending",
+        licencesPurchased: licenceCount,
       });
       return u;
     });

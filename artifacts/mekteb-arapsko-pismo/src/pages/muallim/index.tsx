@@ -11,7 +11,8 @@ import {
   BarChart3, Clock, Loader2, Calendar, ChevronLeft, Trash2, BookOpen,
   Settings, Save, X, UserCheck, UserX, UserPlus, TrendingUp, ClipboardList,
   Award, Target, CheckCircle2, Download, Eye, FileSpreadsheet, Star, FileText, Printer, Sparkles,
-  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw, Bell, MessageSquare
+  Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw, Bell, MessageSquare,
+  CreditCard, ExternalLink
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,14 @@ import { useLanguage } from "@/context/language";
 import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
 import { MuallimGroupSidebar, type GroupModuleKey } from "@/components/muallim-group-sidebar";
+import {
+  BMAC_SHOP_LINK,
+  bmacMektebAddonDetails,
+  bmacRegistrationProductLink,
+  formatMektebTotalPrice,
+  trialDaysLeft,
+  type MektebPaket,
+} from "@/lib/billing";
 
 interface Stats {
   ukupnoUcenika: number;
@@ -355,6 +364,8 @@ interface MektebInfo {
   dozvoljenoMuallima: number;
   brojMuallima: number;
   slobodnoMjesta: number;
+  billingPaket: MektebPaket;
+  billingRegion: "bih" | "dijaspora" | null;
 }
 
 interface MektebMuallim {
@@ -4769,6 +4780,107 @@ export default function MuallimPanel() {
             {/* PROFIL — uređivanje display name-a, premješteno iz inline header dugmeta. */}
             {activeTab === "profil" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {canManageMekteb && !user.isActive && mektebInfo && (() => {
+                  const days = trialDaysLeft(user.trialUntil);
+                  const expired = days !== null && days <= 0;
+                  const isBiH = mektebInfo.billingRegion === "bih";
+                  const hasStoredRegion = mektebInfo.billingRegion !== null;
+                  const addon = bmacMektebAddonDetails(
+                    mektebInfo.billingPaket,
+                    isBiH,
+                    mektebInfo.dozvoljenoMuallima,
+                  );
+                  const paymentLink = hasStoredRegion
+                    ? bmacRegistrationProductLink("mekteb", isBiH, mektebInfo.billingPaket)
+                    : BMAC_SHOP_LINK;
+
+                  return (
+                    <div
+                      className={`border rounded-2xl p-5 mb-5 ${
+                        expired ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"
+                      }`}
+                      data-testid="glavni-muallim-pretplata"
+                    >
+                      <h3 className={`font-extrabold mb-2 flex items-center gap-2 ${
+                        expired ? "text-red-900" : "text-amber-900"
+                      }`}>
+                        <CreditCard className="w-5 h-5" /> {t("Pretplata mekteba")}
+                      </h3>
+                      <p className={`text-sm font-bold ${expired ? "text-red-800" : "text-amber-800"}`}>
+                        {expired
+                          ? t("Probni period je istekao.")
+                          : days === null
+                            ? t("Pretplata još nije aktivirana.")
+                            : `${t("Preostalo besplatnog korištenja:")} ${days} ${days === 1 ? t("dan") : t("dana")}`}
+                      </p>
+                      <div className="mt-3 grid sm:grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">{t("Paket:")}</span>{" "}
+                          <strong>{mektebInfo.billingPaket === "vise100" ? "Mekteb Pro" : "Mekteb Standard"}</strong>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">{t("Muallimskih računa:")}</span>{" "}
+                          <strong>{mektebInfo.dozvoljenoMuallima}</strong>
+                        </div>
+                        {hasStoredRegion && (
+                          <>
+                            <div>
+                              <span className="text-muted-foreground">{t("Regija naplate:")}</span>{" "}
+                              <strong>{isBiH ? "BiH" : t("Dijaspora")}</strong>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">{t("Ukupno za 12 mjeseci:")}</span>{" "}
+                              <strong>{formatMektebTotalPrice(
+                                mektebInfo.billingPaket,
+                                isBiH,
+                                mektebInfo.dozvoljenoMuallima,
+                              )}</strong>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {addon.addonCount > 0 && hasStoredRegion && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {t("Uključeno dodatnih Addona:")} {addon.addonCount} × {addon.addonPriceLabel}
+                        </p>
+                      )}
+                      {!hasStoredRegion && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {t("Za ovaj stariji mekteb regija naplate nije sačuvana. Odaberite odgovarajući BiH ili dijaspora proizvod u Shopu.")}
+                        </p>
+                      )}
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <a
+                          href={paymentLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-white font-bold transition-colors ${
+                            expired ? "bg-red-600 hover:bg-red-700" : "bg-amber-600 hover:bg-amber-700"
+                          }`}
+                          data-testid="profil-plati-pretplatu"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          {addon.addonCount > 0 && hasStoredRegion
+                            ? t("Plati osnovni paket")
+                            : t("Plati pretplatu")}
+                        </a>
+                        {addon.addonCount > 0 && hasStoredRegion && (
+                          <a
+                            href={addon.addonLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold transition-colors"
+                            data-testid="profil-plati-addon"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            {t("Plati Addon")} × {addon.addonCount}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="bg-white border border-border/50 rounded-2xl p-5">
                   <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
                     <Settings className="w-5 h-5 text-primary" /> {t("Uredi profil")}

@@ -1108,6 +1108,10 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE muallim_profili ADD COLUMN IF NOT EXISTS is_glavni boolean DEFAULT false NOT NULL;`);
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS glavni_muallim_id integer;`);
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS dozvoljeno_muallima integer DEFAULT 1 NOT NULL;`);
+    await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS billing_paket varchar(20);`);
+    await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS billing_region varchar(20);`);
+    await db.execute(sql`ALTER TABLE pretplate ADD COLUMN IF NOT EXISTS paid_at timestamp;`);
+    await db.execute(sql`ALTER TABLE pretplate ADD COLUMN IF NOT EXISTS activated_at timestamp;`);
     // Dozvoljeni jezici po muallimu (učenici prate svog muallima). Default su svi
     // jezici uključeni — admin po potrebi ISKLJUČUJE pojedine. Bosanski je uvijek
     // osnovni i ostaje dostupan bez obzira na sadržaj niza.
