@@ -34,6 +34,7 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
 
   const paid = data.subscription?.status === "active";
   const licenceActive = paid || data.isActive;
+  const canSeeBillingDetails = data.coverage === "self" || data.canRenew;
   const days = trialDaysLeft(data.trialUntil);
   const paymentLink = data.billingRegion
     ? data.planType === "mekteb-standard" || data.planType === "mekteb-pro"
@@ -52,6 +53,31 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
     data.planType === "individual" ? t("Pojedinačna licenca") :
     data.planType === "mekteb-pro" ? t("Džematska licenca – Mekteb Pro") :
     t("Džematska licenca – Mekteb Standard");
+
+  if (!canSeeBillingDetails) {
+    return (
+      <div className={`mb-6 rounded-2xl border p-5 ${licenceActive ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`} data-testid="subscription-profile-card">
+        <h3 className={`flex items-center gap-2 font-extrabold ${licenceActive ? "text-emerald-950" : "text-amber-950"}`}>
+          <ShieldCheck className="h-5 w-5" />
+          {t("Licenca")}
+        </h3>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+          <div>
+            <dt className="text-xs font-bold text-muted-foreground">{t("Licenca")}</dt>
+            <dd className="font-extrabold text-foreground">{licenceActive ? t("Aktivna") : t("Nije aktivna")}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-bold text-muted-foreground">{t("Početak")}</dt>
+            <dd className="font-extrabold text-foreground">{formatDate(data.licenceStart)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-bold text-muted-foreground">{t("Kraj licence")}</dt>
+            <dd className="font-extrabold text-foreground">{formatDate(data.licenceEnd)}</dd>
+          </div>
+        </dl>
+      </div>
+    );
+  }
 
   return (
     <div className={`mb-6 rounded-2xl border p-5 ${licenceActive ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`} data-testid="subscription-profile-card">

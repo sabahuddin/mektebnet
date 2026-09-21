@@ -757,21 +757,24 @@ router.get("/subscription", requireAuth, async (req, res) => {
     const currency = subscription
       ? subscription.valuta === "BAM" ? "BAM" : "EUR"
       : null;
+    const canSeeBillingDetails = coverage === "self" || canRenew;
 
     res.json({
       coverage,
-      planType,
+      planType: canSeeBillingDetails ? planType : null,
       canRenew,
       isActive: account.isActive,
       trialUntil: account.trialUntil,
-      billingRegion: storedBillingRegion
-        ?? (currency === "BAM" ? "bih" : currency === "EUR" ? "dijaspora" : null),
-      expectedAmount: subscription?.iznos ?? defaultAmount,
-      currency,
-      licenceCount: subscription?.licencesPurchased ?? null,
+      billingRegion: canSeeBillingDetails
+        ? storedBillingRegion
+          ?? (currency === "BAM" ? "bih" : currency === "EUR" ? "dijaspora" : null)
+        : null,
+      expectedAmount: canSeeBillingDetails ? subscription?.iznos ?? defaultAmount : null,
+      currency: canSeeBillingDetails ? currency : null,
+      licenceCount: canSeeBillingDetails ? subscription?.licencesPurchased ?? null : null,
       licenceStart: subscription?.activatedAt ?? null,
       licenceEnd: subscription?.expiresAt ?? null,
-      subscription: subscription ?? null,
+      subscription: canSeeBillingDetails ? subscription ?? null : null,
     });
   } catch (err) {
     console.error("Subscription profile error:", err);
