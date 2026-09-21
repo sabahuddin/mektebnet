@@ -587,7 +587,7 @@ router.post("/register-roditelj-v2", async (req, res) => {
       await tx.insert(pretplateTable).values({
         userId: user.id,
         planType: "family",
-        iznos: 50,
+        iznos: 30,
         valuta: region === "bih" ? "BAM" : "EUR",
         status: "pending",
         licencesPurchased: 4,
@@ -753,7 +753,10 @@ router.get("/subscription", requireAuth, async (req, res) => {
           .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
           .limit(1)
       : [];
-    const defaultAmount = planType === "family" ? 50 : planType === "individual" ? 20 : null;
+    const defaultAmount = planType === "family" ? 30 : planType === "individual" ? 20 : null;
+    const expectedAmount = planType === "family"
+      ? 30
+      : subscription?.iznos ?? defaultAmount;
     const currency = subscription
       ? subscription.valuta === "BAM" ? "BAM" : "EUR"
       : null;
@@ -769,7 +772,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
         ? storedBillingRegion
           ?? (currency === "BAM" ? "bih" : currency === "EUR" ? "dijaspora" : null)
         : null,
-      expectedAmount: canSeeBillingDetails ? subscription?.iznos ?? defaultAmount : null,
+      expectedAmount: canSeeBillingDetails ? expectedAmount : null,
       currency: canSeeBillingDetails ? currency : null,
       licenceCount: canSeeBillingDetails ? subscription?.licencesPurchased ?? null : null,
       licenceStart: subscription?.activatedAt ?? null,

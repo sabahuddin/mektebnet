@@ -137,7 +137,7 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
         <div>
           <dt className="text-xs font-bold text-muted-foreground">{t("Cijena za 12 mjeseci")}</dt>
           <dd className="font-extrabold text-foreground">
-            {data.expectedAmount !== null ? data.expectedAmount : "—"} {data.currency ?? ""}
+            {data.expectedAmount !== null ? data.expectedAmount : "—"} {data.currency === "BAM" ? "KM" : data.currency ?? ""}
           </dd>
         </div>
         <div>

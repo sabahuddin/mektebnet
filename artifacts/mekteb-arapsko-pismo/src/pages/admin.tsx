@@ -3437,7 +3437,7 @@ export default function AdminPage() {
                   type="number"
                   min={0}
                   step={1}
-                  defaultValue={pretplataKorisnik.pretplata?.iznos ?? (pretplataKorisnik.billingPlan === "family" ? 50 : 20)}
+                  defaultValue={pretplataKorisnik.pretplata?.iznos ?? (pretplataKorisnik.billingPlan === "family" ? 30 : 20)}
                   className="w-full rounded-xl border border-border px-3 py-2 font-bold"
                 />
               </div>

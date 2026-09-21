@@ -23,8 +23,8 @@ const UCENIK_PRICE_BIH = "20 BAM (10 €)";
 const UCENIK_PRICE_EUR = "20 €";
 
 // Porodična (roditeljska) — jedinstvena cijena za do 4 djece.
-const RODITELJ_PRICE_BIH = "50 BAM (25 €)";
-const RODITELJ_PRICE_EUR = "50 €";
+const RODITELJ_PRICE_BIH = "30 KM";
+const RODITELJ_PRICE_EUR = "30 €";
 
 // Mektebski paketi — 2 opcije.
 const MEKTEB_PAKETI: Array<{
