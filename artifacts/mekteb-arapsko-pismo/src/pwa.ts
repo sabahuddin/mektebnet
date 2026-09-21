@@ -30,6 +30,11 @@ export function initPWA(): void {
   void import("virtual:pwa-register").then(({ registerSW }) => {
     registerSW({
       immediate: true,
+      onNeedRefresh() {
+        // Ne aktiviraj novu verziju dok je korisnik usred rada. Workbox će
+        // čekajući service worker aktivirati kada se zatvore svi Mekteb tabovi.
+        window.dispatchEvent(new CustomEvent("mekteb:pwa-update-ready"));
+      },
       onOfflineReady() {
         window.dispatchEvent(new CustomEvent("mekteb:pwa-offline-ready"));
       },

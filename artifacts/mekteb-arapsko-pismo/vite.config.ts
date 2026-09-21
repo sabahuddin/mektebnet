@@ -52,9 +52,10 @@ export default defineConfig({
     tailwindcss(),
     runtimeErrorOverlay(),
     VitePWA({
-      // Nova verzija se preuzima tiho; korisniku se više ne prikazuje trajni
-      // banner koji može ostati zaglavljen u browseru ili instaliranom appu.
-      registerType: "autoUpdate",
+      // Nova verzija se preuzima u pozadini, ali ne smije preuzeti već otvorenu
+      // stranicu i izazvati nasumičan reload/blinkanje. Čekajući service worker
+      // se aktivira nakon što korisnik zatvori sve Mekteb kartice/aplikaciju.
+      registerType: "prompt",
       injectRegister: false,
       strategies: "generateSW",
       includeAssets: [
@@ -115,8 +116,8 @@ export default defineConfig({
         navigateFallback: `${basePath.replace(/\/$/, "")}/index.html`,
         navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//, /^\/vaktija\//, /^\/edu\//, /^\/vjezbe\//, /OneSignalSDKWorker\.js$/],
         cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
+        clientsClaim: false,
+        skipWaiting: false,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         runtimeCaching: [
           {
