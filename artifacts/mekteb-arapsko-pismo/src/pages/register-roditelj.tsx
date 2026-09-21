@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
-import { BMAC_SHOP_LINK } from "@/lib/billing";
+import { bmacRegistrationProductLink } from "@/lib/billing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 // Cijena za pojedinačnu (učeničku) pretplatu — fiksno godišnje.
-const UCENIK_PRICE_BIH = "20 BAM (12 €)";
+const UCENIK_PRICE_BIH = "20 BAM (10 €)";
 const UCENIK_PRICE_EUR = "20 €";
 
 // Porodična (roditeljska) — jedinstvena cijena za do 4 djece.
@@ -42,7 +42,7 @@ const MEKTEB_PAKETI: Array<{
     naziv: "Mektebska pretplata XL",
     opis: "Više od 100 učenika",
     cijenaBih: "300 BAM (150 €)",
-    cijenaEur: "250 €",
+    cijenaEur: "300 €",
   },
 ];
 
@@ -213,6 +213,11 @@ export default function RegisterRoditeljPage() {
     const trialDate = new Date(credentials.trialUntil);
     const trialDateStr = trialDate.toLocaleDateString("bs-BA", { day: "numeric", month: "long", year: "numeric" });
     const copyText = `Korisničko ime: ${credentials.username}\nLozinka: ${credentials.password}`;
+    const paymentLink = bmacRegistrationProductLink(
+      activeTab,
+      isBiH === true,
+      mektebForm.paket,
+    );
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"
         style={{ backgroundImage: "radial-gradient(circle at 50% 0%, hsl(var(--primary)/0.08) 0%, transparent 70%)" }}>
@@ -260,9 +265,9 @@ export default function RegisterRoditeljPage() {
               </div>
             </div>
 
-            <a href={BMAC_SHOP_LINK} target="_blank" rel="noopener noreferrer"
+            <a href={paymentLink} target="_blank" rel="noopener noreferrer"
               className="block w-full text-center bg-primary/5 border border-primary/20 hover:bg-primary/10 transition rounded-xl px-4 py-3 mb-3 text-sm font-bold text-primary flex items-center justify-center gap-2">
-              <ExternalLink className="w-4 h-4" /> {t("Plati pretplatu")}
+              <ExternalLink className="w-4 h-4" /> {t("Plati odabranu pretplatu")}
             </a>
 
             <Button onClick={() => setLocation("/login")} size="lg" className="w-full rounded-xl">
