@@ -528,10 +528,39 @@ export function htmlTranslationIssue(source: string, translation: string, jezik:
 }
 
 // ---- UPSERT ----
+/**
+ * Postgres ne prima NUL bajt u `text` koloni — upis padne sa „invalid byte
+ * sequence for encoding UTF8: 0x00". Bosanski izvornik ga nikad nema, jer i
+ * on sjedi u bazi, ali ga model zna ubaciti u dugi HTML odgovor. Isto vrijedi
+ * za ostale upravljačke znakove: u tekstu lekcije nemaju šta tražiti, a
+ * tabulator, novi red i povratak reda se zadržavaju.
+ */
+export function ocistiZaBazu(tekst: string): string {
+  // eslint-disable-next-line no-control-regex
+  return tekst.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+}
+
+/**
+ * Drizzle u `message` stavi cijeli SQL, a pravi razlog (Postgresova poruka i
+ * kod) ostane u `cause`. Bez ovoga se u ispisu vidjelo samo „Failed query:
+ * INSERT INTO content_prijevodi …", što ne kazuje ništa.
+ */
+export function opisiGresku(e: unknown): string {
+  const err = e as { message?: string; cause?: { message?: string; code?: string }; code?: string };
+  const uzrok = err?.cause?.message;
+  const kod = err?.cause?.code ?? err?.code;
+  if (uzrok) return `${uzrok}${kod ? ` (${kod})` : ""}`;
+  return String(err?.message ?? e).replace(/\s+/g, " ").slice(0, 200);
+}
+
 async function upsert(tabela: string, redId: number, polje: string, jezik: string, prijevod: string, izvorHash: string) {
+  const ocisceno = ocistiZaBazu(prijevod);
+  if (ocisceno !== prijevod) {
+    console.warn(`  [${jezik}] ${tabela}#${redId}/${polje}: uklonjeni upravljački znakovi iz prijevoda prije upisa`);
+  }
   await db.execute(sql`
     INSERT INTO content_prijevodi (tabela, red_id, polje, jezik, prijevod, izvor_hash, updated_at)
-    VALUES (${tabela}, ${redId}, ${polje}, ${jezik}, ${prijevod}, ${izvorHash}, now())
+    VALUES (${tabela}, ${redId}, ${polje}, ${jezik}, ${ocisceno}, ${izvorHash}, now())
     ON CONFLICT (tabela, red_id, polje, jezik)
     DO UPDATE SET prijevod = EXCLUDED.prijevod, izvor_hash = EXCLUDED.izvor_hash, updated_at = now();
   `);
@@ -741,7 +770,7 @@ async function run(): Promise<IshodProlaza> {
           }
         } catch (e) {
           failed += chunk.length;
-          console.error(`  [${jezik}] tekst chunk greška: ${(e as Error).message.slice(0, 140)}`);
+          console.error(`  [${jezik}] tekst chunk greška: ${opisiGresku(e)}`);
         }
       }
     }
@@ -769,7 +798,7 @@ async function run(): Promise<IshodProlaza> {
           if (doneJobs % 10 === 0) console.log(`  napredak (html): ${doneJobs} upsertano | ${hi}/${hjobs.length}`);
         } catch (e) {
           failed++;
-          console.error(`  [${j.jezik}] html ${j.tabela}#${j.redId} greška: ${(e as Error).message.slice(0, 140)}`);
+          console.error(`  [${j.jezik}] html ${j.tabela}#${j.redId} greška: ${opisiGresku(e)}`);
         }
       }
     }
