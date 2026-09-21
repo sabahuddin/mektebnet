@@ -25,6 +25,8 @@
  *   ... --dry --list-jobs                 (ispiši tačne preostale redove)
  *   ... --do-kraja                        (ponavljaj prolaze dok ima posla)
  *   ... --do-kraja --pauza 120            (duža pauza kad servis vraća 429)
+ *   ... --force --do-kraja                (force vrijedi samo za prvi prolaz,
+ *                                          ostali kupe samo ono što nije uspjelo)
  */
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -74,6 +76,11 @@ const ONLY_TYPES = argVal("--types", "").split(",").map((s) => s.trim()).filter(
 const ONLY_NIVO = parseInt(argVal("--nivo", "0"), 10);
 const ONLY_IDS = argVal("--ids", "").split(",").map((s) => parseInt(s.trim(), 10)).filter(Number.isInteger);
 const FORCE = args.includes("--force");
+// `--force` vrijedi samo za PRVI prolaz. Uz `--do-kraja` bi inače svaki
+// prolaz iznova zatekao sve redove (jer force zanemaruje heš), pa bi se
+// cijeli sadržaj prevodio do dvadeset puta. Poslije prvog prolaza ostaje
+// samo ono što nije uspjelo — a to inkrementalni prolaz i traži.
+let forceOvogProlaza = FORCE;
 const DRY = args.includes("--dry");
 const LIST_JOBS = args.includes("--list-jobs");
 const MODEL = argVal("--model", "gpt-5-mini");
@@ -680,7 +687,7 @@ async function run(): Promise<IshodProlaza> {
               needsRepair = existingTextNeedsRepair(srcStr, prior.prijevod, jezik);
             }
           }
-          if (!FORCE && prior?.hash === hash && !needsRepair) continue; // izvor nepromijenjen i prijevod je prošao QA
+          if (!forceOvogProlaza && prior?.hash === hash && !needsRepair) continue; // izvor nepromijenjen i prijevod je prošao QA
           if (f.type === "html") htmlJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, html: srcStr, hash });
           else textJobs.push({ tabela: t.tabela, redId, polje: f.col, jezik, type: f.type, strings, hash, arr: objArr });
         }
@@ -827,6 +834,12 @@ async function doKraja(): Promise<void> {
     console.log(`\n──── prolaz ${prolaz}/${MAX_PROLAZA} ────`);
     process.exitCode = 0;
     const ishod = await run();
+    if (forceOvogProlaza) {
+      // Ponovljeni prolazi kupe samo ostatak; bez ovoga bi --force --do-kraja
+      // prevodio cijeli sadržaj u svakom prolazu.
+      forceOvogProlaza = false;
+      console.log("--force je odradio svoje; idući prolazi uzimaju samo ono što nije uspjelo.");
+    }
     if (ishod.poslova === 0) {
       console.log(`\nGotovo: nema više šta prevesti (${prolaz}. prolaz).`);
       process.exitCode = 0;
