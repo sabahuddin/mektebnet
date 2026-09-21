@@ -8,8 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation, Link } from "wouter";
 import {
   User, Star, CalendarCheck, ClipboardList, BookOpen, Calendar,
-  ChevronLeft, ChevronRight, Award, GraduationCap, MessageSquare,
-  Flame, Trophy, Sparkles, Target, Footprints, Settings, Volume2, VolumeX,
+  ChevronLeft, ChevronRight, Award, GraduationCap,
+  Flame, Trophy, Sparkles, Target, Settings, Volume2, VolumeX,
   FileText, Clock, AlertCircle, Medal, Lock, CheckCircle2, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -332,7 +332,7 @@ export default function UcenikProfilPage() {
   const [isLoading, setIsLoading] = useState(true);
   // Odabrana mektebska godina (null = default/tekuća; server vraća odabranu).
   const [selectedGodina, setSelectedGodina] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"moj-put" | "profil" | "ocjene" | "napamet" | "kalendar" | "zadace" | "kvizovi" | "zvjezdice" | "dokumenti" | "postavke">("zadace");
+  const [activeTab, setActiveTab] = useState<"moj-put" | "profil" | "ocjene" | "napamet" | "kalendar" | "zadace" | "kvizovi" | "zvjezdice" | "dokumenti" | "postavke">("moj-put");
   const [napamet, setNapamet] = useState<NapametResponse | null>(null);
   const [dokumenti, setDokumenti] = useState<MektebDokument[] | null>(null);
   const [zadSubTab, setZadSubTab] = useState<"aktivne" | "zavrsene" | "neuradjene">("aktivne");
@@ -439,6 +439,7 @@ export default function UcenikProfilPage() {
     : "—";
 
   const TABS = [
+    { id: "moj-put", label: t("Pregled"), icon: Sparkles },
     { id: "zadace", label: t("Zadaće"), icon: FileText, badge: zadace.length },
     { id: "ocjene", label: t("Ocjene"), icon: Star },
     { id: "napamet", label: t("Napamet"), icon: BookOpen },
@@ -519,15 +520,6 @@ export default function UcenikProfilPage() {
                     ))}
                   </select>
                 )}
-                <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={() => setActiveTab("moj-put")} title={t("Moj put")} aria-label={t("Moj put")}>
-                  <Footprints className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={() => setActiveTab("postavke")} title={t("Postavke")} aria-label={t("Postavke")}>
-                  <Settings className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-xl h-9 w-9" onClick={() => setLocation("/poruke")} title={t("Poruke")} aria-label={t("Poruke")}>
-                  <MessageSquare className="w-4 h-4" />
-                </Button>
               </div>
             </div>
 
