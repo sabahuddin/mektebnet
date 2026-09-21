@@ -37,7 +37,10 @@ export function canAccessAdminRoute({
 
   const record = body as Record<string, unknown>;
   const keys = Object.keys(record);
-  return keys.length === 1
-    && keys[0] === "contentHtml"
-    && typeof record.contentHtml === "string";
+  const allowedKeys = new Set(["contentHtml", "language"]);
+  return keys.length >= 1
+    && keys.every((key) => allowedKeys.has(key))
+    && typeof record.contentHtml === "string"
+    && (record.language === undefined
+      || ["bs", "sq", "de", "en", "tr", "ar"].includes(String(record.language)));
 }

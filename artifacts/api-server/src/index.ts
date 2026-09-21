@@ -1185,6 +1185,23 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS grupa_muallimi_uidx ON grupa_muallimi (grupa_id, muallim_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS grupa_muallimi_muallim_idx ON grupa_muallimi (muallim_id);`);
 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS izmjene_lekcija (
+        id serial PRIMARY KEY,
+        lekcija_id integer NOT NULL REFERENCES ilmihal_lekcije(id) ON DELETE CASCADE,
+        predlozeni_html text NOT NULL,
+        jezik varchar(5) NOT NULL DEFAULT 'bs',
+        predlozio_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status varchar(20) NOT NULL DEFAULT 'na_cekanju',
+        pregledao_id integer REFERENCES users(id) ON DELETE SET NULL,
+        pregledano_at timestamp,
+        created_at timestamp NOT NULL DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`ALTER TABLE izmjene_lekcija ADD COLUMN IF NOT EXISTS jezik varchar(5) NOT NULL DEFAULT 'bs';`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS izmjene_lekcija_status_idx ON izmjene_lekcija (status, created_at DESC);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS izmjene_lekcija_lekcija_idx ON izmjene_lekcija (lekcija_id);`);
+
     // Stari direktni Napamet unosi nisu imali predmet pa su ostajali izvan
     // ukupnog broja/prosjeka ocjena. Označi samo samostalne unose; prateći
     // Napamet zapisi uz redovnu ocjenu/zadaću ostaju bez predmeta kako se ista
@@ -1228,7 +1245,7 @@ async function runResidualSchema() {
         AND ABS(EXTRACT(EPOCH FROM (prateca.created_at - glavna.created_at))) <= 10;
     `);
 
-    logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi) ready");
+    logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi + izmjene_lekcija) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

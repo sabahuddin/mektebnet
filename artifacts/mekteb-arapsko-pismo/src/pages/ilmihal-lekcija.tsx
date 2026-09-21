@@ -328,7 +328,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   onSaved: (html: string) => void;
 }) {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [html, setHtml] = useState(lekcija.contentHtml);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -355,7 +355,21 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
       if (mode === "visual" && (window as any).__wysiwygGetFullHtml) {
         saveHtml = (window as any).__wysiwygGetFullHtml();
       }
-      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { contentHtml: saveHtml }, token);
+      const result = await apiRequest<{ success: boolean; pendingApproval?: boolean }>(
+        "PUT",
+        `/admin/ilmihal/${lekcija.id}`,
+        { contentHtml: saveHtml, language: lang },
+        token,
+      );
+      if (result.pendingApproval) {
+        toast({
+          title: t("Poslano na odobrenje"),
+          description: t("Admin treba odobriti izmjenu prije nego što postane vidljiva učenicima."),
+        });
+        setIsDirty(false);
+        onClose();
+        return;
+      }
       toast({ title: t("Sačuvano! ✓"), description: t("Sadržaj lekcije uspješno ažuriran") });
       setIsDirty(false);
       onSaved(saveHtml);

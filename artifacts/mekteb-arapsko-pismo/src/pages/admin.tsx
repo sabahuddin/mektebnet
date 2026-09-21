@@ -530,6 +530,121 @@ function PendingPrilozi({ token }: { token: string }) {
   );
 }
 
+interface PendingLessonEdit {
+  id: number;
+  lekcijaId: number;
+  lekcijaNaslov: string;
+  lekcijaSlug: string;
+  lekcijaNivo: number;
+  trenutniHtml: string;
+  predlozeniHtml: string;
+  jezik: string;
+  predlozioIme: string;
+  createdAt: string;
+}
+
+function PendingLessonEdits({ token }: { token: string }) {
+  const { toast } = useToast();
+  const { t } = useLanguage();
+  const [pending, setPending] = useState<PendingLessonEdit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    apiRequest<PendingLessonEdit[]>("GET", "/admin/izmjene-lekcija", undefined, token)
+      .then(setPending)
+      .catch(() => setPending([]))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const handle = async (id: number, approve: boolean) => {
+    setProcessingId(id);
+    try {
+      await apiRequest("PUT", `/admin/izmjene-lekcija/${id}/odluka`, { approve }, token);
+      setPending((prev) => prev.filter((item) => item.id !== id));
+      toast({
+        title: approve ? t("Izmjena odobrena") : t("Izmjena odbijena"),
+        description: approve
+          ? t("Novi sadržaj lekcije je sada objavljen.")
+          : t("Objavljena lekcija je ostala nepromijenjena."),
+      });
+    } catch (err: any) {
+      toast({ title: t("Greška"), description: err?.message || t("Pokušaj ponovo"), variant: "destructive" });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  if (loading) {
+    return <div className="rounded-2xl border border-border/50 bg-white p-5"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (pending.length === 0) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-white p-5">
+        <Check className="h-5 w-5 shrink-0 text-emerald-500" />
+        <span className="text-sm text-muted-foreground">{t("Nema izmjena lekcija koje čekaju odobrenje.")}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-amber-200 bg-white">
+      <div className="flex items-center gap-2 border-b border-amber-100 bg-amber-50 p-4">
+        <Pencil className="h-5 w-5 text-amber-600" />
+        <h3 className="font-extrabold text-foreground">{t("Izmjene lekcija čekaju odobrenje")}</h3>
+        <span className="ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">{pending.length}</span>
+      </div>
+      <div className="divide-y divide-border/40">
+        {pending.map((item) => (
+          <div key={item.id} className="space-y-3 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <a
+                  href={`/ilmihal/${item.lekcijaSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-primary hover:underline"
+                >
+                  {item.lekcijaNaslov}
+                </a>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("Predložio:")} <strong>{item.predlozioIme}</strong>
+                  {" · "}{t("Nivo")} {item.lekcijaNivo}
+                  {" · "}{t("Jezik:")} <strong>{(LANG_LABELS as Record<string, string>)[item.jezik] || item.jezik.toUpperCase()}</strong>
+                  {" · "}{new Date(item.createdAt).toLocaleString("bs-BA")}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => handle(item.id, true)} disabled={processingId === item.id} className="bg-emerald-600 hover:bg-emerald-700">
+                  {processingId === item.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+                  {t("Odobri")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handle(item.id, false)} disabled={processingId === item.id} className="border-red-200 text-red-700 hover:bg-red-50">
+                  <X className="mr-1 h-4 w-4" /> {t("Odbij")}
+                </Button>
+              </div>
+            </div>
+            <details className="rounded-xl border border-border/60 bg-muted/20">
+              <summary className="cursor-pointer px-4 py-2 text-sm font-bold">{t("Uporedi trenutni i predloženi tekst")}</summary>
+              <div className="grid gap-3 border-t border-border/50 p-3 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-xs font-extrabold uppercase text-muted-foreground">{t("Trenutno objavljeno")}</p>
+                  <div className="max-h-80 overflow-auto rounded-lg border bg-white p-3 text-sm ilmihal-content" dangerouslySetInnerHTML={{ __html: item.trenutniHtml }} />
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-extrabold uppercase text-amber-700">{t("Muallimov prijedlog")}</p>
+                  <div className="max-h-80 overflow-auto rounded-lg border border-amber-200 bg-white p-3 text-sm ilmihal-content" dangerouslySetInnerHTML={{ __html: item.predlozeniHtml }} />
+                </div>
+              </div>
+            </details>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const MEDENA_KATEGORIJE_META: Record<string, { naziv: string; ikona: string }> = {
   sarti: { naziv: "Imanski i islamski šarti", ikona: "🌷" },
   sure: { naziv: "Sure i ajeti", ikona: "📖" },
@@ -3240,6 +3355,7 @@ export default function AdminPage() {
 
             <TabsContent value="moderacija" data-testid="admin-system-content-moderacija" className="mt-0 space-y-5">
               <KategorijeZvjezdica token={token!} />
+              <PendingLessonEdits token={token!} />
               <PendingPrilozi token={token!} />
             </TabsContent>
 

@@ -69,3 +69,4 @@
 - [Bundler template script escape](bundler-template-script-escape.md) — nakon JSON reserializacije obavezno escapuj unutrašnje zatvarajuće script tagove ili browser prekida template JSON.
 - [pnpm verzija na Replitu](pnpm-package-manager-version-replit.md) — isključi pnpm samoprebacivanje verzije; inače packageManager noviji od Nix pnpm-a izaziva rekurzivnu instalaciju.
 - [PWA ažuriranje bez prekida rada](pwa-update-bez-reloada.md) — novi service worker čeka zatvaranje svih tabova; ne aktivirati ga usred korisničke sesije.
+- [Odobravanje izmjena lekcija](odobravanje-izmjena-lekcija.md) — muallimove izmjene čekaju admina i moraju ostati vezane za jezik koji je uređivan.

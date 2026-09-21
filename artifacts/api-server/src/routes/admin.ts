@@ -72,6 +72,7 @@ import { TIPOVI_VJEZBI, getVjezba, jeNasaVjezba, vjezbaMarker, vjezbaUrl } from 
 import { createGzip } from "node:zlib";
 import { logger } from "../lib/logger.js";
 import { KNJIGA_33_PRICE, KNJIGA_33_PRICE_IZVOR } from "../data/citaonica-33-price.js";
+import { createHash } from "node:crypto";
 
 /** Naslov bez razlike u velikim slovima, kvačicama i razmacima — za poređenje. */
 function kljucNaslova(naslov: string): string {
@@ -2648,10 +2649,125 @@ router.post("/ilmihal", async (req, res) => {
   return;
 });
 
+// GET /api/admin/izmjene-lekcija — muallimski prijedlozi koji čekaju admina.
+router.get("/izmjene-lekcija", async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        i.id,
+        i.lekcija_id AS "lekcijaId",
+        i.predlozeni_html AS "predlozeniHtml",
+        i.jezik,
+        i.created_at AS "createdAt",
+        l.naslov AS "lekcijaNaslov",
+        l.slug AS "lekcijaSlug",
+        l.nivo AS "lekcijaNivo",
+        CASE
+          WHEN i.jezik = 'bs' THEN l.content_html
+          ELSE COALESCE(cp.prijevod, l.content_html)
+        END AS "trenutniHtml",
+        u.display_name AS "predlozioIme"
+      FROM izmjene_lekcija i
+      INNER JOIN ilmihal_lekcije l ON l.id = i.lekcija_id
+      INNER JOIN users u ON u.id = i.predlozio_id
+      LEFT JOIN content_prijevodi cp
+        ON cp.tabela = 'ilmihal_lekcije'
+        AND cp.red_id = i.lekcija_id
+        AND cp.polje = 'content_html'
+        AND cp.jezik = i.jezik
+      WHERE i.status = 'na_cekanju'
+      ORDER BY i.created_at ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    req.log.error({ err }, "GET /izmjene-lekcija error");
+    res.status(500).json({ error: "Nije moguće učitati prijedloge izmjena" });
+  }
+});
+
+// PUT /api/admin/izmjene-lekcija/:id/odluka — odobri ili odbij prijedlog.
+router.put("/izmjene-lekcija/:id/odluka", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const approve = req.body?.approve === true;
+    if (!Number.isInteger(id) || id < 1) {
+      res.status(400).json({ error: "Neispravan ID prijedloga" });
+      return;
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const locked = await tx.execute(sql`
+        SELECT
+          i.id,
+          i.lekcija_id AS "lekcijaId",
+          i.predlozeni_html AS "predlozeniHtml",
+          i.jezik,
+          l.content_html AS "izvorHtml"
+        FROM izmjene_lekcija i
+        INNER JOIN ilmihal_lekcije l ON l.id = i.lekcija_id
+        WHERE i.id = ${id} AND i.status = 'na_cekanju'
+        FOR UPDATE
+      `);
+      const proposal = locked.rows[0] as {
+        id: number;
+        lekcijaId: number;
+        predlozeniHtml: string;
+        jezik: string;
+        izvorHtml: string;
+      } | undefined;
+      if (!proposal) return null;
+
+      if (approve) {
+        if (proposal.jezik === "bs") {
+          await tx.update(ilmihalLekcijeTable).set({
+            contentHtml: proposal.predlozeniHtml,
+            locked: true,
+            lockedAt: new Date(),
+            lockedNote: "Odobrena muallimska izmjena",
+          }).where(eq(ilmihalLekcijeTable.id, proposal.lekcijaId));
+        } else {
+          const sourceHash = createHash("sha256").update(proposal.izvorHtml).digest("hex");
+          await tx.execute(sql`
+            INSERT INTO content_prijevodi
+              (tabela, red_id, polje, jezik, prijevod, izvor_hash, updated_at)
+            VALUES
+              ('ilmihal_lekcije', ${proposal.lekcijaId}, 'content_html', ${proposal.jezik}, ${proposal.predlozeniHtml}, ${sourceHash}, NOW())
+            ON CONFLICT (tabela, red_id, polje, jezik)
+            DO UPDATE SET
+              prijevod = EXCLUDED.prijevod,
+              izvor_hash = EXCLUDED.izvor_hash,
+              updated_at = NOW()
+          `);
+        }
+      }
+      await tx.execute(sql`
+        UPDATE izmjene_lekcija
+        SET
+          status = ${approve ? "odobreno" : "odbijeno"},
+          pregledao_id = ${req.user!.userId},
+          pregledano_at = NOW()
+        WHERE id = ${id}
+      `);
+      return proposal;
+    });
+
+    if (!result) {
+      res.status(404).json({ error: "Prijedlog nije pronađen ili je već obrađen" });
+      return;
+    }
+    res.json({ success: true, approved: approve });
+  } catch (err) {
+    req.log.error({ err }, "PUT /izmjene-lekcija/:id/odluka error");
+    res.status(500).json({ error: "Nije moguće obraditi prijedlog" });
+  }
+});
+
 router.put("/ilmihal/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet, uvjetiIds, dostupnost } = req.body;
+    const requestedLanguage = String(req.body?.language || "bs").toLowerCase();
+    const language = ["sq", "de", "en", "tr", "ar"].includes(requestedLanguage) ? requestedLanguage : "bs";
     const editorRole = req.user?.role;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
@@ -2683,7 +2799,32 @@ router.put("/ilmihal/:id", async (req, res) => {
       }
       // Auto-clean before save: remove duplicate priprema accordions, upgrade old design.
       const { regeneratePripremaInHtml } = await import("../lib/priprema-render.js");
-      updates.contentHtml = normalizeSurahNames(regeneratePripremaInHtml(safeHtml));
+      const normalizedHtml = normalizeSurahNames(regeneratePripremaInHtml(safeHtml));
+      if (editorRole === "muallim") {
+        await db.execute(sql`
+          INSERT INTO izmjene_lekcija (lekcija_id, predlozeni_html, jezik, predlozio_id)
+          VALUES (${id}, ${normalizedHtml}, ${language}, ${req.user!.userId})
+        `);
+        res.json({ success: true, pendingApproval: true });
+        return;
+      }
+      if (language !== "bs") {
+        const sourceHash = createHash("sha256").update(existing.contentHtml).digest("hex");
+        await db.execute(sql`
+          INSERT INTO content_prijevodi
+            (tabela, red_id, polje, jezik, prijevod, izvor_hash, updated_at)
+          VALUES
+            ('ilmihal_lekcije', ${id}, 'content_html', ${language}, ${normalizedHtml}, ${sourceHash}, NOW())
+          ON CONFLICT (tabela, red_id, polje, jezik)
+          DO UPDATE SET
+            prijevod = EXCLUDED.prijevod,
+            izvor_hash = EXCLUDED.izvor_hash,
+            updated_at = NOW()
+        `);
+        res.json({ success: true });
+        return;
+      }
+      updates.contentHtml = normalizedHtml;
     }
     if (naslov !== undefined) updates.naslov = normalizeSurahNames(String(naslov));
     if (redoslijed !== undefined) updates.redoslijed = redoslijed;
