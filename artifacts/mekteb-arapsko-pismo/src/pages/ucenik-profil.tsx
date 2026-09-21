@@ -493,7 +493,7 @@ export default function UcenikProfilPage() {
           <div className="text-center py-20 text-muted-foreground">{t("Greška pri učitavanju profila")}</div>
         ) : (
           <>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5 min-w-0">
+            <div className="flex items-center gap-3 mb-5 min-w-0">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="w-11 h-11 sm:w-14 sm:h-14 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md shrink-0">
                   <User className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
@@ -505,21 +505,6 @@ export default function UcenikProfilPage() {
                   {profil.muallim && <span> · {t("Muallim:")} {profil.muallim.displayName}</span>}
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                {profil.mektebskaGodina && profil.mektebskaGodina.godine.length > 0 && (
-                  <select
-                    data-testid="select-mektebska-godina"
-                    value={selectedGodina ?? profil.mektebskaGodina.odabrana ?? ""}
-                    onChange={(e) => setSelectedGodina(e.target.value)}
-                    className="rounded-xl border border-border/60 bg-white px-2.5 py-1.5 text-xs sm:text-sm font-bold text-foreground max-w-[170px]"
-                    title={t("Mektebska godina")}
-                  >
-                    {profil.mektebskaGodina.godine.map((g) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                )}
               </div>
             </div>
 
@@ -958,6 +943,25 @@ export default function UcenikProfilPage() {
 
             {activeTab === "profil" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {profil.mektebskaGodina && profil.mektebskaGodina.godine.length > 0 && (
+                  <div className="mb-6 rounded-2xl border border-border/50 bg-white p-5">
+                    <label htmlFor="mektebska-godina" className="mb-2 block text-sm font-extrabold text-foreground">
+                      {t("Mektebska godina")}
+                    </label>
+                    <select
+                      id="mektebska-godina"
+                      data-testid="select-mektebska-godina"
+                      value={selectedGodina ?? profil.mektebskaGodina.odabrana ?? ""}
+                      onChange={(e) => setSelectedGodina(e.target.value)}
+                      className="w-full max-w-xs rounded-xl border border-border/60 bg-white px-3 py-2 text-sm font-bold text-foreground"
+                    >
+                      {profil.mektebskaGodina.godine.map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {profil.napredak && (
                   <div className="mb-6 bg-gradient-to-br from-primary/5 via-violet-50 to-amber-50 border border-primary/20 rounded-3xl p-5">
                     <div className="flex items-center gap-2 mb-4">
