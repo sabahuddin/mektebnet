@@ -117,6 +117,36 @@ interface MuallimPregled {
   grupe: { id: number; naziv: string; skolskaGodina: string; isActive: boolean; brojUcenika: number; aktivniUcenika: number }[];
 }
 
+interface DzematPregled {
+  id: number;
+  naziv: string;
+  grad: string | null;
+  isActive: boolean;
+  glavniMuallim: { id: number; displayName: string } | null;
+  dozvoljenoMuallima: number;
+  brojMuallima: number;
+  aktivnihMuallima: number;
+  ukupnoLicenci: number;
+  dodijeljeneLicence: number;
+  evidentiranoIskoristenihLicenci: number;
+  brojUcenika: number;
+  aktivnihUcenika: number;
+  brojRoditelja: number;
+  aktivnaPretplata: {
+    planType: string;
+    licencesPurchased: number;
+    expiresAt: string | null;
+  } | null;
+  muallimi: {
+    id: number;
+    displayName: string;
+    isActive: boolean;
+    isGlavni: boolean;
+    licenceCount: number;
+    licencesUsed: number;
+  }[];
+}
+
 interface MektebOpcija {
   id: number;
   naziv: string;
@@ -1715,6 +1745,8 @@ export default function AdminPage() {
 
   const [muallimPregled, setMuallimPregled] = useState<MuallimPregled[]>([]);
   const [muallimLoading, setMuallimLoading] = useState(false);
+  const [dzematiPregled, setDzematiPregled] = useState<DzematPregled[]>([]);
+  const [dzematiLoading, setDzematiLoading] = useState(false);
   const [expandedMuallim, setExpandedMuallim] = useState<number | null>(null);
   const [muallimSearch, setMuallimSearch] = useState("");
   const [muallimSort, setMuallimSort] = useState<"prezime" | "datum">("prezime");
@@ -1758,6 +1790,19 @@ export default function AdminPage() {
       toast({ title: t("Greška"), description: t("Nije moguće učitati pregled muallima"), variant: "destructive" });
     } finally {
       setMuallimLoading(false);
+    }
+  };
+
+  const loadDzematiPregled = async () => {
+    if (!token) return;
+    setDzematiLoading(true);
+    try {
+      const data = await apiRequest<DzematPregled[]>("GET", "/admin/dzemati-pregled", undefined, token);
+      setDzematiPregled(data);
+    } catch {
+      toast({ title: t("Greška"), description: t("Nije moguće učitati pregled džemata"), variant: "destructive" });
+    } finally {
+      setDzematiLoading(false);
     }
   };
 
@@ -1815,7 +1860,7 @@ export default function AdminPage() {
     try {
       await apiRequest("PUT", `/admin/muallim/${userId}/mekteb`, { mektebId }, token);
       toast({ title: t("Sačuvano"), description: t("Džemat ažuriran") });
-      await loadMuallimPregled();
+      await Promise.all([loadMuallimPregled(), loadDzematiPregled()]);
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće promijeniti džemat"), variant: "destructive" });
     } finally {
@@ -1829,7 +1874,7 @@ export default function AdminPage() {
     try {
       await apiRequest("PUT", `/admin/muallim/${userId}/glavni`, { isGlavni }, token);
       toast({ title: t("Sačuvano"), description: isGlavni ? t("Postavljen kao glavni muallim") : t("Skinut status glavnog") });
-      await loadMuallimPregled();
+      await Promise.all([loadMuallimPregled(), loadDzematiPregled()]);
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće promijeniti status"), variant: "destructive" });
     } finally {
@@ -1843,7 +1888,7 @@ export default function AdminPage() {
     try {
       await apiRequest("PUT", `/admin/mekteb/${mektebId}/dozvoljeno-muallima`, { dozvoljenoMuallima }, token);
       toast({ title: t("Sačuvano"), description: t("Dozvoljeno muallima: {n}", { n: String(dozvoljenoMuallima) }) });
-      await loadMuallimPregled();
+      await Promise.all([loadMuallimPregled(), loadDzematiPregled()]);
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće promijeniti limit"), variant: "destructive" });
     } finally {
@@ -1861,7 +1906,7 @@ export default function AdminPage() {
       await apiRequest("PUT", `/admin/muallim/${userId}/mekteb`, { mektebId: novi.id }, token);
       toast({ title: t("Sačuvano"), description: t('Džemat "{naziv}" kreiran i dodijeljen', { naziv }) });
       setNoviDzematZa(null); setNoviDzematNaziv(""); setNoviDzematGrad("");
-      await Promise.all([loadMuallimPregled(), loadMektebiOpcije()]);
+      await Promise.all([loadMuallimPregled(), loadDzematiPregled(), loadMektebiOpcije()]);
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće kreirati džemat"), variant: "destructive" });
     } finally {
@@ -1869,7 +1914,7 @@ export default function AdminPage() {
     }
   };
 
-  useEffect(() => { loadData(); loadMuallimPregled(); loadGrupeAll(); loadMektebiOpcije(); }, [token]);
+  useEffect(() => { loadData(); loadMuallimPregled(); loadDzematiPregled(); loadGrupeAll(); loadMektebiOpcije(); }, [token]);
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("admin-main-tab", activeMainTab);
@@ -2006,7 +2051,7 @@ export default function AdminPage() {
         {activeMainTab === "korisnici" && (
           <div className="flex gap-1 bg-muted/30 p-1 rounded-xl mb-5 overflow-x-auto">
             {[
-              { key: "muallimi" as const, label: t("Muallimi"), icon: <UserCog className="w-4 h-4" /> },
+              { key: "muallimi" as const, label: t("Džemati"), icon: <Building2 className="w-4 h-4" /> },
               { key: "korisnici" as const, label: t("Korisnici"), icon: <Users className="w-4 h-4" /> },
               { key: "analitika" as const, label: t("Analitika"), icon: <BarChart3 className="w-4 h-4" /> },
               { key: "rezultati" as const, label: t("Kviz rezultati"), icon: <ClipboardList className="w-4 h-4" /> },
@@ -2021,206 +2066,115 @@ export default function AdminPage() {
         )}
 
         {activeMainTab === "korisnici" && (<>
-        {/* ── TAB: MUALLIMI ── */}
+        {/* ── TAB: DŽEMATI ── */}
         {activeTab === "muallimi" && (
-          <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
-            <div className="p-4 border-b border-border/50 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-extrabold text-foreground flex items-center gap-2">
-                    <UserCog className="w-5 h-5 text-primary" /> {t("Pregled muallima")}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">{t("Muallimi, njihovi džemati, grupe i broj učenika")}</p>
-                </div>
-                <Button size="sm" onClick={() => { setShowDodajMuallim(true); }} className="rounded-xl flex items-center gap-1.5">
-                  <Plus className="w-4 h-4" /> {t("Dodaj muallima")}
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2 items-center">
-                <input
-                  type="text"
-                  placeholder={t("Pretraži po imenu ili džematu...")}
-                  value={muallimSearch}
-                  onChange={e => setMuallimSearch(e.target.value)}
-                  className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 flex-1 min-w-[200px]"
-                />
-                <span className="text-xs text-muted-foreground">{t("Poredaj:")}</span>
-                <select value={muallimSort} onChange={e => setMuallimSort(e.target.value as "prezime" | "datum")}
-                  className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
-                  <option value="prezime">{t("Po prezimenu")}</option>
-                  <option value="datum">{t("Po datumu registracije")}</option>
-                </select>
-              </div>
-            </div>
-            {muallimLoading ? (
-              <div className="p-4 flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
-            ) : muallimiPrikaz.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                {muallimiPrikaz.map(m => (
-                  <div key={m.id} className="border-b border-border/20 last:border-b-0">
-                    <button
-                      onClick={() => setExpandedMuallim(expandedMuallim === m.id ? null : m.id)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-muted/20 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${m.isActive ? "bg-teal-100" : "bg-red-100"}`}>
-                          <UserCog className={`w-5 h-5 ${m.isActive ? "text-teal-700" : "text-red-700"}`} />
-                        </div>
-                        <div>
-                          <div className="font-bold text-foreground flex items-center gap-2">
-                            {m.displayName}
-                            {m.isGlavni && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">{t("Glavni")}</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
-                            <span className="inline-flex items-center gap-1 font-semibold text-foreground/70">
-                              <Building2 className="w-3 h-3" />
-                              {m.mektebNaziv ? `${m.mektebNaziv}${m.mektebGrad ? `, ${m.mektebGrad}` : ""}` : t("Bez džemata")}
-                            </span>
-                            <span>· {m.email || m.username} · {m.brojGrupa} {t("grupa")} · {m.aktivniUcenici}/{m.brojUcenika} {t("učenika")}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                          {m.isActive ? t("Aktivan") : t("Neaktivan")}
-                        </span>
-                        <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expandedMuallim === m.id ? "rotate-90" : ""}`} />
-                      </div>
-                    </button>
-                    {expandedMuallim === m.id && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-                        className="px-4 pb-4">
-                        {/* Admin kontrole: džemat, glavni, dozvoljeni broj muallima */}
-                        <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-3 flex flex-col gap-3">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t("Džemat")}</label>
-                              <div className="flex items-center gap-2">
-                                <select
-                                  value={m.mektebId ?? ""}
-                                  disabled={muallimAkcija === m.id}
-                                  onChange={e => dodijeliMekteb(m.id, e.target.value === "" ? null : parseInt(e.target.value))}
-                                  className="border border-border rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[200px]"
-                                >
-                                  <option value="">{t("Bez džemata")}</option>
-                                  {mektebiOpcije.map(o => (
-                                    <option key={o.id} value={o.id}>{o.naziv}{o.grad ? `, ${o.grad}` : ""}</option>
-                                  ))}
-                                </select>
-                                <button
-                                  type="button"
-                                  onClick={() => { setNoviDzematZa(noviDzematZa === m.id ? null : m.id); setNoviDzematNaziv(""); setNoviDzematGrad(""); }}
-                                  className="text-xs font-bold text-primary hover:underline whitespace-nowrap"
-                                >
-                                  {noviDzematZa === m.id ? t("Otkaži") : t("+ Novi džemat")}
-                                </button>
-                              </div>
-                              {noviDzematZa === m.id && (
-                                <div className="flex flex-wrap items-center gap-2 mt-1 bg-white border border-border rounded-lg p-2">
-                                  <input
-                                    type="text" placeholder={t("Naziv džemata")}
-                                    value={noviDzematNaziv}
-                                    onChange={e => setNoviDzematNaziv(e.target.value)}
-                                    className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[180px]"
-                                  />
-                                  <input
-                                    type="text" placeholder={t("Grad (opcionalno)")}
-                                    value={noviDzematGrad}
-                                    onChange={e => setNoviDzematGrad(e.target.value)}
-                                    className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-[140px]"
-                                  />
-                                  <button
-                                    type="button"
-                                    disabled={muallimAkcija === m.id || !noviDzematNaziv.trim()}
-                                    onClick={() => kreirajIDodijeliDzemat(m.id)}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
-                                  >
-                                    {t("Kreiraj i dodijeli")}
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t("Glavni muallim")}</label>
-                              <button
-                                disabled={muallimAkcija === m.id || !m.mektebId}
-                                onClick={() => postaviGlavni(m.id, !m.isGlavni)}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 ${m.isGlavni ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-muted text-foreground hover:bg-muted/70"}`}
-                                title={!m.mektebId ? t("Muallim prvo mora imati džemat") : undefined}
-                              >
-                                {m.isGlavni ? t("Skini status glavnog") : t("Postavi za glavnog")}
-                              </button>
-                            </div>
-                            {m.mektebId && (
-                              <div className="flex flex-col gap-1">
-                                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">{t("Dozvoljeno muallima u džematu")}</label>
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="number" min={1} max={99}
-                                    defaultValue={m.dozvoljenoMuallima ?? 1}
-                                    disabled={muallimAkcija === m.mektebId}
-                                    id={`dozv-${m.mektebId}`}
-                                    className="border border-border rounded-lg px-3 py-1.5 text-sm w-20 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                  />
-                                  <button
-                                    disabled={muallimAkcija === m.mektebId}
-                                    onClick={() => {
-                                      const el = document.getElementById(`dozv-${m.mektebId}`) as HTMLInputElement | null;
-                                      const val = parseInt(el?.value || "");
-                                      if (val && m.mektebId) postaviDozvoljeno(m.mektebId, val);
-                                    }}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
-                                  >
-                                    {t("Sačuvaj")}
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            {t("Glavni muallim može sam dodavati kolege u svoj džemat do dozvoljenog broja.")}
-                          </p>
-                        </div>
-                        {m.grupe.length > 0 ? (
-                          <div className="bg-muted/30 rounded-xl overflow-hidden">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="border-b border-border/30 bg-muted/50">
-                                  {[t("Grupa"), t("Šk. godina"), t("Aktivni učenici"), t("Ukupno učenika"), t("Status")].map(h => (
-                                    <th key={h} className="text-left px-4 py-2 font-bold text-xs text-muted-foreground">{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {m.grupe.map(g => (
-                                  <tr key={g.id} className="border-b border-border/20 last:border-b-0">
-                                    <td className="px-4 py-2.5 font-bold text-foreground">{g.naziv}</td>
-                                    <td className="px-4 py-2.5 text-muted-foreground">{g.skolskaGodina}</td>
-                                    <td className="px-4 py-2.5 font-bold text-emerald-600">{g.aktivniUcenika}</td>
-                                    <td className="px-4 py-2.5 font-bold text-foreground">{g.brojUcenika}</td>
-                                    <td className="px-4 py-2.5">
-                                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${g.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                                        {g.isActive ? t("Aktivna") : t("Neaktivna")}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground py-3 text-center">{t("Nema grupa")}</p>
-                        )}
-                      </motion.div>
-                    )}
-                  </div>
-                ))}
+                <h3 className="flex items-center gap-2 font-extrabold text-foreground">
+                  <Building2 className="h-5 w-5 text-primary" /> {t("Pregled džemata")}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">{t("Pretplate, licence i broj korisnika po džematu")}</p>
               </div>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground text-sm">Nema muallima</div>
-            )}
+              <Button size="sm" onClick={() => setShowDodajMuallim(true)} className="flex items-center gap-1.5 rounded-xl">
+                <Plus className="h-4 w-4" /> {t("Dodaj muallima")}
+              </Button>
+            </div>
+
+            {dzematiLoading ? (
+              <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div>
+            ) : dzematiPregled.length === 0 ? (
+              <div className="rounded-2xl border border-border/50 bg-white p-10 text-center text-sm text-muted-foreground">{t("Nema džemata")}</div>
+            ) : dzematiPregled.map((d) => (
+              <div key={d.id} className="overflow-hidden rounded-2xl border border-border/50 bg-white">
+                <button
+                  type="button"
+                  onClick={() => setExpandedMuallim(expandedMuallim === d.id ? null : d.id)}
+                  className="w-full p-5 text-left transition-colors hover:bg-muted/20"
+                >
+                  <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-lg font-extrabold text-foreground">{d.naziv}</h4>
+                        {d.grad && <span className="text-sm text-muted-foreground">· {d.grad}</span>}
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${d.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                          {d.isActive ? t("Aktivan") : t("Neaktivan")}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t("Glavni muallim:")} <span className="font-bold text-foreground">{d.glavniMuallim?.displayName ?? t("Nije postavljen")}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${d.aktivnaPretplata ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
+                        {d.aktivnaPretplata ? `${t("Aktivna pretplata")} · ${d.aktivnaPretplata.planType}` : t("Nema aktivne pretplate")}
+                      </span>
+                      <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expandedMuallim === d.id ? "rotate-90" : ""}`} />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+                    {[
+                      { label: t("Iskorištene / ukupne licence"), value: `${d.evidentiranoIskoristenihLicenci}/${d.ukupnoLicenci}`, color: "text-violet-700", bg: "bg-violet-50" },
+                      { label: t("Muallimi"), value: `${d.brojMuallima}/${d.dozvoljenoMuallima}`, color: "text-teal-700", bg: "bg-teal-50" },
+                      { label: t("Aktivni muallimi"), value: d.aktivnihMuallima, color: "text-cyan-700", bg: "bg-cyan-50" },
+                      { label: t("Učenici"), value: `${d.aktivnihUcenika}/${d.brojUcenika}`, color: "text-blue-700", bg: "bg-blue-50" },
+                      { label: t("Roditelji"), value: d.brojRoditelja, color: "text-amber-700", bg: "bg-amber-50" },
+                    ].map((stat) => (
+                      <div key={stat.label} className={`rounded-xl border border-border/40 p-3 ${stat.bg}`}>
+                        <div className={`text-xl font-black ${stat.color}`}>{stat.value}</div>
+                        <div className="mt-0.5 text-xs font-bold text-muted-foreground">{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </button>
+
+                {expandedMuallim === d.id && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="border-t border-border/40 px-5 py-4">
+                    <div className="mb-4 flex flex-wrap items-end gap-3">
+                      <div>
+                        <label htmlFor={`dozv-${d.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{t("Dozvoljeno muallima")}</label>
+                        <input id={`dozv-${d.id}`} type="number" min={d.brojMuallima} max={99} defaultValue={d.dozvoljenoMuallima}
+                          className="w-24 rounded-lg border border-border px-3 py-1.5 text-sm" />
+                      </div>
+                      <Button size="sm" disabled={muallimAkcija === d.id} onClick={() => {
+                        const el = document.getElementById(`dozv-${d.id}`) as HTMLInputElement | null;
+                        const value = Number(el?.value);
+                        if (value) postaviDozvoljeno(d.id, value);
+                      }}>{t("Sačuvaj")}</Button>
+                      {d.aktivnaPretplata?.expiresAt && (
+                        <p className="text-xs text-muted-foreground">{t("Pretplata važi do:")} {new Date(d.aktivnaPretplata.expiresAt).toLocaleDateString("bs-BA")}</p>
+                      )}
+                    </div>
+                    <div className="overflow-x-auto rounded-xl border border-border/40">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/40">
+                          <tr>
+                            {[t("Muallim"), t("Status"), t("Iskorištene licence"), t("Ukupno licenci")].map((h) => (
+                              <th key={h} className="px-4 py-2 text-left text-xs font-bold text-muted-foreground">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {d.muallimi.map((m) => (
+                            <tr key={m.id} className="border-t border-border/30">
+                              <td className="px-4 py-2.5 font-bold text-foreground">
+                                {m.displayName} {m.isGlavni && <span className="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">{t("Glavni")}</span>}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${m.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{m.isActive ? t("Aktivan") : t("Neaktivan")}</span>
+                              </td>
+                              <td className="px-4 py-2.5 font-bold">{m.licencesUsed}</td>
+                              <td className="px-4 py-2.5 font-bold">{m.licenceCount}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -2963,13 +2917,13 @@ export default function AdminPage() {
       </div>
 
       {showDodajAdmina && (
-        <DodajAdminaModal token={token!} onClose={() => setShowDodajAdmina(false)} onCreated={() => { loadData(); loadMuallimPregled(); }} />
+        <DodajAdminaModal token={token!} onClose={() => setShowDodajAdmina(false)} onCreated={() => { loadData(); loadMuallimPregled(); loadDzematiPregled(); }} />
       )}
       {showDodajMuallim && (
-        <DodajMuallimModal token={token!} onClose={() => setShowDodajMuallim(false)} onCreated={() => { loadData(); loadMuallimPregled(); }} />
+        <DodajMuallimModal token={token!} onClose={() => setShowDodajMuallim(false)} onCreated={() => { loadData(); loadMuallimPregled(); loadDzematiPregled(); }} />
       )}
       {showDodajUcnika && (
-        <DodajUcenikaModal token={token!} onClose={() => setShowDodajUcnika(false)} onCreated={() => { loadData(); loadMuallimPregled(); }} />
+        <DodajUcenikaModal token={token!} onClose={() => setShowDodajUcnika(false)} onCreated={() => { loadData(); loadMuallimPregled(); loadDzematiPregled(); }} />
       )}
       {resetKorisnik && (
         <ResetPasswordModal token={token!} korisnik={resetKorisnik} onClose={() => setResetKorisnik(null)} />
@@ -2980,7 +2934,7 @@ export default function AdminPage() {
           korisnik={editKorisnik}
           muallimProfil={muallimProfili.find(mp => mp.userId === editKorisnik.id)}
           onClose={() => setEditKorisnik(null)}
-          onSaved={() => { loadData(); loadMuallimPregled(); }}
+          onSaved={() => { loadData(); loadMuallimPregled(); loadDzematiPregled(); }}
         />
       )}
       {rasporediKorisnik && (
@@ -2989,7 +2943,7 @@ export default function AdminPage() {
           korisnik={rasporediKorisnik}
           grupeAll={grupeAll}
           onClose={() => setRasporediKorisnik(null)}
-          onSaved={() => { loadData(); loadMuallimPregled(); }}
+          onSaved={() => { loadData(); loadMuallimPregled(); loadDzematiPregled(); }}
         />
       )}
       {deleteKorisnik && (

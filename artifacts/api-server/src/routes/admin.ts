@@ -3903,6 +3903,116 @@ router.get("/muallim-pregled", async (req, res) => {
   }
 });
 
+// GET /api/admin/dzemati-pregled — consolidated congregation, subscription and licence overview
+router.get("/dzemati-pregled", async (_req, res) => {
+  try {
+    const [mektebi, muallimi, ucenici, roditeljskeVeze, pretplate] = await Promise.all([
+      db.select().from(mektebiTable),
+      db.select({
+        userId: muallimProfiliTable.userId,
+        mektebId: muallimProfiliTable.mektebId,
+        isGlavni: muallimProfiliTable.isGlavni,
+        licenceCount: muallimProfiliTable.licenceCount,
+        licencesUsed: muallimProfiliTable.licencesUsed,
+        displayName: usersTable.displayName,
+        isActive: usersTable.isActive,
+      }).from(muallimProfiliTable)
+        .innerJoin(usersTable, eq(usersTable.id, muallimProfiliTable.userId)),
+      db.select({
+        userId: ucenikProfiliTable.userId,
+        mektebId: ucenikProfiliTable.mektebId,
+        muallimId: ucenikProfiliTable.muallimId,
+        isActive: usersTable.isActive,
+      }).from(ucenikProfiliTable)
+        .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
+        .where(eq(ucenikProfiliTable.isArchived, false)),
+      db.select({
+        roditeljId: roditeljUcenikTable.roditeljId,
+        ucenikId: roditeljUcenikTable.ucenikId,
+      }).from(roditeljUcenikTable)
+        .innerJoin(usersTable, eq(usersTable.id, roditeljUcenikTable.roditeljId))
+        .where(and(
+          eq(roditeljUcenikTable.status, "approved"),
+          eq(usersTable.role, "roditelj"),
+          eq(usersTable.isActive, true),
+        )),
+      db.select().from(pretplateTable),
+    ]);
+
+    const sada = new Date();
+    const result = mektebi.map((mekteb) => {
+      const mMuallimi = muallimi.filter((m) => m.mektebId === mekteb.id);
+      const muallimIds = new Set(mMuallimi.map((m) => m.userId));
+      // mektebId is authoritative. The muallim fallback only supports legacy
+      // profiles where mektebId was never populated, avoiding double counting.
+      const mUcenici = ucenici.filter((u) =>
+        u.mektebId === mekteb.id ||
+        (u.mektebId == null && u.muallimId != null && muallimIds.has(u.muallimId))
+      );
+      const ucenikIds = new Set(mUcenici.map((u) => u.userId));
+      const roditeljIds = new Set(
+        roditeljskeVeze
+          .filter((r) => ucenikIds.has(r.ucenikId))
+          .map((r) => r.roditeljId),
+      );
+      const glavni = mMuallimi.find((m) => m.userId === mekteb.glavniMuallimId)
+        ?? mMuallimi.find((m) => m.isGlavni)
+        ?? null;
+      const aktivnePretplate = pretplate
+        .filter((p) =>
+          p.userId === glavni?.userId &&
+          p.status === "active" &&
+          (!p.expiresAt || new Date(p.expiresAt) > sada)
+        )
+        .sort((a, b) =>
+          new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime() ||
+          b.id - a.id
+        );
+      const aktivnaPretplata = aktivnePretplate[0] ?? null;
+      const dodijeljeneLicence = mMuallimi.reduce((sum, m) => sum + m.licenceCount, 0);
+
+      return {
+        id: mekteb.id,
+        naziv: mekteb.naziv,
+        grad: mekteb.grad,
+        isActive: mekteb.isActive,
+        glavniMuallim: glavni ? { id: glavni.userId, displayName: glavni.displayName } : null,
+        dozvoljenoMuallima: mekteb.dozvoljenoMuallima,
+        brojMuallima: mMuallimi.length,
+        aktivnihMuallima: mMuallimi.filter((m) => m.isActive).length,
+        ukupnoLicenci: aktivnaPretplata?.licencesPurchased
+          ? aktivnaPretplata.licencesPurchased
+          : dodijeljeneLicence,
+        dodijeljeneLicence,
+        evidentiranoIskoristenihLicenci: mMuallimi.reduce((sum, m) => sum + m.licencesUsed, 0),
+        brojUcenika: mUcenici.length,
+        aktivnihUcenika: mUcenici.filter((u) => u.isActive).length,
+        brojRoditelja: roditeljIds.size,
+        aktivnaPretplata: aktivnaPretplata ? {
+          planType: aktivnaPretplata.planType,
+          licencesPurchased: aktivnaPretplata.licencesPurchased ?? 0,
+          expiresAt: aktivnaPretplata.expiresAt,
+        } : null,
+        muallimi: mMuallimi
+          .map((m) => ({
+            id: m.userId,
+            displayName: m.displayName,
+            isActive: m.isActive,
+            isGlavni: m.userId === glavni?.userId,
+            licenceCount: m.licenceCount,
+            licencesUsed: m.licencesUsed,
+          }))
+          .sort((a, b) => Number(b.isGlavni) - Number(a.isGlavni) || a.displayName.localeCompare(b.displayName, "bs")),
+      };
+    });
+
+    res.json(result.sort((a, b) => a.naziv.localeCompare(b.naziv, "bs")));
+  } catch (err) {
+    console.error("Dzemati pregled error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // PUT /api/admin/ucenik/:id/rasporedi — reassign student to different muallim/group
 router.put("/ucenik/:id/rasporedi", async (req, res) => {
   try {
