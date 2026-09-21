@@ -13,7 +13,7 @@ import {
   pretplateTable,
   passwordResetTokensTable,
 } from "@workspace/db/schema";
-import { eq, and, isNull, gt } from "drizzle-orm";
+import { eq, and, isNull, gt, desc } from "drizzle-orm";
 import { signToken, requireAuth } from "../middlewares/auth.js";
 import { sendRegistrationNotification, sendPasswordResetEmail } from "../lib/email.js";
 
@@ -450,7 +450,7 @@ async function getOnlineMektebGroupForAge(godine: number) {
 // POST /api/auth/register-ucenik — adult self-registration (pending admin approval)
 router.post("/register-ucenik", async (req, res) => {
   try {
-    const { displayName, email, godine } = req.body;
+    const { displayName, email, godine, billingRegion } = req.body;
     if (!displayName?.trim() || !email?.trim()) {
       res.status(400).json({ error: "Ime i email su obavezni" });
       return;
@@ -465,6 +465,7 @@ router.post("/register-ucenik", async (req, res) => {
     const password = crypto.randomBytes(4).toString("hex");
     const passwordHash = await bcrypt.hash(password, 10);
     const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const region = billingRegion === "bih" ? "bih" : "dijaspora";
 
     // Online grupa se kreira/dohvaća van transakcije — koristi vlastite
     // mini-transakcije i, ako učenikov insert padne, grupa ne treba rollback
@@ -499,6 +500,14 @@ router.post("/register-ucenik", async (req, res) => {
         muallimId: onlineGrupa.muallimId,
         grupaId: onlineGrupa.id,
       });
+      await tx.insert(pretplateTable).values({
+        userId: user.id,
+        planType: "individual",
+        iznos: 20,
+        valuta: region === "bih" ? "BAM" : "EUR",
+        status: "pending",
+        licencesPurchased: 1,
+      });
       return user;
     });
 
@@ -508,6 +517,8 @@ router.post("/register-ucenik", async (req, res) => {
       "Korisničko ime": newUser.username,
       "Godine": godineNum,
       "Grupa": onlineGrupa.naziv,
+      "Paket": "Pojedinačna pretplata",
+      "Regija naplate": region === "bih" ? "BiH" : "Dijaspora",
       "Probni period do": trialUntil.toISOString().slice(0, 10),
     }).catch((e) => console.error("[Email] registracija učenik:", e));
 
@@ -527,7 +538,7 @@ router.post("/register-ucenik", async (req, res) => {
 // POST /api/auth/register-roditelj-v2 — parent registration with children count
 router.post("/register-roditelj-v2", async (req, res) => {
   try {
-    const { displayName, email } = req.body;
+    const { displayName, email, billingRegion } = req.body;
     if (!displayName?.trim() || !email?.trim()) {
       res.status(400).json({ error: "Ime i email su obavezni" });
       return;
@@ -549,6 +560,7 @@ router.post("/register-roditelj-v2", async (req, res) => {
     const password = crypto.randomBytes(4).toString("hex");
     const passwordHash = await bcrypt.hash(password, 10);
     const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const region = billingRegion === "bih" ? "bih" : "dijaspora";
 
     // Atomarno: user + roditelj_profili. Ako profil padne, rollback user-a.
     const parentUser = await db.transaction(async (tx) => {
@@ -572,6 +584,14 @@ router.post("/register-roditelj-v2", async (req, res) => {
       }
       if (!user) throw new Error("USERNAME_COLLISION");
       await tx.insert(roditeljProfiliTable).values({ userId: user.id });
+      await tx.insert(pretplateTable).values({
+        userId: user.id,
+        planType: "family",
+        iznos: 50,
+        valuta: region === "bih" ? "BAM" : "EUR",
+        status: "pending",
+        licencesPurchased: 4,
+      });
       return user;
     });
 
@@ -580,6 +600,8 @@ router.post("/register-roditelj-v2", async (req, res) => {
       "Email": email,
       "Korisničko ime": parentUser.username,
       "Broj djece (max)": count,
+      "Paket": "Porodična pretplata",
+      "Regija naplate": region === "bih" ? "BiH" : "Dijaspora",
       "Probni period do": trialUntil.toISOString().slice(0, 10),
     }).catch((e) => console.error("[Email] registracija roditelj:", e));
 
@@ -593,6 +615,79 @@ router.post("/register-roditelj-v2", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// GET /api/auth/subscription — pretplata i način pokrića prijavljenog korisnika.
+router.get("/subscription", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const role = req.user!.role;
+    const [account] = await db.select({
+      isActive: usersTable.isActive,
+      trialUntil: usersTable.trialUntil,
+    }).from(usersTable).where(eq(usersTable.id, userId));
+    if (!account) {
+      res.status(404).json({ error: "Korisnik nije pronađen" });
+      return;
+    }
+
+    let coverage: "self" | "family" | "mekteb" | "none" = "none";
+    let planType: "individual" | "family" | null = null;
+
+    if (role === "roditelj") {
+      coverage = "self";
+      planType = "family";
+    } else if (role === "ucenik") {
+      const [familyLink] = await db.select({ id: roditeljUcenikTable.id })
+        .from(roditeljUcenikTable)
+        .where(and(
+          eq(roditeljUcenikTable.ucenikId, userId),
+          eq(roditeljUcenikTable.status, "approved"),
+        ))
+        .limit(1);
+      const [profile] = await db.select().from(ucenikProfiliTable)
+        .where(eq(ucenikProfiliTable.userId, userId));
+      const [muallimProfile] = profile?.muallimId
+        ? await db.select({ mektebId: muallimProfiliTable.mektebId })
+            .from(muallimProfiliTable)
+            .where(eq(muallimProfiliTable.userId, profile.muallimId))
+            .limit(1)
+        : [];
+      const hasMektebCoverage = Boolean(profile?.mektebId || muallimProfile?.mektebId);
+
+      if (hasMektebCoverage) coverage = "mekteb";
+      else if (familyLink) coverage = "family";
+      else {
+        coverage = "self";
+        planType = "individual";
+      }
+    }
+
+    const [subscription] = planType
+      ? await db.select().from(pretplateTable)
+          .where(eq(pretplateTable.userId, userId))
+          .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
+          .limit(1)
+      : [];
+    const defaultAmount = planType === "family" ? 50 : planType === "individual" ? 20 : null;
+    const currency = subscription
+      ? subscription.valuta === "BAM" ? "BAM" : "EUR"
+      : null;
+
+    res.json({
+      coverage,
+      planType,
+      isActive: account.isActive,
+      trialUntil: account.trialUntil,
+      billingRegion: currency === "BAM" ? "bih" : currency === "EUR" ? "dijaspora" : null,
+      expectedAmount: subscription?.iznos ?? defaultAmount,
+      currency,
+      subscription: subscription ?? null,
+    });
+  } catch (err) {
+    console.error("Subscription profile error:", err);
+    res.status(500).json({ error: "Nije moguće učitati pretplatu" });
   }
 });
 

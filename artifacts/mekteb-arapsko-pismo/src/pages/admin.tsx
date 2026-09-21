@@ -9,7 +9,7 @@ import {
   Users, Building2, ShieldCheck, BookOpen, LayoutDashboard,
   Plus, KeyRound, ToggleLeft, ToggleRight, Loader2, X, Check,
   BarChart3, Globe, TrendingUp, Award, ClipboardList, Pencil, ChevronDown,
-  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2, Languages, Lock, ExternalLink, Database, Wrench, Gamepad2
+  ChevronRight, UserCog, ArrowRightLeft, Trash2, Download, Upload, Bell, FileText, Link2, Eye, Wand2, Languages, Lock, ExternalLink, Database, Wrench, Gamepad2, CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getApiBase } from "@/lib/api";
@@ -82,6 +82,17 @@ interface Korisnik {
   lastSeenAt?: string | null;
   totalScreentimeSec?: number;
   trialUntil?: string | null;
+  billingPlan?: "individual" | "family" | null;
+  billingCoverage?: "self" | "family" | "mekteb" | null;
+  pretplata?: {
+    status: string;
+    planType: string;
+    iznos: number | null;
+    valuta: string | null;
+    paidAt: string | null;
+    activatedAt: string | null;
+    expiresAt: string | null;
+  } | null;
 }
 
 type SortField = "displayName" | "createdAt" | "lastLoginAt" | "totalScreentimeSec";
@@ -1778,6 +1789,7 @@ export default function AdminPage() {
   const [noviDzematGrad, setNoviDzematGrad] = useState("");
   const [grupeAll, setGrupeAll] = useState<GrupaAll[]>([]);
   const [deleteKorisnik, setDeleteKorisnik] = useState<Korisnik | null>(null);
+  const [pretplataKorisnik, setPretplataKorisnik] = useState<Korisnik | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadData = async () => {
@@ -2048,6 +2060,34 @@ export default function AdminPage() {
       if (k.role === "muallim") loadMuallimPregled();
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće promijeniti status"), variant: "destructive" });
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const sacuvajKorisnikPretplatu = async (k: Korisnik, paid: boolean) => {
+    if (!token) return;
+    const iznosEl = document.getElementById(`korisnik-pretplata-iznos-${k.id}`) as HTMLInputElement | null;
+    const valutaEl = document.getElementById(`korisnik-pretplata-valuta-${k.id}`) as HTMLSelectElement | null;
+    const iznos = Number(iznosEl?.value);
+    const valuta = valutaEl?.value || "EUR";
+    if (!Number.isInteger(iznos) || iznos < 0) {
+      toast({ title: t("Greška"), description: t("Unesite ispravan iznos"), variant: "destructive" });
+      return;
+    }
+    setTogglingId(k.id);
+    try {
+      await apiRequest("PUT", `/admin/korisnik/${k.id}/pretplata`, { paid, iznos, valuta }, token);
+      toast({
+        title: t("Sačuvano"),
+        description: paid
+          ? t("Pretplata je označena kao plaćena i aktivirana")
+          : t("Pretplata je označena kao neplaćena"),
+      });
+      setPretplataKorisnik(null);
+      await loadData();
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće sačuvati pretplatu"), variant: "destructive" });
     } finally {
       setTogglingId(null);
     }
@@ -2929,6 +2969,7 @@ export default function AdminPage() {
                       { label: t("Korisničko ime"), sort: null },
                       { label: t("Uloga"), sort: null },
                       { label: t("Status"), sort: null },
+                       { label: t("Pretplata"), sort: null },
                       { label: t("Registrovan"), sort: "createdAt" as SortField },
                        { label: t("Zadnja prijava"), sort: "lastLoginAt" as SortField },
                       { label: t("Vrijeme na platformi"), sort: "totalScreentimeSec" as SortField },
@@ -2958,6 +2999,31 @@ export default function AdminPage() {
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ROLE_COLORS[k.role] || "bg-gray-100 text-gray-700"}`}>
                           {ROLE_LABELS[k.role] || k.role}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {k.billingCoverage === "self" ? (
+                          <button
+                            type="button"
+                            onClick={() => setPretplataKorisnik(k)}
+                            className={`rounded-lg px-2 py-1 text-left text-xs font-bold transition-colors ${
+                              k.pretplata?.status === "active"
+                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                            }`}
+                            title={t("Otvori evidenciju pretplate")}
+                          >
+                            {k.pretplata?.status === "active" ? t("Plaćeno") : t("Nije plaćeno")}
+                            <span className="block text-[10px] font-medium opacity-80">
+                              {k.billingPlan === "family" ? t("Porodična") : t("Pojedinačna")}
+                            </span>
+                          </button>
+                        ) : k.billingCoverage === "family" ? (
+                          <span className="text-xs font-bold text-blue-700">{t("Pokriven porodicom")}</span>
+                        ) : k.billingCoverage === "mekteb" ? (
+                          <span className="text-xs font-bold text-violet-700">{t("Pokriven mektebom")}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         {(() => {
@@ -3041,7 +3107,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {filtrirani.length === 0 && (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema korisnika</td></tr>
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema korisnika</td></tr>
                   )}
                 </tbody>
               </table>
@@ -3144,6 +3210,99 @@ export default function AdminPage() {
           onClose={() => setRasporediKorisnik(null)}
           onSaved={() => { loadData(); loadMuallimPregled(); loadDzematiPregled(); }}
         />
+      )}
+      {pretplataKorisnik && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPretplataKorisnik(null)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-2 text-lg font-extrabold text-foreground">
+                  <CreditCard className="h-5 w-5 text-primary" /> {t("Evidencija pretplate")}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {pretplataKorisnik.displayName} · {pretplataKorisnik.billingPlan === "family" ? t("Porodična") : t("Pojedinačna")}
+                </p>
+              </div>
+              <button type="button" onClick={() => setPretplataKorisnik(null)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">{t("Iznos")}</label>
+                <input
+                  id={`korisnik-pretplata-iznos-${pretplataKorisnik.id}`}
+                  type="number"
+                  min={0}
+                  step={1}
+                  defaultValue={pretplataKorisnik.pretplata?.iznos ?? (pretplataKorisnik.billingPlan === "family" ? 50 : 20)}
+                  className="w-full rounded-xl border border-border px-3 py-2 font-bold"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-muted-foreground">{t("Valuta")}</label>
+                <select
+                  id={`korisnik-pretplata-valuta-${pretplataKorisnik.id}`}
+                  defaultValue={pretplataKorisnik.pretplata?.valuta === "BAM" ? "BAM" : "EUR"}
+                  className="w-full rounded-xl border border-border bg-white px-3 py-2 font-bold"
+                >
+                  <option value="BAM">BAM</option>
+                  <option value="EUR">EUR</option>
+                </select>
+              </div>
+            </div>
+
+            <dl className="mt-5 grid gap-3 rounded-xl bg-muted/30 p-4 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-bold text-muted-foreground">{t("Status")}</dt>
+                <dd className="font-extrabold">{pretplataKorisnik.pretplata?.status === "active" ? t("Plaćeno") : t("Nije plaćeno")}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold text-muted-foreground">{t("Trial do")}</dt>
+                <dd className="font-extrabold">{pretplataKorisnik.trialUntil ? new Date(pretplataKorisnik.trialUntil).toLocaleDateString("bs-BA") : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold text-muted-foreground">{t("Datum uplate")}</dt>
+                <dd className="font-extrabold">{pretplataKorisnik.pretplata?.paidAt ? new Date(pretplataKorisnik.pretplata.paidAt).toLocaleDateString("bs-BA") : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold text-muted-foreground">{t("Vrijedi do")}</dt>
+                <dd className="font-extrabold">{pretplataKorisnik.pretplata?.expiresAt ? new Date(pretplataKorisnik.pretplata.expiresAt).toLocaleDateString("bs-BA") : "—"}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={() => sacuvajKorisnikPretplatu(pretplataKorisnik, true)}
+                disabled={togglingId === pretplataKorisnik.id}
+                className="flex-1 rounded-xl bg-emerald-700 hover:bg-emerald-800"
+              >
+                {togglingId === pretplataKorisnik.id ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Označi plaćeno i aktiviraj")}
+              </Button>
+              {pretplataKorisnik.pretplata?.status === "active" && (
+                <Button
+                  variant="outline"
+                  onClick={() => sacuvajKorisnikPretplatu(pretplataKorisnik, false)}
+                  disabled={togglingId === pretplataKorisnik.id}
+                  className="flex-1 rounded-xl border-amber-300 text-amber-800"
+                >
+                  {t("Vrati na neplaćeno")}
+                </Button>
+              )}
+            </div>
+            {pretplataKorisnik.billingPlan === "family" && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {t("Aktivacija porodične pretplate uključuje roditelja i svu povezanu djecu. Djeca u mektebu ostaju pokrivena mektebskom licencom.")}
+              </p>
+            )}
+          </motion.div>
+        </div>
       )}
       {deleteKorisnik && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDeleteKorisnik(null)}>

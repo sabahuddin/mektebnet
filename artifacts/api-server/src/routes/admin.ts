@@ -1701,22 +1701,207 @@ router.post("/lekcije/:id/insert-image", async (req, res) => {
 // GET /api/admin/korisnici
 router.get("/korisnici", async (req, res) => {
   try {
-    const korisnici = await db.select({
-      id: usersTable.id,
-      username: usersTable.username,
-      displayName: usersTable.displayName,
-      email: usersTable.email,
-      role: usersTable.role,
-      isActive: usersTable.isActive,
-      createdAt: usersTable.createdAt,
-      lastLoginAt: usersTable.lastLoginAt,
-      lastSeenAt: usersTable.lastSeenAt,
-      totalScreentimeSec: usersTable.totalScreentimeSec,
-      trialUntil: usersTable.trialUntil,
-    }).from(usersTable);
-    res.json(korisnici);
+    const [korisnici, pretplate, veze, ucenikProfili, muallimProfili] = await Promise.all([
+      db.select({
+        id: usersTable.id,
+        username: usersTable.username,
+        displayName: usersTable.displayName,
+        email: usersTable.email,
+        role: usersTable.role,
+        isActive: usersTable.isActive,
+        createdAt: usersTable.createdAt,
+        lastLoginAt: usersTable.lastLoginAt,
+        lastSeenAt: usersTable.lastSeenAt,
+        totalScreentimeSec: usersTable.totalScreentimeSec,
+        trialUntil: usersTable.trialUntil,
+      }).from(usersTable),
+      db.select().from(pretplateTable)
+        .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id)),
+      db.select({ ucenikId: roditeljUcenikTable.ucenikId })
+        .from(roditeljUcenikTable)
+        .where(eq(roditeljUcenikTable.status, "approved")),
+      db.select({
+        userId: ucenikProfiliTable.userId,
+        muallimId: ucenikProfiliTable.muallimId,
+        mektebId: ucenikProfiliTable.mektebId,
+      }).from(ucenikProfiliTable),
+      db.select({
+        userId: muallimProfiliTable.userId,
+        mektebId: muallimProfiliTable.mektebId,
+      }).from(muallimProfiliTable),
+    ]);
+    const latestByUser = new Map<number, typeof pretplate[number]>();
+    for (const p of pretplate) {
+      if (!latestByUser.has(p.userId)) latestByUser.set(p.userId, p);
+    }
+    const familyChildren = new Set(veze.map((v) => v.ucenikId));
+    const studentProfiles = new Map(ucenikProfili.map((p) => [p.userId, p]));
+    const muallimMektebi = new Map(muallimProfili.map((p) => [p.userId, p.mektebId]));
+
+    res.json(korisnici.map((k) => {
+      let billingPlan: "individual" | "family" | null = null;
+      let billingCoverage: "self" | "family" | "mekteb" | null = null;
+      if (k.role === "roditelj") {
+        billingPlan = "family";
+        billingCoverage = "self";
+      } else if (k.role === "ucenik") {
+        const profile = studentProfiles.get(k.id);
+        const coveredByMekteb = Boolean(
+          profile?.mektebId ||
+          (profile?.muallimId && muallimMektebi.get(profile.muallimId)),
+        );
+        if (coveredByMekteb) billingCoverage = "mekteb";
+        else if (familyChildren.has(k.id)) billingCoverage = "family";
+        else {
+          billingPlan = "individual";
+          billingCoverage = "self";
+        }
+      }
+      return {
+        ...k,
+        billingPlan,
+        billingCoverage,
+        pretplata: billingCoverage === "self" ? latestByUser.get(k.id) ?? null : null,
+      };
+    }));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/korisnik/:id/pretplata — pojedinačna ili porodična pretplata.
+router.put("/korisnik/:id/pretplata", async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const paid = req.body.paid === true;
+    const iznos = Number(req.body.iznos);
+    const valuta = String(req.body.valuta ?? "").toUpperCase();
+    if (!Number.isInteger(userId) || userId < 1) {
+      res.status(400).json({ error: "Nevažeći korisnik" });
+      return;
+    }
+    if (!Number.isInteger(iznos) || iznos < 0 || iznos > 100000) {
+      res.status(400).json({ error: "Unesite ispravan iznos" });
+      return;
+    }
+    if (!["BAM", "EUR"].includes(valuta)) {
+      res.status(400).json({ error: "Valuta mora biti BAM ili EUR" });
+      return;
+    }
+
+    const [account] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    if (!account || !["roditelj", "ucenik"].includes(account.role)) {
+      res.status(404).json({ error: "Pretplatnički račun nije pronađen" });
+      return;
+    }
+
+    let planType: "individual" | "family";
+    let licencesPurchased: number;
+    let coveredUserIds = [userId];
+    if (account.role === "roditelj") {
+      planType = "family";
+      licencesPurchased = 4;
+      const children = await db.select({ userId: roditeljUcenikTable.ucenikId })
+        .from(roditeljUcenikTable)
+        .where(and(
+          eq(roditeljUcenikTable.roditeljId, userId),
+          eq(roditeljUcenikTable.status, "approved"),
+        ));
+      coveredUserIds.push(...children.map((c) => c.userId));
+    } else {
+      const [familyLink] = await db.select({ id: roditeljUcenikTable.id })
+        .from(roditeljUcenikTable)
+        .where(and(
+          eq(roditeljUcenikTable.ucenikId, userId),
+          eq(roditeljUcenikTable.status, "approved"),
+        ))
+        .limit(1);
+      const [profile] = await db.select().from(ucenikProfiliTable)
+        .where(eq(ucenikProfiliTable.userId, userId));
+      const [teacherProfile] = profile?.muallimId
+        ? await db.select({ mektebId: muallimProfiliTable.mektebId })
+            .from(muallimProfiliTable)
+            .where(eq(muallimProfiliTable.userId, profile.muallimId))
+            .limit(1)
+        : [];
+      if (familyLink || profile?.mektebId || teacherProfile?.mektebId) {
+        res.status(409).json({ error: "Ovaj učenik je već pokriven porodičnom ili mektebskom pretplatom" });
+        return;
+      }
+      planType = "individual";
+      licencesPurchased = 1;
+    }
+
+    const [latest] = await db.select().from(pretplateTable)
+      .where(eq(pretplateTable.userId, userId))
+      .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
+      .limit(1);
+    const now = new Date();
+    const saved = await db.transaction(async (tx) => {
+      let subscription;
+      if (paid) {
+        const currentExpiry = latest?.status === "active" && latest.expiresAt
+          ? new Date(latest.expiresAt)
+          : null;
+        const baseCandidates = [now, account.trialUntil, currentExpiry]
+          .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()));
+        const base = new Date(Math.max(...baseCandidates.map((d) => d.getTime())));
+        const expiresAt = new Date(base);
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        if (latest?.status === "pending") {
+          [subscription] = await tx.update(pretplateTable).set({
+            planType, iznos, valuta, status: "active", licencesPurchased,
+            paidAt: now, activatedAt: now, expiresAt,
+          }).where(eq(pretplateTable.id, latest.id)).returning();
+        } else {
+          [subscription] = await tx.insert(pretplateTable).values({
+            userId, planType, iznos, valuta, status: "active", licencesPurchased,
+            paidAt: now, activatedAt: now, expiresAt,
+          }).returning();
+        }
+        await tx.update(usersTable).set({ isActive: true })
+          .where(inArray(usersTable.id, coveredUserIds));
+      } else {
+        if (latest) {
+          [subscription] = await tx.update(pretplateTable).set({
+            planType, iznos, valuta, status: "pending", licencesPurchased,
+            paidAt: null, activatedAt: null, expiresAt: null,
+          }).where(eq(pretplateTable.id, latest.id)).returning();
+        } else {
+          [subscription] = await tx.insert(pretplateTable).values({
+            userId, planType, iznos, valuta, status: "pending", licencesPurchased,
+          }).returning();
+        }
+
+        let deactivateIds = [userId];
+        if (account.role === "roditelj" && coveredUserIds.length > 1) {
+          const childIds = coveredUserIds.slice(1);
+          const profiles = await tx.select({
+            userId: ucenikProfiliTable.userId,
+            muallimId: ucenikProfiliTable.muallimId,
+            mektebId: ucenikProfiliTable.mektebId,
+          }).from(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, childIds));
+          const teacherIds = profiles.map((p) => p.muallimId).filter((id): id is number => id !== null);
+          const teachers = teacherIds.length
+            ? await tx.select({ userId: muallimProfiliTable.userId, mektebId: muallimProfiliTable.mektebId })
+                .from(muallimProfiliTable).where(inArray(muallimProfiliTable.userId, teacherIds))
+            : [];
+          const teacherMektebi = new Map(teachers.map((p) => [p.userId, p.mektebId]));
+          deactivateIds.push(...profiles
+            .filter((p) => !p.mektebId && !(p.muallimId && teacherMektebi.get(p.muallimId)))
+            .map((p) => p.userId));
+        }
+        await tx.update(usersTable).set({ isActive: false })
+          .where(inArray(usersTable.id, deactivateIds));
+      }
+      return subscription;
+    });
+
+    for (const id of coveredUserIds) invalidateUserStatusCache(id);
+    res.json(saved);
+  } catch (err) {
+    console.error("Korisnička pretplata error:", err);
+    res.status(500).json({ error: "Nije moguće sačuvati pretplatu" });
   }
 });
 

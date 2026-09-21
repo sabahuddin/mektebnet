@@ -17,6 +17,7 @@ import { MaskotaPrazanState } from "@/components/maskota";
 import { formatScreentime, isOnline } from "@/lib/utils";
 import { useLanguage } from "@/context/language";
 import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
+import { SubscriptionCard, type SubscriptionProfile } from "@/components/subscription-card";
 
 function formatScreentimeShort(sec: number | null | undefined): string {
   const s = sec ?? 0;
@@ -876,6 +877,7 @@ export default function RoditeljPage() {
   const [newPw, setNewPw] = useState("");
   const [isChangingPw, setIsChangingPw] = useState(false);
   const [obavjestenja, setObavjestenja] = useState<RoditeljObavjestenje[]>([]);
+  const [subscription, setSubscription] = useState<SubscriptionProfile | null>(null);
   const [activeTab, setActiveTab] = useState<TopTab>("obavjestenja");
   const loadDjeca = () => {
     if (!token) return;
@@ -909,6 +911,9 @@ export default function RoditeljPage() {
     if (!token) return;
     apiRequest<RoditeljObavjestenje[]>("GET", "/roditelj/obavjestenja", undefined, token)
       .then(setObavjestenja)
+      .catch(() => {});
+    apiRequest<SubscriptionProfile>("GET", "/auth/subscription", undefined, token)
+      .then(setSubscription)
       .catch(() => {});
   }, [token]);
 
@@ -1089,6 +1094,7 @@ export default function RoditeljPage() {
 
         {activeTab === "profil" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            {subscription && <SubscriptionCard data={subscription} />}
             {isLoading ? (
               <div className="flex flex-col gap-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
             ) : djeca.length === 0 ? (

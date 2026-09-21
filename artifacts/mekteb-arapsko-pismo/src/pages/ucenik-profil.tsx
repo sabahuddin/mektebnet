@@ -25,6 +25,7 @@ import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
 import { useLanguage } from "@/context/language";
 import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
+import { SubscriptionCard, type SubscriptionProfile } from "@/components/subscription-card";
 
 interface StudentProgress {
   studentId: string;
@@ -343,6 +344,7 @@ export default function UcenikProfilPage() {
   // Selected badge for tap-to-view detail dialog (mobile-friendly fallback for hover tooltip).
   const [selectedBadge, setSelectedBadge] = useState<BedzInfo | null>(null);
   const [mojeZvjezdice, setMojeZvjezdice] = useState<{ pozitivne: number; negativne: number } | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionProfile | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -359,6 +361,9 @@ export default function UcenikProfilPage() {
       .then(([k, p, z]) => { setKalendar(k); setPlanLekcija(p); setZadace(z); })
       .catch(() => {})
       .finally(() => setIsLoading(false));
+    apiRequest<SubscriptionProfile>("GET", "/auth/subscription", undefined, token)
+      .then(setSubscription)
+      .catch(() => {});
   }, [token, selectedGodina]);
 
   // Zvjezdice — prikaz ponašanja (muallim dodijeljuje)
@@ -942,6 +947,7 @@ export default function UcenikProfilPage() {
 
             {activeTab === "profil" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {subscription && <SubscriptionCard data={subscription} />}
                 <div className="mb-6 rounded-2xl border border-border/50 bg-white p-5">
                   <h2 className="mb-4 flex items-center gap-2 text-lg font-extrabold text-foreground">
                     <User className="h-5 w-5 text-primary" /> {t("Lični podaci")}

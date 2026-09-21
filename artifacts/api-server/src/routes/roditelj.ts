@@ -545,6 +545,14 @@ router.post("/dodaj-dijete", async (req, res) => {
     const onlineGrupa = await getOnlineMektebGroup();
     const passwordHash = await bcrypt.hash(password, 10);
     const firstName = displayName.trim().split(/\s+/)[0];
+    const [parentAccount] = await db.select({
+      isActive: usersTable.isActive,
+      trialUntil: usersTable.trialUntil,
+    }).from(usersTable).where(eq(usersTable.id, roditeljId));
+    if (!parentAccount) {
+      res.status(404).json({ error: "Roditeljski račun nije pronađen" });
+      return;
+    }
 
     const result = await db.transaction(async (tx) => {
       const existing = await tx.select().from(roditeljUcenikTable)
@@ -562,6 +570,8 @@ router.post("/dodaj-dijete", async (req, res) => {
             passwordHash,
             displayName: displayName.trim(),
             role: "ucenik",
+            isActive: parentAccount.isActive,
+            trialUntil: parentAccount.trialUntil,
           }).returning();
           break;
         } catch (e: any) {

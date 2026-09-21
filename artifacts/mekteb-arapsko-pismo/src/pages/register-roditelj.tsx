@@ -157,7 +157,11 @@ export default function RegisterRoditeljPage() {
     setIsLoading(true);
     try {
       const r = await apiRequest<{ success: boolean; displayName: string; username: string; password: string; trialUntil: string }>(
-        "POST", "/auth/register-ucenik", { ...ucenikForm, godine: parseInt(ucenikForm.godine) }
+        "POST", "/auth/register-ucenik", {
+          ...ucenikForm,
+          godine: parseInt(ucenikForm.godine),
+          billingRegion: isBiH === true ? "bih" : "dijaspora",
+        }
       );
       setCredentials({ username: r.username, password: r.password, displayName: r.displayName, trialUntil: r.trialUntil });
       setSuccess(true);
@@ -176,7 +180,10 @@ export default function RegisterRoditeljPage() {
     setIsLoading(true);
     try {
       const r = await apiRequest<{ success: boolean; displayName: string; username: string; password: string; trialUntil: string }>(
-        "POST", "/auth/register-roditelj-v2", roditeljForm
+        "POST", "/auth/register-roditelj-v2", {
+          ...roditeljForm,
+          billingRegion: isBiH === true ? "bih" : "dijaspora",
+        }
       );
       setCredentials({ username: r.username, password: r.password, displayName: r.displayName, trialUntil: r.trialUntil });
       setSuccess(true);
