@@ -5,6 +5,8 @@ import {
   existingTextNeedsRepair,
   htmlTranslationIssue,
   objasniOdbijanje,
+  ocistiZaBazu,
+  opisiGresku,
 } from "./translate-content";
 
 test("ne šalje ponovo bankovno pitanje koje prevodi termin i čuva ga u zagradi", () => {
@@ -106,4 +108,33 @@ test("ispis odbijenog reda kaže razlog i pokaže sporni string", () => {
   // odgovoru ili na cijelom nizu.
   assert.match(objasniOdbijanje(["a", "b", "c"], {}, "de"), /3 stringa/);
   assert.match(objasniOdbijanje(["a"], {}, "de"), /1 string\b/);
+});
+
+test("upravljački znakovi se uklanjaju prije upisa u bazu", () => {
+  // Postgres odbija NUL bajt u text koloni: „invalid byte sequence for
+  // encoding UTF8: 0x00". Model ga zna ubaciti u dugi HTML odgovor, pa je
+  // upis lekcije padao dok god se prijevod nije očistio.
+  assert.equal(ocistiZaBazu("Wudu\u0000 ist"), "Wudu ist");
+  assert.equal(ocistiZaBazu("a\u0007b\u001Fc"), "abc");
+  // Tabulator, novi red i povratak reda su legitimni i ostaju.
+  assert.equal(ocistiZaBazu("prvi\ndrugi\ttreći\r\n"), "prvi\ndrugi\ttreći\r\n");
+  // Naša slova i arapsko pismo se ne diraju.
+  assert.equal(ocistiZaBazu("čćžšđ الله"), "čćžšđ الله");
+  const čisto = "<p>Der Wudu ist eine Waschung.</p>";
+  assert.equal(ocistiZaBazu(čisto), čisto);
+});
+
+test("ispis greške kaže Postgresov razlog, ne cijeli SQL", () => {
+  // Drizzle u message stavi cijeli upit, a pravi razlog ostavi u cause —
+  // zato se u ispisu vidjelo samo „Failed query: INSERT INTO …".
+  const drizzle = Object.assign(
+    new Error("Failed query: INSERT INTO content_prijevodi (tabela, red_id, polje…) VALUES ($1, $2)"),
+    { cause: { message: 'invalid byte sequence for encoding "UTF8": 0x00', code: "22021" } },
+  );
+  assert.equal(opisiGresku(drizzle), 'invalid byte sequence for encoding "UTF8": 0x00 (22021)');
+
+  // Bez cause ostaje poruka, ali u jednom redu i skraćena.
+  const obicna = new Error("nešto\nje\npuklo");
+  assert.equal(opisiGresku(obicna), "nešto je puklo");
+  assert.ok(opisiGresku(new Error("x".repeat(400))).length <= 200);
 });
