@@ -140,8 +140,13 @@ export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   audioSrc: varchar("audio_src", { length: 500 }),
   redoslijed: integer("redoslijed").notNull().default(0),
   isPublished: boolean("is_published").notNull().default(true),
-  // Ko smije vidjeti lekciju: "svi" ili "muallimi" (admin uvijek ima pristup).
+  // "svi", "muallimi" ili "autorovi_ucenici" (admin uvijek ima pristup).
   dostupnost: varchar("dostupnost", { length: 20 }).notNull().default("svi"),
+  // Muallim koji je predložio novu lekciju. NULL označava sistemsku/admin lekciju.
+  autorMuallimId: integer("autor_muallim_id"),
+  // Čuva urednički status; privatna muallimska lekcija je odmah odobrena,
+  // a admin je po želji može prebaciti u javnu dostupnost.
+  statusOdobrenja: varchar("status_odobrenja", { length: 20 }).notNull().default("odobreno"),
   // Predmet (Akaid, Ahlak, Ibadat, ...) — koristi se za filter na "Sve lekcije".
   // Inicijalno backfill-ovano iz priprema HTML-a (regex extract iz meta bloka),
   // dalje admin može direktno mijenjati. NULL za lekcije bez priprema/predmeta.

@@ -72,7 +72,7 @@ import { TIPOVI_VJEZBI, getVjezba, jeNasaVjezba, vjezbaMarker, vjezbaUrl } from 
 import { createGzip } from "node:zlib";
 import { logger } from "../lib/logger.js";
 import { KNJIGA_33_PRICE, KNJIGA_33_PRICE_IZVOR } from "../data/citaonica-33-price.js";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 /** Naslov bez razlike u velikim slovima, kvačicama i razmacima — za poređenje. */
 function kljucNaslova(naslov: string): string {
@@ -666,12 +666,16 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
         error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni."
       });
     }
+    const embedHost = new URL(src).hostname.toLowerCase();
+    if (req.user?.role !== "admin" && (embedHost === "h5p.org" || embedHost.endsWith(".h5p.org"))) {
+      return res.status(403).json({ error: "H5P vježbe može dodavati samo administrator" });
+    }
     const [exists] = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
     if (!exists) return res.status(404).json({ error: "Lekcija nije pronađena" });
 
     let provider = "Embed";
     try {
-      const host = new URL(src).hostname.toLowerCase();
+      const host = embedHost;
       if (host.includes("learningapps")) provider = "LearningApps";
       else if (host.includes("wordwall")) provider = "Wordwall";
       else if (host.includes("genial")) provider = "Genially";
@@ -2633,12 +2637,13 @@ router.get("/ilmihal/lista", async (req, res) => {
 router.post("/ilmihal", async (req, res) => {
   try {
     const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja, dostupnost } = req.body;
-    if (!naslov || !slug) return res.status(400).json({ error: "naslov and slug required" });
+    const isMuallim = req.user?.role === "muallim";
+    if (!naslov || (!isMuallim && !slug)) return res.status(400).json({ error: "Naslov je obavezan" });
     // Sigurnost + validacija contentHtml (isti uvjeti kao PUT)
     if (contentHtml) {
-      const html = typeof contentHtml === "string" ? contentHtml : "";
+      const submittedHtml = typeof contentHtml === "string" ? contentHtml : "";
       // Odbij iframe sa nedozvoljenog izvora (zatvara HTML-mode bypass)
-      const badEmbeds = findDisallowedIframeSrcs(html);
+      const badEmbeds = findDisallowedIframeSrcs(submittedHtml);
       if (badEmbeds.length > 0) {
         return res.status(400).json({
           error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
@@ -2646,7 +2651,7 @@ router.post("/ilmihal", async (req, res) => {
         });
       }
       // Validacija lekcijskih pauza ugrađenih u contentHtml
-      const pauseResult = validateLessonPauses(html);
+      const pauseResult = validateLessonPauses(submittedHtml);
       if (!pauseResult.ok) {
         return res.status(400).json({
           error: "Sadržaj sadrži neispravne lekcijske pauze.",
@@ -2657,16 +2662,26 @@ router.post("/ilmihal", async (req, res) => {
     const kviz = kvizPitanja
       ? normalizeSurahNames(typeof kvizPitanja === "string" ? kvizPitanja : JSON.stringify(kvizPitanja))
       : null;
+    const safeContentHtml = isMuallim
+      ? sanitizeMuallimLessonHtml(String(contentHtml || ""), CONTENT_IFRAME_WHITELIST)
+      : String(contentHtml || "");
+    const generatedSlug = isMuallim
+      ? `muallim-${req.user!.userId}-${randomUUID()}`.slice(0, 100)
+      : String(slug);
     const [row] = await db.insert(ilmihalLekcijeTable).values({
       naslov: normalizeSurahNames(String(naslov)),
-      slug,
-      nivo: nivo || 2,
-      redoslijed: redoslijed || 0,
-      contentHtml: normalizeSurahNames(String(contentHtml || "")),
-      kvizPitanja: kviz as any,
-      dostupnost: dostupnost === "muallimi" ? "muallimi" : "svi",
-    }).returning({ id: ilmihalLekcijeTable.id });
-    res.json({ success: true, id: row.id });
+      slug: generatedSlug,
+      nivo: [1, 2, 3].includes(Number(nivo)) ? Number(nivo) : 2,
+      redoslijed: isMuallim ? 9900 : (redoslijed || 0),
+      contentHtml: normalizeSurahNames(safeContentHtml),
+      predmet: isMuallim ? String(req.body.predmet || "").trim().slice(0, 60) || null : undefined,
+      kvizPitanja: isMuallim ? null : kviz as any,
+      dostupnost: isMuallim ? "autorovi_ucenici" : (dostupnost === "muallimi" ? "muallimi" : "svi"),
+      autorMuallimId: isMuallim ? req.user!.userId : null,
+      statusOdobrenja: "odobreno",
+      isPublished: true,
+    }).returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug });
+    res.status(isMuallim ? 201 : 200).json({ success: true, id: row.id, slug: row.slug, privateLesson: isMuallim });
   } catch (err) {
     req.log.error({ err }, "POST /ilmihal error");
     res.status(500).json({ error: "Greška pri kreiranju lekcije" });
@@ -2703,7 +2718,26 @@ router.get("/izmjene-lekcija", async (req, res) => {
       WHERE i.status = 'na_cekanju'
       ORDER BY i.created_at ASC
     `);
-    res.json(result.rows);
+    const nove = await db.execute(sql`
+      SELECT
+        -l.id AS id,
+        l.id AS "lekcijaId",
+        l.content_html AS "predlozeniHtml",
+        'bs' AS jezik,
+        l.created_at AS "createdAt",
+        l.naslov AS "lekcijaNaslov",
+        l.slug AS "lekcijaSlug",
+        l.nivo AS "lekcijaNivo",
+        '' AS "trenutniHtml",
+        u.display_name AS "predlozioIme",
+        true AS "novaLekcija"
+      FROM ilmihal_lekcije l
+      INNER JOIN users u ON u.id = l.autor_muallim_id
+      WHERE l.status_odobrenja = 'odobreno'
+        AND l.dostupnost = 'autorovi_ucenici'
+      ORDER BY l.created_at ASC
+    `);
+    res.json([...nove.rows, ...result.rows]);
   } catch (err) {
     req.log.error({ err }, "GET /izmjene-lekcija error");
     res.status(500).json({ error: "Nije moguće učitati prijedloge izmjena" });
@@ -2715,8 +2749,34 @@ router.put("/izmjene-lekcija/:id/odluka", async (req, res) => {
   try {
     const id = Number(req.params.id);
     const approve = req.body?.approve === true;
-    if (!Number.isInteger(id) || id < 1) {
+    if (!Number.isInteger(id) || id === 0) {
       res.status(400).json({ error: "Neispravan ID prijedloga" });
+      return;
+    }
+
+    if (id < 0) {
+      const lessonId = -id;
+      const visibility = String(req.body?.visibility || "");
+      if (visibility !== "javno") {
+        res.status(400).json({ error: "Privatnu lekciju možete objaviti svima" });
+        return;
+      }
+      const [row] = await db.update(ilmihalLekcijeTable).set({
+        statusOdobrenja: "odobreno",
+        isPublished: true,
+        dostupnost: "svi",
+        locked: true,
+        lockedAt: new Date(),
+        lockedNote: "Muallimska lekcija objavljena svima",
+      }).where(and(
+        eq(ilmihalLekcijeTable.id, lessonId),
+        eq(ilmihalLekcijeTable.dostupnost, "autorovi_ucenici"),
+      )).returning({ id: ilmihalLekcijeTable.id });
+      if (!row) {
+        res.status(404).json({ error: "Prijedlog nije pronađen ili je već obrađen" });
+        return;
+      }
+      res.json({ success: true, visibility });
       return;
     }
 
@@ -2826,6 +2886,13 @@ router.put("/ilmihal/:id", async (req, res) => {
       const { regeneratePripremaInHtml } = await import("../lib/priprema-render.js");
       const normalizedHtml = normalizeSurahNames(regeneratePripremaInHtml(safeHtml));
       if (editorRole === "muallim") {
+        if (existing.autorMuallimId === req.user!.userId && existing.dostupnost === "autorovi_ucenici") {
+          await db.update(ilmihalLekcijeTable)
+            .set({ contentHtml: normalizedHtml })
+            .where(eq(ilmihalLekcijeTable.id, id));
+          res.json({ success: true, privateLesson: true });
+          return;
+        }
         await db.execute(sql`
           INSERT INTO izmjene_lekcija (lekcija_id, predlozeni_html, jezik, predlozio_id)
           VALUES (${id}, ${normalizedHtml}, ${language}, ${req.user!.userId})

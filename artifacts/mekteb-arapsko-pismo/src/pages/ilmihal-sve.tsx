@@ -5,6 +5,8 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
 import { ArrowLeft, CheckCircle2, BookOpen, Lock, ChevronDown, Search, X, Filter, Award, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface Lekcija {
   id: number;
@@ -15,6 +17,8 @@ interface Lekcija {
   zavrseno?: boolean;
   predmet?: string | null;
   uvjetiIds?: number[];
+  statusOdobrenja?: string;
+  autorMuallimId?: number | null;
 }
 
 const BEZ_PREDMETA = "__bez__";
@@ -30,6 +34,8 @@ export default function IlmihalSvePage() {
   const { t, lang } = useLanguage();
   const [, setLocation] = useLocation();
   const isAdmin = user?.role === "admin";
+  const isMuallim = user?.role === "muallim";
+  const { toast } = useToast();
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [loading, setLoading] = useState(true);
   // Akordion: koji nivoi su otvoreni. Po defaultu SVI ZATVORENI da
@@ -45,6 +51,11 @@ export default function IlmihalSvePage() {
   // Vrijednosti dolaze iz priprema HTML-a; nove se pojave automatski čim
   // muallim upiše novi predmet u pripremu lekcije.
   const [predmet, setPredmet] = useState<string>("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newLevel, setNewLevel] = useState(1);
+  const [newSubject, setNewSubject] = useState("");
+  const [creating, setCreating] = useState(false);
 
   // Prijavljeni učenik može otvoriti bilo koju lekciju u sva tri nivoa.
   // Zaključane su samo lekcije s eksplicitnim, još nezavršenim preduvjetima.
@@ -151,6 +162,28 @@ export default function IlmihalSvePage() {
     }
   }
 
+  async function createLessonProposal() {
+    if (!token || !newTitle.trim()) return;
+    setCreating(true);
+    try {
+      const result = await apiRequest<{ slug: string }>("POST", "/admin/ilmihal", {
+        naslov: newTitle.trim(),
+        nivo: newLevel,
+        predmet: newSubject.trim(),
+        contentHtml: `<h1>${newTitle.trim()}</h1><p>Unesite sadržaj nove lekcije.</p>`,
+      }, token);
+      toast({
+        title: t("Lekcija je kreirana"),
+        description: t("Lekcija je odmah dostupna vama i vašim učenicima. Admin je naknadno može objaviti svima."),
+      });
+      setLocation(`/ilmihal/${result.slug}`);
+    } catch (error: any) {
+      toast({ title: t("Greška"), description: error?.message || t("Nije moguće kreirati lekciju"), variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  }
+
   const total = lekcije.length;
   const done = lekcije.filter((l) => l.zavrseno).length;
   const matchCount = isSearching
@@ -187,6 +220,30 @@ export default function IlmihalSvePage() {
             {t("Pregledaj sve lekcije po nivoima i otvori bilo koju")}
           </p>
         </div>
+
+        {isMuallim && (
+          <div className="mx-auto mb-6 max-w-2xl rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+            <button type="button" onClick={() => setShowCreate((value) => !value)} className="flex w-full items-center justify-between gap-3 text-left">
+              <div>
+                <h2 className="font-extrabold text-amber-950">{t("Predloži novu lekciju")}</h2>
+                <p className="mt-1 text-xs text-amber-800">{t("Lekcija je odmah privatna za vas i vaše učenike. Admin je može objaviti svima.")}</p>
+              </div>
+              <Plus className={`h-5 w-5 shrink-0 text-amber-700 transition-transform ${showCreate ? "rotate-45" : ""}`} />
+            </button>
+            {showCreate && (
+              <div className="mt-4 grid gap-3 border-t border-amber-100 pt-4 sm:grid-cols-2">
+                <input value={newTitle} onChange={(event) => setNewTitle(event.target.value)} placeholder={t("Naslov lekcije")} className="rounded-xl border border-amber-200 px-3 py-2 text-sm sm:col-span-2" />
+                <select value={newLevel} onChange={(event) => setNewLevel(Number(event.target.value))} className="rounded-xl border border-amber-200 px-3 py-2 text-sm">
+                  {[1, 2, 3].map((level) => <option key={level} value={level}>{t("Nivo")} {level}</option>)}
+                </select>
+                <input value={newSubject} onChange={(event) => setNewSubject(event.target.value)} placeholder={t("Predmet (opcionalno)")} className="rounded-xl border border-amber-200 px-3 py-2 text-sm" />
+                <Button disabled={creating || !newTitle.trim()} onClick={() => void createLessonProposal()} className="rounded-xl sm:col-span-2">
+                  <Plus className="mr-1 h-4 w-4" /> {creating ? t("Kreiranje…") : t("Kreiraj nacrt i otvori editor")}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="max-w-2xl mx-auto mb-8 px-1">
           <div className="flex flex-col sm:flex-row gap-2">

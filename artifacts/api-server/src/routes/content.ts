@@ -41,6 +41,7 @@ import {
   isInteractiveType,
   type InteractiveQuestion,
 } from "../lib/interactive-translatable.js";
+import { canReadLesson } from "../lib/lesson-visibility.js";
 
 const router = Router();
 
@@ -48,6 +49,7 @@ const SVI_JEZICI = ["bs", "sq", "de", "en", "tr", "ar"];
 
 type LekcijaKvizPitanje = { question?: unknown; options?: unknown; answer?: unknown };
 type PauseConfig = { id?: unknown; type?: unknown; correctAnswer?: unknown; correctOption?: unknown; pairs?: unknown; items?: unknown };
+
 
 /**
  * Provjerava samo aktivne zadaće učenikove trenutne grupe. Zadaća bez redova u
@@ -357,21 +359,25 @@ router.get("/ilmihal", optionalAuth, async (req, res) => {
       dostupnost: ilmihalLekcijeTable.dostupnost,
       predmet: ilmihalLekcijeTable.predmet,
       uvjetiIds: ilmihalLekcijeTable.uvjetiIds,
+      autorMuallimId: ilmihalLekcijeTable.autorMuallimId,
+      statusOdobrenja: ilmihalLekcijeTable.statusOdobrenja,
     };
-    const canSeeMuallimOnly = req.user?.role === "admin" || req.user?.role === "muallim";
     let lekcije;
     if (nivo) {
       lekcije = await db.select(baseSelect).from(ilmihalLekcijeTable)
-        .where(canSeeMuallimOnly
-          ? eq(ilmihalLekcijeTable.nivo, nivo)
-          : and(eq(ilmihalLekcijeTable.nivo, nivo), eq(ilmihalLekcijeTable.dostupnost, "svi")))
+        .where(eq(ilmihalLekcijeTable.nivo, nivo))
         .orderBy(asc(ilmihalLekcijeTable.redoslijed));
     } else {
       const query = db.select(baseSelect).from(ilmihalLekcijeTable);
-      lekcije = canSeeMuallimOnly
-        ? await query.orderBy(asc(ilmihalLekcijeTable.redoslijed))
-        : await query.where(eq(ilmihalLekcijeTable.dostupnost, "svi")).orderBy(asc(ilmihalLekcijeTable.redoslijed));
+      lekcije = await query.orderBy(asc(ilmihalLekcijeTable.redoslijed));
     }
+    const [studentProfile] = req.user?.role === "ucenik"
+      ? await db.select({ muallimId: ucenikProfiliTable.muallimId })
+          .from(ucenikProfiliTable)
+          .where(eq(ucenikProfiliTable.userId, req.user.userId))
+          .limit(1)
+      : [];
+    lekcije = lekcije.filter((lesson) => canReadLesson(req.user, lesson, studentProfile?.muallimId));
 
     // Optional: ako je auth, dodaj zavrseno boolean za svaku lekciju
     // Izvor istine: student_progress.completedLessons (jsonb array). Fallback: korisnik_napredak.
@@ -433,6 +439,16 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
     const lessonSlug = String(req.params.slug);
     const [lekcija] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lessonSlug));
     if (!lekcija) { res.status(404).json({ error: "Lekcija nije pronađena" }); return; }
+    const [studentProfile] = req.user?.role === "ucenik"
+      ? await db.select({ muallimId: ucenikProfiliTable.muallimId })
+          .from(ucenikProfiliTable)
+          .where(eq(ucenikProfiliTable.userId, req.user.userId))
+          .limit(1)
+      : [];
+    if (!canReadLesson(req.user, lekcija, studentProfile?.muallimId)) {
+      res.status(403).json({ error: "Nemate pristup ovoj lekciji" });
+      return;
+    }
     // Task #126: server-side progression gating za učenike. Direktan URL
     // pristup zaključanoj lekciji vraća 403 sa eksplicitnim razlogom; tako
     // se ne može zaobići mapa-gating preko deep linka. Privilegovane role

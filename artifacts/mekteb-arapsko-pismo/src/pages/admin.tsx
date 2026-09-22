@@ -541,6 +541,7 @@ interface PendingLessonEdit {
   jezik: string;
   predlozioIme: string;
   createdAt: string;
+  novaLekcija?: boolean;
 }
 
 function PendingLessonEdits({ token }: { token: string }) {
@@ -557,13 +558,17 @@ function PendingLessonEdits({ token }: { token: string }) {
       .finally(() => setLoading(false));
   }, [token]);
 
-  const handle = async (id: number, approve: boolean) => {
+  const handle = async (id: number, approve: boolean, visibility?: "javno" | "privatno" | "odbijeno") => {
     setProcessingId(id);
     try {
-      await apiRequest("PUT", `/admin/izmjene-lekcija/${id}/odluka`, { approve }, token);
+      await apiRequest("PUT", `/admin/izmjene-lekcija/${id}/odluka`, visibility ? { visibility } : { approve }, token);
       setPending((prev) => prev.filter((item) => item.id !== id));
       toast({
-        title: approve ? t("Izmjena odobrena") : t("Izmjena odbijena"),
+        title: visibility === "javno"
+          ? t("Lekcija je objavljena svima")
+          : visibility === "privatno"
+            ? t("Lekcija je objavljena autoru i njegovim učenicima")
+            : approve ? t("Izmjena odobrena") : t("Izmjena odbijena"),
         description: approve
           ? t("Novi sadržaj lekcije je sada objavljen.")
           : t("Objavljena lekcija je ostala nepromijenjena."),
@@ -583,7 +588,7 @@ function PendingLessonEdits({ token }: { token: string }) {
     return (
       <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-white p-5">
         <Check className="h-5 w-5 shrink-0 text-emerald-500" />
-        <span className="text-sm text-muted-foreground">{t("Nema izmjena lekcija koje čekaju odobrenje.")}</span>
+        <span className="text-sm text-muted-foreground">{t("Nema privatnih lekcija za javnu objavu niti izmjena koje čekaju odobrenje.")}</span>
       </div>
     );
   }
@@ -592,7 +597,7 @@ function PendingLessonEdits({ token }: { token: string }) {
     <div className="overflow-hidden rounded-2xl border border-amber-200 bg-white">
       <div className="flex items-center gap-2 border-b border-amber-100 bg-amber-50 p-4">
         <Pencil className="h-5 w-5 text-amber-600" />
-        <h3 className="font-extrabold text-foreground">{t("Izmjene lekcija čekaju odobrenje")}</h3>
+        <h3 className="font-extrabold text-foreground">{t("Lekcije i izmjene za pregled")}</h3>
         <span className="ml-auto rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">{pending.length}</span>
       </div>
       <div className="divide-y divide-border/40">
@@ -615,7 +620,13 @@ function PendingLessonEdits({ token }: { token: string }) {
                   {" · "}{new Date(item.createdAt).toLocaleString("bs-BA")}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {item.novaLekcija ? <>
+                  <Button size="sm" onClick={() => handle(item.id, true, "javno")} disabled={processingId === item.id} className="bg-emerald-600 hover:bg-emerald-700">
+                    {processingId === item.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
+                    {t("Objavi svima")}
+                  </Button>
+                </> : <>
                 <Button size="sm" onClick={() => handle(item.id, true)} disabled={processingId === item.id} className="bg-emerald-600 hover:bg-emerald-700">
                   {processingId === item.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
                   {t("Odobri")}
@@ -623,15 +634,16 @@ function PendingLessonEdits({ token }: { token: string }) {
                 <Button size="sm" variant="outline" onClick={() => handle(item.id, false)} disabled={processingId === item.id} className="border-red-200 text-red-700 hover:bg-red-50">
                   <X className="mr-1 h-4 w-4" /> {t("Odbij")}
                 </Button>
+                </>}
               </div>
             </div>
             <details className="rounded-xl border border-border/60 bg-muted/20">
-              <summary className="cursor-pointer px-4 py-2 text-sm font-bold">{t("Uporedi trenutni i predloženi tekst")}</summary>
+              <summary className="cursor-pointer px-4 py-2 text-sm font-bold">{item.novaLekcija ? t("Pregledaj sadržaj nove lekcije") : t("Uporedi trenutni i predloženi tekst")}</summary>
               <div className="grid gap-3 border-t border-border/50 p-3 lg:grid-cols-2">
-                <div>
+                {!item.novaLekcija && <div>
                   <p className="mb-2 text-xs font-extrabold uppercase text-muted-foreground">{t("Trenutno objavljeno")}</p>
                   <div className="max-h-80 overflow-auto rounded-lg border bg-white p-3 text-sm ilmihal-content" dangerouslySetInnerHTML={{ __html: item.trenutniHtml }} />
-                </div>
+                </div>}
                 <div>
                   <p className="mb-2 text-xs font-extrabold uppercase text-amber-700">{t("Muallimov prijedlog")}</p>
                   <div className="max-h-80 overflow-auto rounded-lg border border-amber-200 bg-white p-3 text-sm ilmihal-content" dangerouslySetInnerHTML={{ __html: item.predlozeniHtml }} />

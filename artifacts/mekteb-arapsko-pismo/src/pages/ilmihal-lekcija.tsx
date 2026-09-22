@@ -2623,17 +2623,17 @@ function PriloziSection({
             className="overflow-hidden"
           >
             <div className="px-5 pb-5">
-              {canDelete && (
+              {canManage && (
                 <div className="mb-4">
-                  <input
+                  {canDelete && <input
                     ref={h5pInputRef}
                     type="file"
                     accept=".h5p"
                     onChange={handleH5pUpload}
                     className="hidden"
-                  />
+                  />}
                   <div className="flex flex-wrap gap-2">
-                    <Button
+                    {canDelete && <Button
                       onClick={() => h5pInputRef.current?.click()}
                       disabled={uploadingH5p}
                       variant="outline"
@@ -2644,7 +2644,7 @@ function PriloziSection({
                       ) : (
                         <><Sparkles className="w-4 h-4 mr-2" /> {t("Dodaj H5P vježbu")}</>
                       )}
-                    </Button>
+                    </Button>}
                     <Button
                       onClick={() => setShowEmbedForm(v => !v)}
                       variant="outline"
@@ -2652,20 +2652,26 @@ function PriloziSection({
                     >
                       <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? t("Odustani") : t("Dodaj embed vježbu")}
                     </Button>
-                    <Button
+                    {canDelete && <Button
                       onClick={() => setShowNasaVjezbaForm(v => !v)}
                       variant="outline"
                       className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-100 font-bold"
                       data-testid="nasa-vjezba-toggle"
                     >
                       <Sparkles className="w-4 h-4 mr-2" /> {showNasaVjezbaForm ? t("Odustani") : t("Dodaj našu vježbu")}
-                    </Button>
+                    </Button>}
                   </div>
-                  <p className="text-sm text-blue-400 mt-1">{t(".h5p arhiva (max 50MB) ili embed vježba (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")}</p>
+                  <p className="text-sm text-blue-400 mt-1">
+                    {canDelete
+                      ? t(".h5p arhiva (max 50MB) ili embed vježba (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")
+                      : t("Embed vježba: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet ili Mentimeter.")}
+                  </p>
                   {showEmbedForm && (
                     <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 flex flex-col gap-2">
                       <p className="text-xs text-amber-700 font-semibold">
-                        {t("Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni.")}
+                        {canDelete
+                          ? t("Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni.")
+                          : t("Zalijepi embed kod (iframe) ili URL sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet ili Mentimeter. H5P može dodati samo admin.")}
                       </p>
                       <textarea
                         placeholder='&lt;iframe src="https://learningapps.org/watch?app=..."&gt;&lt;/iframe&gt; ili samo URL'

@@ -1205,6 +1205,9 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE izmjene_lekcija ADD COLUMN IF NOT EXISTS jezik varchar(5) NOT NULL DEFAULT 'bs';`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS izmjene_lekcija_status_idx ON izmjene_lekcija (status, created_at DESC);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS izmjene_lekcija_lekcija_idx ON izmjene_lekcija (lekcija_id);`);
+    await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS autor_muallim_id integer;`);
+    await db.execute(sql`ALTER TABLE ilmihal_lekcije ADD COLUMN IF NOT EXISTS status_odobrenja varchar(20) NOT NULL DEFAULT 'odobreno';`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS ilmihal_lekcije_autor_status_idx ON ilmihal_lekcije (autor_muallim_id, status_odobrenja);`);
 
     // Stari direktni Napamet unosi nisu imali predmet pa su ostajali izvan
     // ukupnog broja/prosjeka ocjena. Označi samo samostalne unose; prateći

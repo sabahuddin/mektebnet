@@ -37,7 +37,13 @@ test("muallim ne može mijenjati samo druga polja Ilmihal lekcije", () => {
   }), false);
 });
 
-test("muallim ne može kreirati ili obrisati Ilmihal lekciju", () => {
+test("muallim može predložiti novu Ilmihal lekciju, ali je ne može obrisati", () => {
+  assert.equal(canAccessAdminRoute({
+    role: "muallim",
+    method: "POST",
+    path: "/ilmihal",
+    body: { naslov: "Nova lekcija", nivo: 1, contentHtml: "<p>Lekcija</p>" },
+  }), true);
   assert.equal(canAccessAdminRoute({
     role: "muallim",
     method: "POST",
@@ -79,8 +85,13 @@ test("postojeći muallim pristup prilozima i uploadu ostaje dozvoljen", () => {
   }), true);
 });
 
-test("muallim ne može dodavati vježbe poslije lekcije", () => {
-  for (const suffix of ["h5p", "embed", "osmosmjerka", "nasa-vjezba"]) {
+test("muallim može dodati Embed, ali H5P i naše vježbe ostaju admin-only", () => {
+  assert.equal(canAccessAdminRoute({
+    role: "muallim",
+    method: "POST",
+    path: "/prilozi/12/embed",
+  }), true);
+  for (const suffix of ["h5p", "osmosmjerka", "nasa-vjezba"]) {
     assert.equal(canAccessAdminRoute({
       role: "muallim",
       method: "POST",

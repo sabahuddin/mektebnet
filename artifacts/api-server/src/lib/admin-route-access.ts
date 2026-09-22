@@ -23,10 +23,23 @@ export function canAccessAdminRoute({
     // Muallim može i dalje dodavati nastavne materijale (fajl ili URL), ali
     // vježbe koje se prikazuju poslije lekcije dodaje samo admin.
     const isExerciseCreateRoute = method.toUpperCase() === "POST"
-      && /^\/prilozi\/\d+\/(?:h5p|embed|osmosmjerka|nasa-vjezba)$/.test(path);
+      && /^\/prilozi\/\d+\/(?:h5p|osmosmjerka|nasa-vjezba)$/.test(path);
     return !isExerciseCreateRoute;
   }
   if (path === "/upload") return true;
+
+  // Muallim može napraviti privatnu lekciju. Server sam postavlja slug, autora,
+  // privatnu vidljivost i redoslijed; admin je naknadno može objaviti svima.
+  if (method.toUpperCase() === "POST" && path === "/ilmihal") {
+    if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+    const record = body as Record<string, unknown>;
+    const keys = Object.keys(record);
+    const allowedKeys = new Set(["naslov", "nivo", "predmet", "contentHtml"]);
+    return keys.length >= 2
+      && keys.every((key) => allowedKeys.has(key))
+      && typeof record.naslov === "string"
+      && typeof record.contentHtml === "string";
+  }
 
   // Muallim može uređivati samo sadržaj postojeće Ilmihal lekcije. Namjerno
   // ne dopuštamo naslov, predmet, redoslijed, kviz, preduvjete ni forceUnlock.
