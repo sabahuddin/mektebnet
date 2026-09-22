@@ -438,9 +438,9 @@ test("mektebsku NAPAMET stavku vide svi u istom mektebu, uređuju autor i glavni
   let createdId = "";
 
   try {
-    const create = await authed("/api/muallim/napamet-lokalno", authorToken, {
+    const create = await authed("/api/muallim/napamet-lokalno", muallimToken, {
       method: "POST",
-      body: JSON.stringify({ grupaId: authorGroup.id, naziv: "Mektebska dova", nivo: 4 }),
+      body: JSON.stringify({ grupaId, naziv: "Mektebska dova", nivo: 4 }),
     });
     assert.equal(create.status, 201);
     createdId = ((await create.json()) as { id: string }).id;
@@ -485,6 +485,17 @@ test("mektebsku NAPAMET stavku vide svi u istom mektebu, uređuju autor i glavni
       body: JSON.stringify({ naziv: "Drugi mekteb" }),
     });
     assert.equal(externalEdit.status, 404);
+
+    const authorDelete = await authed(`/api/muallim/napamet-lokalno/${createdId}?grupaId=${authorGroup.id}`, authorToken, {
+      method: "DELETE",
+    });
+    assert.equal(authorDelete.status, 403);
+
+    const mainDelete = await authed(`/api/muallim/napamet-lokalno/${createdId}?grupaId=${grupaId}`, muallimToken, {
+      method: "DELETE",
+    });
+    assert.equal(mainDelete.status, 200);
+    createdId = "";
   } finally {
     if (createdId) await db.delete(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.stavkaId, createdId));
     await db.delete(grupeTable).where(inArray(grupeTable.id, [authorGroup.id, readerGroup.id, externalGroup.id]));

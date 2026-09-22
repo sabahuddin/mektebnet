@@ -3044,11 +3044,6 @@ router.get("/napamet-lokalno", async (req, res) => {
       res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
     }
     const katalog = await getNapametKatalog({ mektebId: ctx.mektebId, grupaId, includeHidden: true });
-    const vlasnici = await db.select({
-      id: napametMuallimProgramTable.stavkaId,
-      muallimId: napametMuallimProgramTable.muallimId,
-    }).from(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.mektebId, ctx.mektebId));
-    const vlasnikPoStavci = new Map(vlasnici.map((item) => [item.id, item.muallimId]));
     const activeProfiles = await db.select({ userId: ucenikProfiliTable.userId })
       .from(ucenikProfiliTable)
       .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
@@ -3077,10 +3072,11 @@ router.get("/napamet-lokalno", async (req, res) => {
       seen.add(key);
       assessedByItem.set(grade.napametStavkaId, (assessedByItem.get(grade.napametStavkaId) ?? 0) + 1);
     }
-    res.json({ katalog: katalog.filter((item) => item.scope === "lokalno").map((item) => ({
+    res.json({ canManage: ctx.isGlavni, katalog: katalog.filter((item) => item.scope === "lokalno").map((item) => ({
       ...item, ukupnoUcenika: studentIds.length, ocijenjenoUcenika: assessedByItem.get(item.id) ?? 0,
-      canEdit: ctx.isGlavni || vlasnikPoStavci.get(item.id) === req.user!.userId,
+      canEdit: ctx.isGlavni,
       canReorder: ctx.isGlavni,
+      canDelete: ctx.isGlavni,
     })) });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
@@ -3092,6 +3088,9 @@ router.post("/napamet-lokalno", async (req, res) => {
     if (!ctx?.mektebId || !grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
       res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
     }
+    if (!ctx.isGlavni) {
+      res.status(403).json({ error: "Stavke može dodavati samo glavni imam" }); return;
+    }
     const naziv = String(req.body.naziv || "").trim();
     const nivo = Number(req.body.nivo);
     if (!naziv || naziv.length > 200 || ![1, 2, 3, 4].includes(nivo)) { res.status(400).json({ error: "Naziv i nivo nisu ispravni" }); return; }
@@ -3100,7 +3099,7 @@ router.post("/napamet-lokalno", async (req, res) => {
       mektebId: ctx.mektebId, muallimId: req.user!.userId, grupaId, stavkaId, nivo, naziv,
       redoslijed: Number(req.body.redoslijed) || 9999,
     }).returning();
-    res.status(201).json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "lokalno", canEdit: true });
+    res.status(201).json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "lokalno", canEdit: true, canDelete: ctx.isGlavni });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
@@ -3118,8 +3117,8 @@ router.put("/napamet-lokalno/:stavkaId", async (req, res) => {
       eq(napametMuallimProgramTable.stavkaId, req.params.stavkaId),
     ));
     if (!existing) { res.status(404).json({ error: "Stavka nije pronađena" }); return; }
-    if (!ctx.isGlavni && existing.muallimId !== req.user!.userId) {
-      res.status(403).json({ error: "Stavku mogu uređivati autor i glavni muallim" }); return;
+    if (!ctx.isGlavni) {
+      res.status(403).json({ error: "Stavku može uređivati samo glavni imam" }); return;
     }
     const values: Record<string, unknown> = { updatedAt: new Date() };
     if (req.body.naziv !== undefined) {
@@ -3140,6 +3139,27 @@ router.put("/napamet-lokalno/:stavkaId", async (req, res) => {
       )).returning();
     if (!row) { res.status(404).json({ error: "Stavka nije pronađena" }); return; }
     res.json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "lokalno", canEdit: true });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
+});
+
+router.delete("/napamet-lokalno/:stavkaId", async (req, res) => {
+  try {
+    const grupaId = Number(req.query.grupaId);
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
+      res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
+    }
+    if (!ctx.isGlavni) {
+      res.status(403).json({ error: "Stavku može obrisati samo glavni muallim" }); return;
+    }
+    const [deleted] = await db.delete(napametMuallimProgramTable)
+      .where(and(
+        eq(napametMuallimProgramTable.mektebId, ctx.mektebId),
+        eq(napametMuallimProgramTable.stavkaId, req.params.stavkaId),
+      ))
+      .returning({ id: napametMuallimProgramTable.stavkaId });
+    if (!deleted) { res.status(404).json({ error: "Stavka nije pronađena" }); return; }
+    res.json({ success: true });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
@@ -3187,15 +3207,11 @@ router.put("/napamet-lokalno-redoslijed", async (req, res) => {
       }
     });
     const katalog = await getNapametKatalog({ mektebId, grupaId, includeHidden: true });
-    const vlasnici = await db.select({
-      id: napametMuallimProgramTable.stavkaId,
-      muallimId: napametMuallimProgramTable.muallimId,
-    }).from(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.mektebId, mektebId));
-    const vlasnikPoStavci = new Map(vlasnici.map((item) => [item.id, item.muallimId]));
     res.json({ success: true, katalog: katalog.filter((item) => item.scope === "lokalno").map((item) => ({
       ...item,
-      canEdit: ctx.isGlavni || vlasnikPoStavci.get(item.id) === req.user!.userId,
+      canEdit: ctx.isGlavni,
       canReorder: true,
+      canDelete: ctx.isGlavni,
     })) });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });

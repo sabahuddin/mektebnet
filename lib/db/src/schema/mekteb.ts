@@ -165,8 +165,8 @@ export const napametGlobalProgramTable = pgTable("napamet_global_program", {
   orderIdx: index("napamet_global_program_order_idx").on(t.nivo, t.redoslijed),
 }));
 
-// Mektebska NAPAMET stavka: vidi je cijeli mekteb, a uređuju autor i glavni
-// muallim. grupaId ostaje kao trag grupe iz koje je stavka prvobitno dodana.
+// Mektebska NAPAMET stavka: vide je muallimi, učenici i povezani roditelji
+// tog mekteba, a njome upravlja glavni imam. grupaId ostaje kao trag izvora.
 export const napametMuallimProgramTable = pgTable("napamet_muallim_program", {
   id: serial("id").primaryKey(),
   stavkaId: varchar("stavka_id", { length: 80 }).notNull(),
