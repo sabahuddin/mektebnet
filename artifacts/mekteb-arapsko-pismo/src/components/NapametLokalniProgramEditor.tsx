@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
@@ -55,6 +55,7 @@ export function NapametLokalniProgramEditor({
   });
   const [items, setItems] = useState<LokalnaStavka[]>([]);
   const [canManage, setCanManage] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [naziv, setNaziv] = useState("");
   const [nivo, setNivo] = useState(4);
   const [saving, setSaving] = useState(false);
@@ -69,7 +70,7 @@ export function NapametLokalniProgramEditor({
       toast({ title: t("Greška"), description: error?.message || t("Nije moguće učitati lokalne stavke"), variant: "destructive" });
     }
   };
-  useEffect(() => { if (open) void load(); }, [token, grupaId, open]);
+  useEffect(() => { void load(); }, [token, grupaId]);
 
   const update = async (item: LokalnaStavka, patch: Record<string, unknown>) => {
     if (!token) return;
@@ -168,26 +169,58 @@ export function NapametLokalniProgramEditor({
     })}
 
     <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white">
-      <button type="button" className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-emerald-50/40" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-        <div><h3 className="font-extrabold text-emerald-950">{t("Stavke za ovaj mekteb")}</h3><p className="text-xs text-muted-foreground mt-1">{t("Dodane stavke vide muallimi, učenici i povezani roditelji ovog mekteba. Dodaje, uređuje i briše ih glavni imam.")}</p></div>
-        <ChevronDown className={`w-5 h-5 text-emerald-700 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
+      <div className="flex items-center gap-2 px-5 py-4 transition-colors hover:bg-emerald-50/40">
+        <button type="button" className="flex min-w-0 flex-1 items-center justify-between text-left" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+          <div><h3 className="font-extrabold text-emerald-950">{t("Stavke za ovaj mekteb")}</h3><p className="text-xs text-muted-foreground mt-1">{t("Dodane stavke vide muallimi, učenici i povezani roditelji ovog mekteba.")}</p></div>
+          <ChevronDown className={`mx-2 h-5 w-5 shrink-0 text-emerald-700 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+        {canManage && <Button
+          type="button"
+          size="sm"
+          variant={editing ? "default" : "outline"}
+          disabled={saving}
+          onClick={() => {
+            if (editing) setEditing(false);
+            else {
+              setOpen(true);
+              setEditing(true);
+            }
+          }}
+          className="shrink-0 rounded-xl"
+        >
+          {editing ? <Save className="mr-1 h-4 w-4" /> : <Pencil className="mr-1 h-4 w-4" />}
+          {editing ? t("Sačuvaj") : t("Uredi")}
+        </Button>}
+      </div>
       {open && <div className="space-y-4 border-t border-emerald-100 p-4">
-        {[1, 2, 3, 4].map((sectionNivo) => {
+        {!editing && [1, 2, 3, 4].map((sectionNivo) => {
+          const section = items.filter((item) => item.nivo === sectionNivo && item.isVisible !== false).sort((a, b) => a.redoslijed - b.redoslijed);
+          return section.length ? <div key={sectionNivo} className="space-y-2">
+            <h3 className="text-sm font-black uppercase text-emerald-800">{sectionNivo === 4 ? `${t("Napamet")} – ${t("Dodatak")}` : `${t("Napamet")} – ${t("Nivo")} ${sectionNivo}`}</h3>
+            <div className="grid grid-cols-1 gap-2">
+              {section.map((item) => <button
+                type="button"
+                key={item.id}
+                onClick={() => onItemClick?.(item)}
+                className="w-full rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-left text-sm font-semibold leading-snug text-emerald-950 transition-colors hover:border-emerald-300 hover:bg-emerald-100"
+              >
+                <span className="block text-base">{t(item.naziv)}</span>
+                <NapametUceniciLinija item={item} />
+              </button>)}
+            </div>
+          </div> : null;
+        })}
+        {editing && [1, 2, 3, 4].map((sectionNivo) => {
           const section = items.filter((item) => item.nivo === sectionNivo).sort((a, b) => a.redoslijed - b.redoslijed);
           return section.length ? <div key={sectionNivo} className="space-y-2">
             <h3 className="text-sm font-black uppercase text-emerald-800">{sectionNivo === 4 ? t("Dodatak") : `${t("Napamet")} – ${t("Nivo")} ${sectionNivo}`}</h3>
             <div className="grid grid-cols-1 gap-2">
-              {section.map((item, index) => <div key={item.id} onClick={(event) => {
-                if ((event.target as HTMLElement).closest("button, input, select")) return;
-                onItemClick?.(item);
-              }} className={`flex w-full flex-wrap items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/40 px-4 py-3 sm:flex-nowrap ${item.isVisible === false ? "opacity-60 bg-slate-50" : ""}`}>
+              {section.map((item, index) => <div key={item.id} className={`flex w-full flex-wrap items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/40 px-4 py-3 sm:flex-nowrap ${item.isVisible === false ? "bg-slate-50 opacity-60" : ""}`}>
                 <div className="flex flex-col">
-                  <button disabled={saving || !item.canReorder || index === 0} onClick={() => void reorder(sectionNivo, index, -1)} aria-label={t("Pomjeri gore")}><ChevronUp className="w-4 h-4" /></button>
-                  <button disabled={saving || !item.canReorder || index === section.length - 1} onClick={() => void reorder(sectionNivo, index, 1)} aria-label={t("Pomjeri dolje")}><ChevronDown className="w-4 h-4" /></button>
+                  <button disabled={saving || !item.canReorder || index === 0} onClick={() => void reorder(sectionNivo, index, -1)} aria-label={t("Pomjeri gore")}><ChevronUp className="h-4 w-4" /></button>
+                  <button disabled={saving || !item.canReorder || index === section.length - 1} onClick={() => void reorder(sectionNivo, index, 1)} aria-label={t("Pomjeri dolje")}><ChevronDown className="h-4 w-4" /></button>
                 </div>
-                <input defaultValue={item.naziv} disabled={!item.canEdit} onClick={(event) => event.stopPropagation()} onBlur={(event) => { const value = event.target.value.trim(); if (item.canEdit && value && value !== item.naziv) void update(item, { naziv: value }); }} className="min-w-[12rem] flex-1 rounded-lg border border-border px-3 py-2 text-sm font-semibold disabled:bg-white" aria-label={t("Naziv mektebske stavke")} />
-                <NapametUceniciLinija item={item} compact />
+                <input defaultValue={item.naziv} disabled={!item.canEdit} onBlur={(event) => { const value = event.target.value.trim(); if (item.canEdit && value && value !== item.naziv) void update(item, { naziv: value }); }} className="min-w-[12rem] flex-1 rounded-lg border border-border px-3 py-2 text-sm font-semibold disabled:bg-white" aria-label={t("Naziv mektebske stavke")} />
                 <select value={item.nivo} disabled={saving || !item.canEdit} onChange={(event) => void update(item, { nivo: Number(event.target.value) })} className="rounded-lg border border-border px-2 py-2 text-sm">{[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value === 4 ? t("Dodatak") : value}</option>)}</select>
                 {item.canEdit && <button disabled={saving} onClick={() => void update(item, { isVisible: item.isVisible === false })} className="rounded-lg bg-white px-3 py-2 text-xs font-bold">{item.isVisible === false ? t("Prikaži") : t("Sakrij")}</button>}
                 {item.canDelete && <button disabled={saving} onClick={() => void remove(item)} className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100" aria-label={t("Obriši stavku")} title={t("Obriši stavku")}><Trash2 className="h-4 w-4" /></button>}
@@ -195,7 +228,7 @@ export function NapametLokalniProgramEditor({
             </div>
           </div> : null;
         })}
-        {canManage && <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row">
+        {editing && canManage && <div className="flex flex-col gap-2 border-t border-border pt-3 sm:flex-row">
           <input value={naziv} onChange={(event) => setNaziv(event.target.value)} placeholder={t("Nova stavka za mekteb")} className="flex-1 rounded-xl border border-border px-3 py-2 text-sm" />
           <select value={nivo} onChange={(event) => setNivo(Number(event.target.value))} className="rounded-xl border border-border px-3 py-2 text-sm">{[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value === 4 ? t("Dodatak") : `${t("Nivo")} ${value}`}</option>)}</select>
           <Button size="sm" disabled={saving || !naziv.trim()} onClick={() => void add()} className="rounded-xl"><Plus className="w-4 h-4 mr-1" /> {t("Dodaj")}</Button>
