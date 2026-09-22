@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -2914,7 +2915,7 @@ router.post("/ocjene", async (req, res) => {
   }
 });
 
-// Globalni katalog + lokalne stavke prijavljenog muallima za konkretnu grupu.
+// Globalni katalog + mektebske stavke za konkretnu grupu.
 router.get("/napamet-program", async (req, res) => {
   try {
     const ctx = await getMektebCtx(req.user!.userId);
@@ -2926,7 +2927,6 @@ router.get("/napamet-program", async (req, res) => {
     const katalog = await getNapametKatalog({
       mektebId: ctx.mektebId,
       grupaId: grupaId || undefined,
-      muallimId: grupaId ? req.user!.userId : undefined,
       includeHidden: true,
     });
     if (grupaId) {
@@ -2985,7 +2985,6 @@ router.get("/napamet-program/:stavkaId/detalji", async (req, res) => {
     const item = (await getNapametKatalog({
       mektebId: ctx.mektebId,
       grupaId,
-      muallimId: req.user!.userId,
       includeHidden: true,
     })).find((candidate) => candidate.id === stavkaId);
     if (!item) { res.status(404).json({ error: "NAPAMET stavka nije pronađena" }); return; }
@@ -3044,7 +3043,12 @@ router.get("/napamet-lokalno", async (req, res) => {
     if (!ctx?.mektebId || !grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
       res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
     }
-    const katalog = await getNapametKatalog({ grupaId, muallimId: req.user!.userId, includeHidden: true });
+    const katalog = await getNapametKatalog({ mektebId: ctx.mektebId, grupaId, includeHidden: true });
+    const vlasnici = await db.select({
+      id: napametMuallimProgramTable.stavkaId,
+      muallimId: napametMuallimProgramTable.muallimId,
+    }).from(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.mektebId, ctx.mektebId));
+    const vlasnikPoStavci = new Map(vlasnici.map((item) => [item.id, item.muallimId]));
     const activeProfiles = await db.select({ userId: ucenikProfiliTable.userId })
       .from(ucenikProfiliTable)
       .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
@@ -3075,6 +3079,8 @@ router.get("/napamet-lokalno", async (req, res) => {
     }
     res.json({ katalog: katalog.filter((item) => item.scope === "lokalno").map((item) => ({
       ...item, ukupnoUcenika: studentIds.length, ocijenjenoUcenika: assessedByItem.get(item.id) ?? 0,
+      canEdit: ctx.isGlavni || vlasnikPoStavci.get(item.id) === req.user!.userId,
+      canReorder: ctx.isGlavni,
     })) });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
@@ -3082,26 +3088,38 @@ router.get("/napamet-lokalno", async (req, res) => {
 router.post("/napamet-lokalno", async (req, res) => {
   try {
     const grupaId = Number(req.body.grupaId);
-    if (!grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
       res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
     }
     const naziv = String(req.body.naziv || "").trim();
     const nivo = Number(req.body.nivo);
     if (!naziv || naziv.length > 200 || ![1, 2, 3, 4].includes(nivo)) { res.status(400).json({ error: "Naziv i nivo nisu ispravni" }); return; }
-    const stavkaId = `lokalno-${req.user!.userId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const stavkaId = `mekteb-${ctx.mektebId}-${randomUUID()}`.slice(0, 80);
     const [row] = await db.insert(napametMuallimProgramTable).values({
-      muallimId: req.user!.userId, grupaId, stavkaId, nivo, naziv,
+      mektebId: ctx.mektebId, muallimId: req.user!.userId, grupaId, stavkaId, nivo, naziv,
       redoslijed: Number(req.body.redoslijed) || 9999,
     }).returning();
-    res.status(201).json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "lokalno" });
+    res.status(201).json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "lokalno", canEdit: true });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
 router.put("/napamet-lokalno/:stavkaId", async (req, res) => {
   try {
     const grupaId = Number(req.query.grupaId);
-    if (!grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
       res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
+    }
+    const [existing] = await db.select({
+      muallimId: napametMuallimProgramTable.muallimId,
+    }).from(napametMuallimProgramTable).where(and(
+      eq(napametMuallimProgramTable.mektebId, ctx.mektebId),
+      eq(napametMuallimProgramTable.stavkaId, req.params.stavkaId),
+    ));
+    if (!existing) { res.status(404).json({ error: "Stavka nije pronađena" }); return; }
+    if (!ctx.isGlavni && existing.muallimId !== req.user!.userId) {
+      res.status(403).json({ error: "Stavku mogu uređivati autor i glavni muallim" }); return;
     }
     const values: Record<string, unknown> = { updatedAt: new Date() };
     if (req.body.naziv !== undefined) {
@@ -3117,34 +3135,68 @@ router.put("/napamet-lokalno/:stavkaId", async (req, res) => {
     if (req.body.isVisible !== undefined) values.isVisible = Boolean(req.body.isVisible);
     const [row] = await db.update(napametMuallimProgramTable).set(values)
       .where(and(
-        eq(napametMuallimProgramTable.grupaId, grupaId),
-        eq(napametMuallimProgramTable.muallimId, req.user!.userId),
+        eq(napametMuallimProgramTable.mektebId, ctx.mektebId),
         eq(napametMuallimProgramTable.stavkaId, req.params.stavkaId),
       )).returning();
     if (!row) { res.status(404).json({ error: "Stavka nije pronađena" }); return; }
-    res.json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "lokalno" });
+    res.json({ id: row.stavkaId, nivo: row.nivo, naziv: row.naziv, redoslijed: row.redoslijed, isVisible: row.isVisible, scope: "lokalno", canEdit: true });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
 router.put("/napamet-lokalno-redoslijed", async (req, res) => {
   try {
     const grupaId = Number(req.body.grupaId);
-    if (!grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId || !grupaId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
       res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
     }
+    if (!ctx.isGlavni) {
+      res.status(403).json({ error: "Redoslijed stavki može mijenjati samo glavni muallim" }); return;
+    }
+    const mektebId = ctx.mektebId;
     const stavke = Array.isArray(req.body.stavke) ? req.body.stavke : [];
-    for (const item of stavke) {
+    const postojece = await db.select({ id: napametMuallimProgramTable.stavkaId })
+      .from(napametMuallimProgramTable)
+      .where(eq(napametMuallimProgramTable.mektebId, mektebId));
+    const postojeciIds = new Set(postojece.map((item) => item.id));
+    const poslaniIds = new Set(stavke.map((item: any) => String(item.id)));
+    const positions = new Set<string>();
+    const invalidPayload = stavke.length !== postojece.length
+      || poslaniIds.size !== stavke.length
+      || [...postojeciIds].some((id) => !poslaniIds.has(id))
+      || stavke.some((item: any) => {
+        const nivo = Number(item.nivo);
+        const redoslijed = Number(item.redoslijed);
+        const position = `${nivo}:${redoslijed}`;
+        if (![1, 2, 3, 4].includes(nivo) || !Number.isInteger(redoslijed) || redoslijed < 0 || positions.has(position)) return true;
+        positions.add(position);
+        return false;
+      });
+    if (invalidPayload) {
+      res.status(400).json({ error: "Pošaljite potpun i ispravan redoslijed svih mektebskih stavki" }); return;
+    }
+    await db.transaction(async (tx) => {
+      for (const item of stavke) {
       const nivo = Number(item.nivo);
-      if (![1, 2, 3, 4].includes(nivo)) continue;
-      await db.update(napametMuallimProgramTable).set({ nivo, redoslijed: Number(item.redoslijed), updatedAt: new Date() })
+      const redoslijed = Number(item.redoslijed);
+        await tx.update(napametMuallimProgramTable).set({ nivo, redoslijed, updatedAt: new Date() })
         .where(and(
-          eq(napametMuallimProgramTable.grupaId, grupaId),
-          eq(napametMuallimProgramTable.muallimId, req.user!.userId),
+          eq(napametMuallimProgramTable.mektebId, mektebId),
           eq(napametMuallimProgramTable.stavkaId, String(item.id)),
         ));
-    }
-    const katalog = await getNapametKatalog({ grupaId, muallimId: req.user!.userId, includeHidden: true });
-    res.json({ success: true, katalog: katalog.filter((item) => item.scope === "lokalno") });
+      }
+    });
+    const katalog = await getNapametKatalog({ mektebId, grupaId, includeHidden: true });
+    const vlasnici = await db.select({
+      id: napametMuallimProgramTable.stavkaId,
+      muallimId: napametMuallimProgramTable.muallimId,
+    }).from(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.mektebId, mektebId));
+    const vlasnikPoStavci = new Map(vlasnici.map((item) => [item.id, item.muallimId]));
+    res.json({ success: true, katalog: katalog.filter((item) => item.scope === "lokalno").map((item) => ({
+      ...item,
+      canEdit: ctx.isGlavni || vlasnikPoStavci.get(item.id) === req.user!.userId,
+      canReorder: true,
+    })) });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 

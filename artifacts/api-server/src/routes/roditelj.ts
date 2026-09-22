@@ -393,10 +393,20 @@ router.get("/napamet/:ucenikId", async (req, res) => {
       .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
     const latest = new Map<string, typeof ocjene[number]>();
     for (const o of ocjene) if (o.napametStavkaId && !latest.has(o.napametStavkaId)) latest.set(o.napametStavkaId, o);
-    const [profil] = await db.select({ mektebId: ucenikProfiliTable.mektebId, grupaId: ucenikProfiliTable.grupaId })
+    const [profil] = await db.select({
+      mektebId: ucenikProfiliTable.mektebId,
+      grupaId: ucenikProfiliTable.grupaId,
+      muallimId: ucenikProfiliTable.muallimId,
+    })
       .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+    const [vlasnik] = profil?.mektebId || !profil?.muallimId
+      ? []
+      : await db.select({ mektebId: muallimProfiliTable.mektebId })
+          .from(muallimProfiliTable)
+          .where(eq(muallimProfiliTable.userId, profil.muallimId));
+    const effectiveMektebId = profil?.mektebId ?? vlasnik?.mektebId ?? null;
     res.json({
-      katalog: profil ? await getNapametKatalog({ mektebId: profil.mektebId, grupaId: profil.grupaId }) : [],
+      katalog: profil ? await getNapametKatalog({ mektebId: effectiveMektebId, grupaId: profil.grupaId }) : [],
       ocjene: [...latest.values()],
     });
   } catch { res.status(500).json({ error: "Greška servera" }); }

@@ -370,14 +370,18 @@ async function runResidualSchema() {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS napamet_muallim_program (
         id serial PRIMARY KEY, stavka_id varchar(80) NOT NULL, muallim_id integer NOT NULL,
-        grupa_id integer NOT NULL, nivo integer NOT NULL, naziv varchar(200) NOT NULL,
+        grupa_id integer NOT NULL, mekteb_id integer, nivo integer NOT NULL, naziv varchar(200) NOT NULL,
         redoslijed integer NOT NULL, is_visible boolean NOT NULL DEFAULT true,
         created_at timestamp DEFAULT now(), updated_at timestamp DEFAULT now()
       );
     `);
+    await db.execute(sql`ALTER TABLE napamet_muallim_program ADD COLUMN IF NOT EXISTS mekteb_id integer;`);
+    // Stare stavke ostaju sa NULL mekteb_id i zadržavaju prvobitni grupni
+    // scope. Ne smijemo ih automatski pripisati trenutnom mektebu autora jer
+    // je muallim od tada mogao promijeniti mekteb.
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_muallim_program_stavka_unique_idx ON napamet_muallim_program (stavka_id);`);
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_muallim_program_owner_order_idx ON napamet_muallim_program (muallim_id, grupa_id, nivo, redoslijed);`);
-    await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_muallim_program_grupa_order_idx ON napamet_muallim_program (grupa_id, nivo, redoslijed);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_muallim_program_owner_order_idx ON napamet_muallim_program (muallim_id, mekteb_id, nivo, redoslijed);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_muallim_program_mekteb_order_idx ON napamet_muallim_program (mekteb_id, nivo, redoslijed);`);
 
     // grupe.datum_pocetka / datum_kraja — datumi mektebske godine za grupu.
     // Definisani u Drizzle schema/mekteb.ts; idempotentno dodajemo na svaki

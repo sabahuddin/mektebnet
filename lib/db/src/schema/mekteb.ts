@@ -165,11 +165,12 @@ export const napametGlobalProgramTable = pgTable("napamet_global_program", {
   orderIdx: index("napamet_global_program_order_idx").on(t.nivo, t.redoslijed),
 }));
 
-// Lokalna stavka je privatna za muallima koji ju je dodao i njegovu grupu.
-// Time ručni dodatak ne ulazi u katalog drugih muallima.
+// Mektebska NAPAMET stavka: vidi je cijeli mekteb, a uređuju autor i glavni
+// muallim. grupaId ostaje kao trag grupe iz koje je stavka prvobitno dodana.
 export const napametMuallimProgramTable = pgTable("napamet_muallim_program", {
   id: serial("id").primaryKey(),
   stavkaId: varchar("stavka_id", { length: 80 }).notNull(),
+  mektebId: integer("mekteb_id"),
   muallimId: integer("muallim_id").notNull(),
   grupaId: integer("grupa_id").notNull(),
   nivo: integer("nivo").notNull(),
@@ -180,8 +181,8 @@ export const napametMuallimProgramTable = pgTable("napamet_muallim_program", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   stavkaIdx: uniqueIndex("napamet_muallim_program_stavka_unique_idx").on(t.stavkaId),
-  ownerOrderIdx: index("napamet_muallim_program_owner_order_idx").on(t.muallimId, t.grupaId, t.nivo, t.redoslijed),
-  grupaOrderIdx: index("napamet_muallim_program_grupa_order_idx").on(t.grupaId, t.nivo, t.redoslijed),
+  ownerOrderIdx: index("napamet_muallim_program_owner_order_idx").on(t.muallimId, t.mektebId, t.nivo, t.redoslijed),
+  mektebOrderIdx: index("napamet_muallim_program_mekteb_order_idx").on(t.mektebId, t.nivo, t.redoslijed),
 }));
 
 // Mekteb-nivo dokumenti (PDF): pravila, kućni red i sl. Uploaduje ih glavni

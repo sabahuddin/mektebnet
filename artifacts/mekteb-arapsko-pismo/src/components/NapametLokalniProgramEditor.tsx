@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import type { NapametStavka } from "@/components/NapametPregled";
 
-type LokalnaStavka = NapametStavka & { isVisible?: boolean };
+type LokalnaStavka = NapametStavka & { isVisible?: boolean; canEdit?: boolean; canReorder?: boolean };
 
 function NapametUceniciLinija({ item, compact = false }: { item: NapametStavka; compact?: boolean }) {
   const { t } = useLanguage();
@@ -134,7 +134,7 @@ export function NapametLokalniProgramEditor({
       })}
     </div>}
     <button type="button" className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-emerald-50/40 transition-colors" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
-      <div><h3 className="font-extrabold text-emerald-950">{t("Lokalne stavke za ovu grupu")}</h3><p className="text-xs text-muted-foreground mt-1">{t("Dodaj ručnu stavku samo za ovu grupu. Ne prikazuje se drugim muallimima.")}</p></div>
+      <div><h3 className="font-extrabold text-emerald-950">{t("Stavke za ovaj mekteb")}</h3><p className="text-xs text-muted-foreground mt-1">{t("Dodane stavke vide svi muallimi i učenici ovog mekteba. Uređuju ih autor i glavni muallim.")}</p></div>
       <ChevronDown className={`w-5 h-5 text-emerald-700 transition-transform ${open ? "rotate-180" : ""}`} />
     </button>
     {open && <div className="p-4 space-y-3">
@@ -147,17 +147,17 @@ export function NapametLokalniProgramEditor({
                if ((event.target as HTMLElement).closest("button, input, select")) return;
                onItemClick?.(item);
              }} className={`flex gap-2 items-center rounded-xl border px-3 py-2 ${item.isVisible === false ? "opacity-60 bg-slate-50" : ""}`}>
-            <div className="flex flex-col"><button disabled={saving || index === 0} onClick={() => void reorder(sectionNivo, index, -1)} aria-label={t("Pomjeri gore")}><ChevronUp className="w-3 h-3" /></button><button disabled={saving || index === section.length - 1} onClick={() => void reorder(sectionNivo, index, 1)} aria-label={t("Pomjeri dolje")}><ChevronDown className="w-3 h-3" /></button></div>
-             <input defaultValue={item.naziv} onClick={(event) => event.stopPropagation()} onBlur={(event) => { const value = event.target.value.trim(); if (value && value !== item.naziv) void update(item, { naziv: value }); }} className="min-w-0 flex-1 rounded-lg border border-border px-2 py-1.5 text-sm font-semibold" aria-label={t("Naziv lokalne stavke")} />
+            <div className="flex flex-col"><button disabled={saving || !item.canReorder || index === 0} onClick={() => void reorder(sectionNivo, index, -1)} aria-label={t("Pomjeri gore")}><ChevronUp className="w-3 h-3" /></button><button disabled={saving || !item.canReorder || index === section.length - 1} onClick={() => void reorder(sectionNivo, index, 1)} aria-label={t("Pomjeri dolje")}><ChevronDown className="w-3 h-3" /></button></div>
+             <input defaultValue={item.naziv} disabled={!item.canEdit} onClick={(event) => event.stopPropagation()} onBlur={(event) => { const value = event.target.value.trim(); if (item.canEdit && value && value !== item.naziv) void update(item, { naziv: value }); }} className="min-w-0 flex-1 rounded-lg border border-border px-2 py-1.5 text-sm font-semibold disabled:bg-slate-50" aria-label={t("Naziv mektebske stavke")} />
              <NapametUceniciLinija item={item} compact />
-            <select value={item.nivo} disabled={saving} onChange={(event) => void update(item, { nivo: Number(event.target.value) })} className="rounded-lg border border-border px-2 py-1.5 text-sm">{[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value}</option>)}</select>
-            <button disabled={saving} onClick={() => void update(item, { isVisible: item.isVisible === false })} className="rounded-lg px-2 py-1.5 text-xs font-bold bg-slate-100">{item.isVisible === false ? t("Prikaži") : t("Sakrij")}</button>
+            <select value={item.nivo} disabled={saving || !item.canEdit} onChange={(event) => void update(item, { nivo: Number(event.target.value) })} className="rounded-lg border border-border px-2 py-1.5 text-sm">{[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value}</option>)}</select>
+            {item.canEdit && <button disabled={saving} onClick={() => void update(item, { isVisible: item.isVisible === false })} className="rounded-lg px-2 py-1.5 text-xs font-bold bg-slate-100">{item.isVisible === false ? t("Prikaži") : t("Sakrij")}</button>}
           </div>)}
           </div>
         </div> : null;
       })}
       <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-border">
-        <input value={naziv} onChange={(event) => setNaziv(event.target.value)} placeholder={t("Nova lokalna stavka")} className="flex-1 rounded-xl border border-border px-3 py-2 text-sm" />
+        <input value={naziv} onChange={(event) => setNaziv(event.target.value)} placeholder={t("Nova stavka za mekteb")} className="flex-1 rounded-xl border border-border px-3 py-2 text-sm" />
         <select value={nivo} onChange={(event) => setNivo(Number(event.target.value))} className="rounded-xl border border-border px-3 py-2 text-sm">{[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value === 4 ? t("Dodatak") : `${t("Nivo")} ${value}`}</option>)}</select>
         <Button size="sm" disabled={saving || !naziv.trim()} onClick={() => void add()} className="rounded-xl"><Plus className="w-4 h-4 mr-1" /> {t("Dodaj")}</Button>
       </div>

@@ -108,11 +108,12 @@ before(async () => {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS napamet_muallim_program (
       id serial PRIMARY KEY, stavka_id varchar(80) NOT NULL, muallim_id integer NOT NULL,
-      grupa_id integer NOT NULL, nivo integer NOT NULL, naziv varchar(200) NOT NULL,
+      grupa_id integer NOT NULL, mekteb_id integer, nivo integer NOT NULL, naziv varchar(200) NOT NULL,
       redoslijed integer NOT NULL, is_visible boolean NOT NULL DEFAULT true,
       created_at timestamp DEFAULT now(), updated_at timestamp DEFAULT now()
     )
   `);
+  await db.execute(sql`ALTER TABLE napamet_muallim_program ADD COLUMN IF NOT EXISTS mekteb_id integer;`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_muallim_program_stavka_unique_idx ON napamet_muallim_program (stavka_id);`);
 
   const [mekteb] = await db.insert(mektebiTable).values({
@@ -381,7 +382,7 @@ test("obična ocjena preuzima predmet lekcije i ne pravi NAPAMET zapis", async (
   assert.deepEqual(rows, [{ kategorija: "ocjena", predmet: lekcija.predmet, napametStavkaId: null }]);
 });
 
-test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i roditelj", async () => {
+test("mektebsku NAPAMET stavku vide učenik i roditelj, uključujući stari profil bez mekteb_id", async () => {
   const create = await authed("/api/muallim/napamet-lokalno", muallimToken, {
     method: "POST",
     body: JSON.stringify({ grupaId, naziv: "Dova prije puta", nivo: 4 }),
@@ -397,14 +398,99 @@ test("lokalna NAPAMET stavka pripada grupi muallima i vide je njen učenik i rod
   assert.equal(ownPayload.katalog.find((item) => item.id === lokalnaStavkaId)?.ukupnoUcenika, 1);
   assert.equal(ownPayload.katalog.find((item) => item.id === lokalnaStavkaId)?.ocijenjenoUcenika, 0);
 
-  for (const [token, path] of [
-    [ucenikToken, "/api/ucenik/napamet"],
-    [roditeljToken, `/api/roditelj/napamet/${ucenikId}`],
-  ] as const) {
-    const response = await authed(path, token);
-    assert.equal(response.status, 200);
-    const payload = await response.json() as { katalog: Array<{ id: string; scope?: string }> };
-    assert.equal(payload.katalog.find((item) => item.id === lokalnaStavkaId)?.scope, "lokalno");
+  for (const legacyProfile of [false, true]) {
+    if (legacyProfile) {
+      await db.update(ucenikProfiliTable).set({ mektebId: null }).where(eq(ucenikProfiliTable.userId, ucenikId));
+    }
+    for (const [token, path] of [
+      [ucenikToken, "/api/ucenik/napamet"],
+      [roditeljToken, `/api/roditelj/napamet/${ucenikId}`],
+    ] as const) {
+      const response = await authed(path, token);
+      assert.equal(response.status, 200);
+      const payload = await response.json() as { katalog: Array<{ id: string; scope?: string }> };
+      assert.equal(payload.katalog.find((item) => item.id === lokalnaStavkaId)?.scope, "lokalno");
+    }
+  }
+  await db.update(ucenikProfiliTable).set({ mektebId }).where(eq(ucenikProfiliTable.userId, ucenikId));
+});
+
+test("mektebsku NAPAMET stavku vide svi u istom mektebu, uređuju autor i glavni, a drugi mekteb je ne vidi", async () => {
+  const authorId = await createUser("muallim", "napamet-author");
+  const readerId = await createUser("muallim", "napamet-reader");
+  const externalId = await createUser("muallim", "napamet-external");
+  const [externalMekteb] = await db.insert(mektebiTable).values({
+    naziv: `Drugi mekteb ${SUFFIX}`,
+  }).returning({ id: mektebiTable.id });
+  await db.insert(muallimProfiliTable).values([
+    { userId: authorId, mektebId, isGlavni: false },
+    { userId: readerId, mektebId, isGlavni: false },
+    { userId: externalId, mektebId: externalMekteb.id, isGlavni: true },
+  ]);
+  const [authorGroup, readerGroup, externalGroup] = await db.insert(grupeTable).values([
+    { muallimId: authorId, naziv: `Autor grupa ${SUFFIX}`, skolskaGodina: "2025/2026" },
+    { muallimId: readerId, naziv: `Čitalac grupa ${SUFFIX}`, skolskaGodina: "2025/2026" },
+    { muallimId: externalId, naziv: `Drugi mekteb grupa ${SUFFIX}`, skolskaGodina: "2025/2026" },
+  ]).returning({ id: grupeTable.id });
+  const authorToken = tokenFor(authorId, "muallim", "napamet-author");
+  const readerToken = tokenFor(readerId, "muallim", "napamet-reader");
+  const externalToken = tokenFor(externalId, "muallim", "napamet-external");
+  let createdId = "";
+
+  try {
+    const create = await authed("/api/muallim/napamet-lokalno", authorToken, {
+      method: "POST",
+      body: JSON.stringify({ grupaId: authorGroup.id, naziv: "Mektebska dova", nivo: 4 }),
+    });
+    assert.equal(create.status, 201);
+    createdId = ((await create.json()) as { id: string }).id;
+
+    const readerList = await authed(`/api/muallim/napamet-lokalno?grupaId=${readerGroup.id}`, readerToken);
+    assert.equal(readerList.status, 200);
+    const readerPayload = await readerList.json() as { katalog: Array<{ id: string; canEdit: boolean; canReorder: boolean }> };
+    assert.equal(readerPayload.katalog.find((item) => item.id === createdId)?.canEdit, false);
+    assert.equal(readerPayload.katalog.find((item) => item.id === createdId)?.canReorder, false);
+
+    const forbiddenEdit = await authed(`/api/muallim/napamet-lokalno/${createdId}?grupaId=${readerGroup.id}`, readerToken, {
+      method: "PUT",
+      body: JSON.stringify({ naziv: "Ne smije promijeniti" }),
+    });
+    assert.equal(forbiddenEdit.status, 403);
+
+    const forbiddenReorder = await authed("/api/muallim/napamet-lokalno-redoslijed", authorToken, {
+      method: "PUT",
+      body: JSON.stringify({ grupaId: authorGroup.id, stavke: [] }),
+    });
+    assert.equal(forbiddenReorder.status, 403);
+
+    const mainList = await authed(`/api/muallim/napamet-lokalno?grupaId=${grupaId}`, muallimToken);
+    assert.equal(mainList.status, 200);
+    const mainPayload = await mainList.json() as { katalog: Array<{ id: string; canEdit: boolean; canReorder: boolean }> };
+    assert.equal(mainPayload.katalog.find((item) => item.id === createdId)?.canEdit, true);
+    assert.equal(mainPayload.katalog.find((item) => item.id === createdId)?.canReorder, true);
+
+    const mainEdit = await authed(`/api/muallim/napamet-lokalno/${createdId}?grupaId=${grupaId}`, muallimToken, {
+      method: "PUT",
+      body: JSON.stringify({ naziv: "Glavni je promijenio" }),
+    });
+    assert.equal(mainEdit.status, 200);
+
+    const externalList = await authed(`/api/muallim/napamet-lokalno?grupaId=${externalGroup.id}`, externalToken);
+    assert.equal(externalList.status, 200);
+    const externalPayload = await externalList.json() as { katalog: Array<{ id: string }> };
+    assert.equal(externalPayload.katalog.some((item) => item.id === createdId), false);
+
+    const externalEdit = await authed(`/api/muallim/napamet-lokalno/${createdId}?grupaId=${externalGroup.id}`, externalToken, {
+      method: "PUT",
+      body: JSON.stringify({ naziv: "Drugi mekteb" }),
+    });
+    assert.equal(externalEdit.status, 404);
+  } finally {
+    if (createdId) await db.delete(napametMuallimProgramTable).where(eq(napametMuallimProgramTable.stavkaId, createdId));
+    await db.delete(grupeTable).where(inArray(grupeTable.id, [authorGroup.id, readerGroup.id, externalGroup.id]));
+    await db.delete(muallimProfiliTable).where(inArray(muallimProfiliTable.userId, [authorId, readerId, externalId]));
+    await db.delete(mektebiTable).where(eq(mektebiTable.id, externalMekteb.id));
+    await db.delete(usersTable).where(inArray(usersTable.id, [authorId, readerId, externalId]));
   }
 });
 

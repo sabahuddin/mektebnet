@@ -5,7 +5,7 @@ import {
   napametMuallimProgramTable,
   napametProgramTable,
 } from "@workspace/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 
 export type NapametNivo = 1 | 2 | 3 | 4;
 export type NapametScope = "global" | "lokalno" | "legacy";
@@ -139,16 +139,26 @@ export async function getNapametKatalog({
   const [globalne, rezervisaniGlobalniRedovi, lokalne, legacy] = await Promise.all([
     getGlobalNapametKatalog(includeHidden),
     db.select({ id: napametGlobalProgramTable.stavkaId }).from(napametGlobalProgramTable),
-    grupaId ? db.select({
+    (mektebId || grupaId) ? db.select({
       id: napametMuallimProgramTable.stavkaId,
       nivo: napametMuallimProgramTable.nivo,
       naziv: napametMuallimProgramTable.naziv,
       redoslijed: napametMuallimProgramTable.redoslijed,
       isVisible: napametMuallimProgramTable.isVisible,
     }).from(napametMuallimProgramTable).where(
-      muallimId
-        ? and(eq(napametMuallimProgramTable.grupaId, grupaId), eq(napametMuallimProgramTable.muallimId, muallimId))
-        : eq(napametMuallimProgramTable.grupaId, grupaId),
+      mektebId
+        ? (grupaId
+          ? or(
+              eq(napametMuallimProgramTable.mektebId, mektebId),
+              and(
+                isNull(napametMuallimProgramTable.mektebId),
+                eq(napametMuallimProgramTable.grupaId, grupaId),
+              ),
+            )
+          : eq(napametMuallimProgramTable.mektebId, mektebId))
+        : muallimId
+          ? and(eq(napametMuallimProgramTable.grupaId, grupaId!), eq(napametMuallimProgramTable.muallimId, muallimId))
+          : eq(napametMuallimProgramTable.grupaId, grupaId!),
     ).orderBy(asc(napametMuallimProgramTable.nivo), asc(napametMuallimProgramTable.redoslijed)) : [],
     mektebId ? db.select({
       id: napametProgramTable.stavkaId,
