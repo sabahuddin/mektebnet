@@ -45,15 +45,19 @@ export default function IlmihalSvePage() {
     2: false,
     3: false,
   });
+  const [openDodaci, setOpenDodaci] = useState<Record<number, boolean>>({
+    1: false,
+    2: false,
+    3: false,
+  });
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim().toLowerCase();
   // Filter po predmetu (Ahlak, Akaid, Ibadat, ...). "" = svi predmeti.
   // Vrijednosti dolaze iz priprema HTML-a; nove se pojave automatski čim
   // muallim upiše novi predmet u pripremu lekcije.
   const [predmet, setPredmet] = useState<string>("");
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreateLevel, setShowCreateLevel] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState("");
-  const [newLevel, setNewLevel] = useState(1);
   const [newSubject, setNewSubject] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -86,6 +90,8 @@ export default function IlmihalSvePage() {
     () => new Set(lekcije.filter((l) => l.zavrseno).map((l) => l.id)),
     [lekcije],
   );
+  const isDodatakLesson = (lesson: Lekcija) =>
+    lesson.slug.startsWith("dodatak-nivo") || lesson.autorMuallimId != null;
 
   // Lista jedinstvenih predmeta (sortirana po broju lekcija, najveći prvo).
   // Lekcije bez predmeta dobijaju zasebnu opciju "Bez predmeta" na dnu.
@@ -162,13 +168,13 @@ export default function IlmihalSvePage() {
     }
   }
 
-  async function createLessonProposal() {
+  async function createLessonProposal(nivo: number) {
     if (!token || !newTitle.trim()) return;
     setCreating(true);
     try {
       const result = await apiRequest<{ slug: string }>("POST", "/admin/ilmihal", {
         naslov: newTitle.trim(),
-        nivo: newLevel,
+        nivo,
         predmet: newSubject.trim(),
         contentHtml: `<h1>${newTitle.trim()}</h1><p>Unesite sadržaj nove lekcije.</p>`,
       }, token);
@@ -192,6 +198,8 @@ export default function IlmihalSvePage() {
 
   const toggleNivo = (n: number) =>
     setOpenNivoi((prev) => ({ ...prev, [n]: !prev[n] }));
+  const toggleDodatak = (n: number) =>
+    setOpenDodaci((prev) => ({ ...prev, [n]: !prev[n] }));
 
   return (
     <Layout>
@@ -220,30 +228,6 @@ export default function IlmihalSvePage() {
             {t("Pregledaj sve lekcije po nivoima i otvori bilo koju")}
           </p>
         </div>
-
-        {isMuallim && (
-          <div className="mx-auto mb-6 max-w-2xl rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
-            <button type="button" onClick={() => setShowCreate((value) => !value)} className="flex w-full items-center justify-between gap-3 text-left">
-              <div>
-                <h2 className="font-extrabold text-amber-950">{t("Predloži novu lekciju")}</h2>
-                <p className="mt-1 text-xs text-amber-800">{t("Lekcija je odmah privatna za vas i vaše učenike. Admin je može objaviti svima.")}</p>
-              </div>
-              <Plus className={`h-5 w-5 shrink-0 text-amber-700 transition-transform ${showCreate ? "rotate-45" : ""}`} />
-            </button>
-            {showCreate && (
-              <div className="mt-4 grid gap-3 border-t border-amber-100 pt-4 sm:grid-cols-2">
-                <input value={newTitle} onChange={(event) => setNewTitle(event.target.value)} placeholder={t("Naslov lekcije")} className="rounded-xl border border-amber-200 px-3 py-2 text-sm sm:col-span-2" />
-                <select value={newLevel} onChange={(event) => setNewLevel(Number(event.target.value))} className="rounded-xl border border-amber-200 px-3 py-2 text-sm">
-                  {[1, 2, 3].map((level) => <option key={level} value={level}>{t("Nivo")} {level}</option>)}
-                </select>
-                <input value={newSubject} onChange={(event) => setNewSubject(event.target.value)} placeholder={t("Predmet (opcionalno)")} className="rounded-xl border border-amber-200 px-3 py-2 text-sm" />
-                <Button disabled={creating || !newTitle.trim()} onClick={() => void createLessonProposal()} className="rounded-xl sm:col-span-2">
-                  <Plus className="mr-1 h-4 w-4" /> {creating ? t("Kreiranje…") : t("Kreiraj nacrt i otvori editor")}
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
 
         <div className="max-w-2xl mx-auto mb-8 px-1">
           <div className="flex flex-col sm:flex-row gap-2">
@@ -309,24 +293,29 @@ export default function IlmihalSvePage() {
 
         {loading ? (
           <div className="text-center text-amber-800/70 py-10">{t("Učitavanje…")}</div>
-        ) : total === 0 ? (
+        ) : total === 0 && !isAdmin && !isMuallim ? (
           <div className="text-center text-amber-800/70 py-10">
             {t("Trenutno nema dostupnih lekcija.")}
           </div>
         ) : (
           <div className="space-y-4">
             {[1, 2, 3].map((nivo) => {
-              const allItems = groupedByNivo[nivo];
-              const items = filteredByNivo[nivo];
-              if (!allItems || allItems.length === 0) return null;
+              const allItems = groupedByNivo[nivo].filter((lesson) => !isDodatakLesson(lesson));
+              const items = filteredByNivo[nivo].filter((lesson) => !isDodatakLesson(lesson));
+              const dodatakAllItems = groupedByNivo[nivo].filter(isDodatakLesson);
+              const dodatakItems = filteredByNivo[nivo].filter(isDodatakLesson);
+              if (allItems.length === 0 && dodatakAllItems.length === 0 && !isAdmin && !isMuallim) return null;
               // Pri aktivnoj pretrazi sakrij nivoe bez rezultata.
-              if (isSearching && items.length === 0) return null;
+              if (isSearching && items.length === 0 && dodatakItems.length === 0) return null;
               const info = NIVO_INFO[nivo];
               const nivoDone = allItems.filter((l) => l.zavrseno).length;
+              const dodatakDone = dodatakAllItems.filter((l) => l.zavrseno).length;
               // Pri pretrazi: forsiraj otvoren akordion da se rezultati vide.
               const isOpen = isSearching ? true : !!openNivoi[nivo];
+              const isDodatakOpen = isSearching ? true : !!openDodaci[nivo];
               return (
-                <section key={nivo} data-testid={`section-nivo-${nivo}`}>
+                <Fragment key={nivo}>
+                {(!isSearching || items.length > 0) && <section data-testid={`section-nivo-${nivo}`}>
                   <button
                     type="button"
                     onClick={() => !isSearching && toggleNivo(nivo)}
@@ -497,18 +486,127 @@ export default function IlmihalSvePage() {
                         });
                       })()}
                     </ol>
-                    {isAdmin && (
-                      <button
-                        onClick={() => createDodatak(nivo)}
-                        className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl border-2 border-dashed border-amber-400 text-amber-800 font-bold text-sm hover:bg-white/60 active:bg-white/80 transition-colors"
-                        data-testid={`button-add-dodatak-${nivo}`}
-                      >
-                        <Plus className="w-4 h-4" /> {t("Dodaj DODATAK lekciju")}
-                      </button>
-                    )}
                   </div>
                   )}
-                </section>
+                </section>}
+                {(!isSearching || dodatakItems.length > 0) && (
+                  <section className="mt-3" data-testid={`section-dodatak-${nivo}`}>
+                    <button
+                      type="button"
+                      onClick={() => !isSearching && toggleDodatak(nivo)}
+                      aria-expanded={isDodatakOpen}
+                      aria-controls={`dodatak-panel-${nivo}`}
+                      className={`w-full flex items-center justify-between gap-3 rounded-2xl border-2 border-dashed border-amber-300 bg-white/75 px-3 py-3 text-left shadow-sm transition-colors ${
+                        isSearching ? "cursor-default" : "hover:bg-amber-50 active:bg-amber-100"
+                      }`}
+                      data-testid={`button-toggle-dodatak-${nivo}`}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                          {t("Dodatne lekcije")}
+                        </div>
+                        <h2 className="text-xl font-extrabold text-amber-900">
+                          {t("DODATAK")} {nivo}
+                        </h2>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        {token && dodatakAllItems.length > 0 && (
+                          <div className="text-xs font-bold text-amber-800/80">
+                            {dodatakDone} / {dodatakAllItems.length}
+                          </div>
+                        )}
+                        {!isSearching && (
+                          <ChevronDown
+                            className={`h-5 w-5 text-amber-800/80 transition-transform ${isDodatakOpen ? "rotate-180" : ""}`}
+                            aria-hidden="true"
+                          />
+                        )}
+                      </div>
+                    </button>
+
+                    {isDodatakOpen && (
+                      <div id={`dodatak-panel-${nivo}`} className="mt-2 rounded-2xl border border-amber-200 bg-white/80 p-2 shadow-sm sm:p-3">
+                        {dodatakItems.length > 0 ? (
+                          <ol className="divide-y divide-amber-100">
+                            {dodatakItems.map((lesson, index) => (
+                              <li key={lesson.id}>
+                                <Link
+                                  href={`/ilmihal/${lesson.slug}`}
+                                  className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-amber-50 active:bg-amber-100"
+                                  data-testid={`link-dodatak-${lesson.slug}`}
+                                >
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-50 text-sm font-extrabold text-amber-900 ring-2 ring-amber-200">
+                                    {index + 1}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate text-sm font-bold text-amber-900 sm:text-base">{lesson.naslov}</div>
+                                    {lesson.predmet && <div className="mt-0.5 text-xs text-amber-700/70">{lesson.predmet}</div>}
+                                  </div>
+                                  {lesson.zavrseno
+                                    ? <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" aria-label={t("Završeno")} />
+                                    : <BookOpen className="h-5 w-5 shrink-0 text-amber-700/80" aria-hidden="true" />}
+                                </Link>
+                              </li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p className="px-3 py-4 text-center text-sm text-amber-800/65">{t("Još nema dodatnih lekcija.")}</p>
+                        )}
+
+                        {(isMuallim || isAdmin) && (
+                          <div className="mt-2 border-t border-amber-100 pt-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isAdmin) {
+                                  void createDodatak(nivo);
+                                  return;
+                                }
+                                setShowCreateLevel((current) => current === nivo ? null : nivo);
+                                setNewTitle("");
+                                setNewSubject("");
+                              }}
+                              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-amber-400 px-3 py-3 text-sm font-bold text-amber-800 transition-colors hover:bg-amber-50 active:bg-amber-100"
+                              data-testid={`button-add-dodatak-${nivo}`}
+                            >
+                              <Plus className="h-4 w-4" /> {t("Dodaj novu lekciju")}
+                            </button>
+
+                            {isMuallim && showCreateLevel === nivo && (
+                              <div className="mt-3 grid gap-3 rounded-xl bg-amber-50/70 p-3 sm:grid-cols-2">
+                                <input
+                                  value={newTitle}
+                                  onChange={(event) => setNewTitle(event.target.value)}
+                                  placeholder={t("Naslov lekcije")}
+                                  className="rounded-xl border border-amber-200 px-3 py-2 text-sm sm:col-span-2"
+                                  autoFocus
+                                />
+                                <input
+                                  value={newSubject}
+                                  onChange={(event) => setNewSubject(event.target.value)}
+                                  placeholder={t("Predmet (opcionalno)")}
+                                  className="rounded-xl border border-amber-200 px-3 py-2 text-sm"
+                                />
+                                <Button
+                                  disabled={creating || !newTitle.trim()}
+                                  onClick={() => void createLessonProposal(nivo)}
+                                  className="rounded-xl"
+                                >
+                                  <Plus className="mr-1 h-4 w-4" />
+                                  {creating ? t("Kreiranje…") : t("Kreiraj i otvori editor")}
+                                </Button>
+                                <p className="text-xs text-amber-800 sm:col-span-2">
+                                  {t("Lekcija je odmah privatna za vas i vaše učenike. Admin je može objaviti svima.")}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                )}
+                </Fragment>
               );
             })}
           </div>
