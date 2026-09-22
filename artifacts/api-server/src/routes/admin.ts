@@ -1718,7 +1718,10 @@ router.get("/korisnici", async (req, res) => {
       }).from(usersTable),
       db.select().from(pretplateTable)
         .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id)),
-      db.select({ ucenikId: roditeljUcenikTable.ucenikId })
+      db.select({
+        roditeljId: roditeljUcenikTable.roditeljId,
+        ucenikId: roditeljUcenikTable.ucenikId,
+      })
         .from(roditeljUcenikTable)
         .where(eq(roditeljUcenikTable.status, "approved")),
       db.select({
@@ -1738,13 +1741,31 @@ router.get("/korisnici", async (req, res) => {
     const familyChildren = new Set(veze.map((v) => v.ucenikId));
     const studentProfiles = new Map(ucenikProfili.map((p) => [p.userId, p]));
     const muallimMektebi = new Map(muallimProfili.map((p) => [p.userId, p.mektebId]));
+    const mektebChildren = new Set(
+      ucenikProfili
+        .filter((profile) => Boolean(
+          profile.mektebId
+          || (profile.muallimId && muallimMektebi.get(profile.muallimId)),
+        ))
+        .map((profile) => profile.userId),
+    );
+    const mektebParents = new Set(
+      veze
+        .filter((veza) => mektebChildren.has(veza.ucenikId))
+        .map((veza) => veza.roditeljId),
+    );
 
     res.json(korisnici.map((k) => {
       let billingPlan: "individual" | "family" | null = null;
       let billingCoverage: "self" | "family" | "mekteb" | null = null;
       if (k.role === "roditelj") {
-        billingPlan = "family";
-        billingCoverage = "self";
+        const isSelfRegistered = Boolean(k.email?.trim());
+        if (isSelfRegistered) {
+          billingPlan = "family";
+          billingCoverage = "self";
+        } else if (mektebParents.has(k.id)) {
+          billingCoverage = "mekteb";
+        }
       } else if (k.role === "ucenik") {
         const profile = studentProfiles.get(k.id);
         const coveredByMekteb = Boolean(
@@ -1793,6 +1814,10 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
     const [account] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (!account || !["roditelj", "ucenik"].includes(account.role)) {
       res.status(404).json({ error: "Pretplatnički račun nije pronađen" });
+      return;
+    }
+    if (account.role === "roditelj" && !account.email?.trim()) {
+      res.status(409).json({ error: "Ovaj roditelj je kreiran uz učenika i nema samostalnu porodičnu pretplatu" });
       return;
     }
 

@@ -626,6 +626,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
     const [account] = await db.select({
       isActive: usersTable.isActive,
       trialUntil: usersTable.trialUntil,
+      email: usersTable.email,
     }).from(usersTable).where(eq(usersTable.id, userId));
     if (!account) {
       res.status(404).json({ error: "Korisnik nije pronađen" });
@@ -639,49 +640,52 @@ router.get("/subscription", requireAuth, async (req, res) => {
     let storedBillingRegion: "bih" | "dijaspora" | null = null;
 
     if (role === "roditelj") {
-      const links = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
-        .from(roditeljUcenikTable)
-        .where(and(
-          eq(roditeljUcenikTable.roditeljId, userId),
-          eq(roditeljUcenikTable.status, "approved"),
-        ));
-      const childIds = links.map((link) => link.ucenikId);
-      const childProfiles = childIds.length
-        ? await db.select({
-            mektebId: ucenikProfiliTable.mektebId,
-            muallimId: ucenikProfiliTable.muallimId,
-          }).from(ucenikProfiliTable)
-            .where(inArray(ucenikProfiliTable.userId, childIds))
-        : [];
-      let mektebId = childProfiles.find((profile) => profile.mektebId)?.mektebId ?? null;
-      if (!mektebId) {
-        const teacherIds = childProfiles
-          .map((profile) => profile.muallimId)
-          .filter((id): id is number => id !== null);
-        const [teacherProfile] = teacherIds.length
-          ? await db.select({ mektebId: muallimProfiliTable.mektebId })
-              .from(muallimProfiliTable)
-              .where(inArray(muallimProfiliTable.userId, teacherIds))
-              .limit(1)
-          : [];
-        mektebId = teacherProfile?.mektebId ?? null;
-      }
-      const [mekteb] = mektebId
-        ? await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId)).limit(1)
-        : [];
-      if (mekteb) {
-        coverage = "mekteb";
-        planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
-        subscriptionOwnerId = mekteb.glavniMuallimId;
-        storedBillingRegion =
-          mekteb.billingRegion === "bih" || mekteb.billingRegion === "dijaspora"
-            ? mekteb.billingRegion
-            : null;
-      } else {
+      const isSelfRegistered = Boolean(account.email?.trim());
+      if (isSelfRegistered) {
         coverage = "self";
         planType = "family";
         subscriptionOwnerId = userId;
         canRenew = true;
+      } else {
+        const links = await db.select({ ucenikId: roditeljUcenikTable.ucenikId })
+          .from(roditeljUcenikTable)
+          .where(and(
+            eq(roditeljUcenikTable.roditeljId, userId),
+            eq(roditeljUcenikTable.status, "approved"),
+          ));
+        const childIds = links.map((link) => link.ucenikId);
+        const childProfiles = childIds.length
+          ? await db.select({
+              mektebId: ucenikProfiliTable.mektebId,
+              muallimId: ucenikProfiliTable.muallimId,
+            }).from(ucenikProfiliTable)
+              .where(inArray(ucenikProfiliTable.userId, childIds))
+          : [];
+        let mektebId = childProfiles.find((profile) => profile.mektebId)?.mektebId ?? null;
+        if (!mektebId) {
+          const teacherIds = childProfiles
+            .map((profile) => profile.muallimId)
+            .filter((id): id is number => id !== null);
+          const [teacherProfile] = teacherIds.length
+            ? await db.select({ mektebId: muallimProfiliTable.mektebId })
+                .from(muallimProfiliTable)
+                .where(inArray(muallimProfiliTable.userId, teacherIds))
+                .limit(1)
+            : [];
+          mektebId = teacherProfile?.mektebId ?? null;
+        }
+        const [mekteb] = mektebId
+          ? await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId)).limit(1)
+          : [];
+        if (mekteb) {
+          coverage = "mekteb";
+          planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
+          subscriptionOwnerId = mekteb.glavniMuallimId;
+          storedBillingRegion =
+            mekteb.billingRegion === "bih" || mekteb.billingRegion === "dijaspora"
+              ? mekteb.billingRegion
+              : null;
+        }
       }
     } else if (role === "muallim") {
       const [profile] = await db.select({
