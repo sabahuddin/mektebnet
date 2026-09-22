@@ -105,10 +105,10 @@ export default function IlmihalSvePage() {
     }
     const sorted = Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "bs"))
-      .map(([value, count]) => ({ value, label: value, count }));
+      .map(([value, count]) => ({ value, label: t(value), count }));
     if (bez > 0) sorted.push({ value: BEZ_PREDMETA, label: t("Bez predmeta"), count: bez });
     return sorted;
-  }, [lekcije]);
+  }, [lekcije, t]);
 
   // Pretraga + filter po predmetu. Kada je bilo koji filter aktivan, otvori
   // sve nivoe koji imaju match (da rezultati budu vidljivi bez ručnog otvaranja).
@@ -540,7 +540,7 @@ export default function IlmihalSvePage() {
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm font-bold text-amber-900 sm:text-base">{lesson.naslov}</div>
-                                    {lesson.predmet && <div className="mt-0.5 text-xs text-amber-700/70">{lesson.predmet}</div>}
+                                    {lesson.predmet && <div className="mt-0.5 text-xs text-amber-700/70">{t(lesson.predmet)}</div>}
                                   </div>
                                   {lesson.zavrseno
                                     ? <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" aria-label={t("Završeno")} />

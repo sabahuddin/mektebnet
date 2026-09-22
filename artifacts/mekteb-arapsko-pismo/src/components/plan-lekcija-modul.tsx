@@ -21,6 +21,7 @@ export interface PlanLekcija {
 export interface PlanIlmihalLekcija {
   id: number;
   naslov: string;
+  izvorniNaslov?: string;
   nivo: number;
   slug?: string;
 }
@@ -215,7 +216,7 @@ export function PlanLekcijaModul({ grupaId, readOnly = false, onOtvoriKalendar }
                     const unos = unosi[kljuc];
                     const naslov = unos?.naslov ?? postojeci?.lekcijaNaslov ?? "";
                     const tip = unos?.tip ?? postojeci?.lekcijaTip ?? "obrada";
-                    const poznataLekcija = lekcije.some(l => l.naslov === naslov);
+                    const poznataLekcija = lekcije.some(l => (l.izvorniNaslov ?? l.naslov) === naslov);
                     const slobodanUnos = unos?.slobodanUnos ?? (naslov !== "" && !poznataLekcija);
                     const izmijenjeno = !!unos && (naslov !== (postojeci?.lekcijaNaslov ?? "") || tip !== (postojeci?.lekcijaTip ?? "obrada"));
                     const postaviUnos = (izmjene: Partial<{ naslov: string; tip: string; slobodanUnos: boolean }>) =>
@@ -264,7 +265,7 @@ export function PlanLekcijaModul({ grupaId, readOnly = false, onOtvoriKalendar }
                                 if (nivoLekcije.length === 0) return null;
                                 return (
                                   <optgroup key={nivo} label={t("Nivo {n}", { n: String(nivo) })}>
-                                    {nivoLekcije.map(l => <option key={l.id} value={l.naslov}>{l.naslov}</option>)}
+                                    {nivoLekcije.map(l => <option key={l.id} value={l.izvorniNaslov ?? l.naslov}>{l.naslov}</option>)}
                                   </optgroup>
                                 );
                               })}

@@ -48,6 +48,7 @@ import { normalizeUploadedFilename } from "../lib/file-names.js";
 import { getGlobalNapametKatalog, getNapametKatalog } from "../data/napamet.js";
 import { getStaticVjezba } from "../lib/static-vjezbe.js";
 import { jeNasaVjezba } from "../lib/nase-vjezbe.js";
+import { getLang, overlayRows } from "../lib/content-translatable.js";
 
 const router = Router();
 const ukupneOcjeneFilter = or(
@@ -4012,7 +4013,12 @@ router.get("/lekcije-za-plan", async (req, res) => {
       dostupnost: ilmihalLekcijeTable.dostupnost,
     }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
 
-    res.json(lekcije);
+    const izvorniNaslovPoId = new Map(lekcije.map((lekcija) => [lekcija.id, lekcija.naslov]));
+    await overlayRows(lekcije, "ilmihal_lekcije", getLang(req));
+    res.json(lekcije.map((lekcija) => ({
+      ...lekcija,
+      izvorniNaslov: izvorniNaslovPoId.get(lekcija.id) ?? lekcija.naslov,
+    })));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

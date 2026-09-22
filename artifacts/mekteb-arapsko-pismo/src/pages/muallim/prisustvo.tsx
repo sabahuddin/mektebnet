@@ -221,7 +221,7 @@ export default function PrisustvoPage() {
                               : "bg-muted/50 text-muted-foreground border-transparent hover:border-border"
                           }`}
                         >
-                          {opt.icon} {opt.label}
+                          {opt.icon} {t(opt.label)}
                         </button>
                       ))}
                     </div>

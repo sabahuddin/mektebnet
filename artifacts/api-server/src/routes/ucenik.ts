@@ -28,6 +28,7 @@ import { streamDokument } from "../lib/dokumenti.js";
 import { normalizeUploadedFilename } from "../lib/file-names.js";
 import { getStudentGodine, razrijesiGodinu } from "../lib/mektebska-godina.js";
 import { getNapametKatalog } from "../data/napamet.js";
+import { getLang, overlayRows } from "../lib/content-translatable.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("ucenik"));
@@ -313,8 +314,26 @@ router.get("/plan-lekcija", async (req, res) => {
       .where(where)
       .orderBy(asc(planLekcijaTable.datum), asc(planLekcijaTable.redoslijed));
 
+    const planNaslovi = [...new Set(lekcije.map((lekcija) => lekcija.lekcijaNaslov.trim()).filter(Boolean))];
+    const katalogLekcije = planNaslovi.length
+      ? await db.select({
+          id: ilmihalLekcijeTable.id,
+          naslov: ilmihalLekcijeTable.naslov,
+        }).from(ilmihalLekcijeTable).where(inArray(ilmihalLekcijeTable.naslov, planNaslovi))
+      : [];
+    const izvorniNaslovPoId = new Map(katalogLekcije.map((lekcija) => [lekcija.id, lekcija.naslov]));
+    await overlayRows(katalogLekcije, "ilmihal_lekcije", getLang(req));
+    const prijevodPoNaslovu = new Map(katalogLekcije.map((lekcija) => [
+      izvorniNaslovPoId.get(lekcija.id) ?? lekcija.naslov,
+      lekcija.naslov,
+    ]));
+
     // `redoslijed` je 0-baziran u bazi; učenik i roditelj vide broj časa.
-    res.json(lekcije.map(l => ({ ...l, cas: (l.redoslijed ?? 0) + 1 })));
+    res.json(lekcije.map(l => ({
+      ...l,
+      lekcijaNaslov: prijevodPoNaslovu.get(l.lekcijaNaslov) ?? l.lekcijaNaslov,
+      cas: (l.redoslijed ?? 0) + 1,
+    })));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }
