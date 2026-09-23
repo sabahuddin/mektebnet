@@ -13,7 +13,7 @@ interface AyahFlowProps {
   ayahs: FlowAyah[];
   activeKey: string | null;
   onAyahClick: (a: FlowAyah) => void;
-  /** Prikaži zaglavlje + bismillu na početku svake sure (za Mushaf stranicu). */
+  /** Prikaži zaglavlje + bismillu samo kad stranica sadrži početak sure. */
   showSurahDividers?: boolean;
 }
 
@@ -65,7 +65,7 @@ export function AyahFlow({ ayahs, activeKey, onAyahClick, showSurahDividers }: A
     <div>
       {groups.map((group) => (
         <div key={`grp-${group[0].surah}-${group[0].numberInSurah}`}>
-          {showSurahDividers && <SurahDivider ayah={group[0]} />}
+          {showSurahDividers && group[0].numberInSurah === 1 && <SurahDivider ayah={group[0]} />}
           <div
             dir="rtl"
             className="text-right"

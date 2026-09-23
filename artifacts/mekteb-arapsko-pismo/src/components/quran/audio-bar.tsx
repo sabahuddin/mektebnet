@@ -1,4 +1,5 @@
 import { Play, Pause, Square, Repeat } from "lucide-react";
+import { Link } from "wouter";
 import { RECITERS } from "@/lib/quran";
 import { useLanguage } from "@/context/language";
 
@@ -35,9 +36,15 @@ export function AudioBar({
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 border-t border-emerald-100 bg-white/95 backdrop-blur-md shadow-[0_-6px_24px_rgba(0,0,0,0.08)]">
       <div className="max-w-4xl mx-auto px-3 sm:px-5 py-2.5 sm:py-3 grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_minmax(240px,1.4fr)_minmax(0,1fr)] items-center gap-x-3 gap-y-2">
-        <label className="min-w-0 flex flex-col gap-1 text-[11px] font-bold text-muted-foreground">
-          {t("Učač")}
+        <div className="min-w-0 flex flex-col gap-1 text-[11px] font-bold text-muted-foreground">
+          <span className="flex items-center justify-between gap-1">
+            <label htmlFor="quran-reciter">{t("Učač")}</label>
+            <Link href="/kuran" className="text-primary hover:underline font-extrabold" data-testid="link-sure-player">
+              {t("Sure")}
+            </Link>
+          </span>
           <select
+            id="quran-reciter"
             value={reciterId}
             onChange={(e) => onReciterChange(e.target.value)}
             className="w-full h-9 rounded-xl bg-emerald-50 text-foreground text-xs font-bold px-2 border border-emerald-100 focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
@@ -47,13 +54,13 @@ export function AudioBar({
               <option key={r.id} value={r.id}>{t(r.label)}</option>
             ))}
           </select>
-        </label>
+        </div>
 
         <div className="col-span-2 row-start-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 flex items-center justify-center gap-2 min-w-0">
           <button onClick={onStop} disabled={!canStop}
-            className="shrink-0 w-9 h-9 rounded-full bg-muted text-muted-foreground flex items-center justify-center disabled:opacity-40"
+            className="game-button shrink-0 w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md hover:bg-red-700 disabled:opacity-90"
             data-testid="btn-stop" aria-label={t("Zaustavi")}>
-            <Square className="w-4 h-4" />
+            <Square className="w-5 h-5" />
           </button>
           <button onClick={onToggle}
             className="game-button shrink-0 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md"
@@ -74,15 +81,20 @@ export function AudioBar({
           </label>
         </div>
 
-        <label className="min-w-0 flex flex-col gap-1 text-[11px] font-bold text-muted-foreground">
-          <span className="flex items-center justify-end gap-1"><Repeat className="h-3 w-3" />{t("Ponavljanje ajeta")}</span>
-          <select value={repeatCount} onChange={(e) => onRepeatCountChange(Number(e.target.value))}
+        <div className="min-w-0 flex flex-col gap-1 text-[11px] font-bold text-muted-foreground">
+          <span className="flex items-center justify-between gap-1">
+            <Link href="/kuran/stranica/1" className="text-primary hover:underline font-extrabold" data-testid="link-stranice-player">
+              {t("Stranice")}
+            </Link>
+            <label htmlFor="quran-repeat" className="flex items-center gap-1"><Repeat className="h-3 w-3" />{t("Ponavljanje ajeta")}</label>
+          </span>
+          <select id="quran-repeat" value={repeatCount} onChange={(e) => onRepeatCountChange(Number(e.target.value))}
             aria-label={t("Ponavljanje ajeta")} data-testid="select-ponavljanje"
             className="w-full h-9 rounded-xl bg-emerald-50 text-foreground text-xs font-bold px-2 border border-emerald-100 focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer">
             {Array.from({ length: 10 }, (_, index) => index + 1).map(count =>
               <option key={count} value={count}>{t("{n} puta", { n: String(count) })}</option>)}
           </select>
-        </label>
+        </div>
       </div>
     </div>
   );

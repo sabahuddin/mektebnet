@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AyahFlow, type FlowAyah } from "@/components/quran/ayah-flow";
 import { AudioBar } from "@/components/quran/audio-bar";
 import { useQuranAudio, useReciter, type PlayItem } from "@/hooks/use-quran-audio";
-import { ChevronLeft } from "lucide-react";
 import {
   fetchSurah,
   revelationLabel,
@@ -71,23 +70,6 @@ export default function KuranSuraPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto pb-44 sm:pb-32">
-        {/* Header sure */}
-        <div className="mb-5 flex items-center justify-between gap-2">
-          <Link
-            href="/kuran"
-            className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            {t("Sve sure")}
-          </Link>
-          <Link
-            href="/kuran/stranica/1"
-            className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
-          >
-            {t("Po stranici (Mushaf)")}
-          </Link>
-        </div>
-
         {isLoading ? (
           <Skeleton className="h-32 rounded-3xl mb-4" />
         ) : meta ? (

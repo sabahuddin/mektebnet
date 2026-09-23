@@ -14,3 +14,10 @@ Za quran-uthmani tekst (api.alquran.cloud) generički/subsetovani Uthmanic woff2
 Kur'an se čita zdesna nalijevo kao štampani Mushaf, pa: **Sljedeća = LIJEVO (← Sljedeća), Prethodna = DESNO (Prethodna →)** — suprotno od latiničnih knjiga. Vrijedi i za page mode i za prev/next sure.
 
 **How to apply:** kad gradiš bilo koju prev/next kontrolu unutar Kur'ana, postavi "naprijed" dugme lijevo sa strelicom ←.
+
+## Bismilla u prikazu po stranicama
+Bismilla i naslov sure prikazuju se samo kad stranica sadrži **prvi ajet nove sure**, ne na vrhu svake stranice koja nastavlja istu suru. El-Fatiha ima bismillu kao prvi ajet, a Et-Tevba je nema.
+
+**Why:** korisnik je ukazao da ponavljanje bismille i naslova sure na svakoj Mushaf stranici netačno predstavlja tekst i zauzima prostor za ajete.
+
+**How to apply:** za oznaku početka sure gledaj broj ajeta unutar sure, ne prvi ajet učitan na stranici. Na stranici koja počinje usred sure odmah prikaži ajete.

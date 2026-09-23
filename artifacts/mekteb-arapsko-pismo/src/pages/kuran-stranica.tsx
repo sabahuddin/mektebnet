@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useLocation } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AyahFlow, type FlowAyah } from "@/components/quran/ayah-flow";
 import { AudioBar } from "@/components/quran/audio-bar";
 import { useQuranAudio, useReciter, type PlayItem } from "@/hooks/use-quran-audio";
-import { ChevronLeft } from "lucide-react";
 import {
   fetchPage,
   surahName,
@@ -78,27 +77,17 @@ export default function KuranStranicaPage() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto pb-44 sm:pb-32">
-        <div className="mb-5 flex items-center justify-between gap-2">
-          <Link
-            href="/kuran"
-            className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            {t("Sve sure")}
-          </Link>
-        </div>
-
         {/* Odabir stranice */}
-        <div className="rounded-3xl bg-gradient-to-br from-primary to-teal-700 text-primary-foreground p-5 mb-6">
-          <div className="text-xs font-bold uppercase tracking-wider text-white/70 text-center mb-3">
+        <div className="rounded-2xl bg-gradient-to-br from-primary to-teal-700 text-primary-foreground px-3 py-3 sm:px-5 mb-3 flex flex-wrap items-center justify-center sm:justify-between gap-x-3 gap-y-1">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-white/85 text-center">
             {t("Mushaf · stranica {br} / {ukupno}", { br: String(pageNum), ukupno: String(QURAN_PAGES) })}
           </div>
           {/* RTL redoslijed (kao Mushaf): Sljedeća lijevo, Prethodna desno */}
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
             <button
               onClick={() => goToPage(pageNum + 1)}
               disabled={pageNum >= QURAN_PAGES}
-              className="px-3 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-sm disabled:opacity-40 transition-colors"
+              className="px-1.5 sm:px-3 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-[11px] sm:text-sm whitespace-nowrap disabled:opacity-40 transition-colors"
               data-testid="btn-sljedeca-stranica"
             >
               {t("← Sljedeća")}
@@ -114,13 +103,13 @@ export default function KuranStranicaPage() {
                 value={pageInput}
                 onChange={(e) => setPageInput(e.target.value.replace(/[^0-9]/g, ""))}
                 inputMode="numeric"
-                className="w-16 h-10 rounded-xl bg-white text-foreground text-center font-extrabold focus:outline-none focus:ring-2 focus:ring-gold"
+                className="w-12 sm:w-16 h-10 rounded-xl bg-white text-foreground text-center font-extrabold focus:outline-none focus:ring-2 focus:ring-gold"
                 data-testid="input-stranica"
                 aria-label={t("Broj stranice")}
               />
               <button
                 type="submit"
-                className="px-3 h-10 rounded-xl bg-gold text-gold-foreground font-bold text-sm"
+                className="px-2 sm:px-3 h-10 rounded-xl bg-gold text-gold-foreground font-bold text-xs sm:text-sm"
                 data-testid="btn-idi-stranica"
               >
                 {t("Idi")}
@@ -129,7 +118,7 @@ export default function KuranStranicaPage() {
             <button
               onClick={() => goToPage(pageNum - 1)}
               disabled={pageNum <= 1}
-              className="px-3 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-sm disabled:opacity-40 transition-colors"
+              className="px-1.5 sm:px-3 h-10 rounded-xl bg-white/15 hover:bg-white/25 font-bold text-[11px] sm:text-sm whitespace-nowrap disabled:opacity-40 transition-colors"
               data-testid="btn-prethodna-stranica"
             >
               {t("Prethodna →")}
