@@ -17,6 +17,7 @@ interface Entry {
   rank: number;
   userId: number;
   displayName: string;
+  username: string;
   mektebName: string | null;
   bestScore: number;
   totalGames: number;
@@ -240,11 +241,11 @@ export default function Ljestvica() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-foreground truncate">
-                      {e.displayName}
+                      {scope === "global" ? e.username : e.displayName}
                       {isMe && <span className="ml-2 text-xs font-bold text-primary">{t("(ja)")}</span>}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {e.mektebName ? (
+                      {scope !== "global" && e.mektebName ? (
                         <>
                           <span className="inline-flex items-center gap-1" data-testid={`mekteb-${e.userId}`}>
                             <School className="w-3 h-3" /> {e.mektebName}

@@ -12,7 +12,7 @@ export default function PrivatnostPage() {
             <ShieldCheck className="w-7 h-7" />
           </div>
           <h1 className="text-3xl font-black text-foreground">{t("Pravila privatnosti")}</h1>
-          <p className="text-sm text-muted-foreground mt-2">{t("Posljednje ažuriranje")}: {t("juni 2026.")}</p>
+          <p className="text-sm text-muted-foreground mt-2">{t("Posljednje ažuriranje")}: septembar 2026.</p>
         </div>
 
         <div className="bg-white rounded-3xl border border-border/40 shadow-sm p-6 sm:p-10 space-y-8 text-[15px] leading-relaxed text-foreground/80">
@@ -68,7 +68,7 @@ export default function PrivatnostPage() {
               <li>Račune za djecu kreiraju muallimi ili roditelji/staratelji.</li>
               <li>Ne prikupljamo više podataka nego što je neophodno za funkcioniranje Platforme.</li>
               <li>Podaci djece nisu javno vidljivi izvan Platforme.</li>
-              <li>Na rang-listama se prikazuju samo korisničko ime i bodovi.</li>
+              <li>Na globalnoj rang-listi igara prikazuju se korisničko ime i bodovi, bez punog imena i naziva mekteba.</li>
               <li>Povezivanje roditelja s djetetom zahtijeva odobrenje muallima.</li>
             </ul>
           </section>
@@ -85,6 +85,11 @@ export default function PrivatnostPage() {
               <li>roditeljima — pristup podacima o napretku vlastite djece (nakon odobrenja);</li>
               <li>administratorima mekteba — agregirane statistike.</li>
             </ul>
+            <p className="mt-2">
+              Muallimi mogu izvesti ili ispisati podatke svojih ovlaštenih grupa radi nastave.
+              Nakon preuzimanja kopije izvan Platforme, dužni su je zaštititi i ne dijeliti
+              neovlaštenim osobama.
+            </p>
           </section>
 
           <section>
@@ -110,7 +115,9 @@ export default function PrivatnostPage() {
           <section>
             <h2 className="text-lg font-bold text-foreground mb-2">8. {t("Čuvanje podataka")}</h2>
             <p>
-              Vaše podatke čuvamo dok je korisnički račun aktivan ili dok su potrebni za pružanje
+              Evidentiramo datum kada su potvrđeni Uvjeti korištenja i čitanje Pravila privatnosti,
+              a za muallime i roditelje i datum odgovarajuće izjave. Te zapise koristimo da utvrdimo
+              koje su potvrde date. Vaše podatke čuvamo dok je korisnički račun aktivan ili dok su potrebni za pružanje
               usluga. Nakon brisanja računa, podaci se trajno uklanjaju u razumnom roku, osim ako
               zakon nalaže duže čuvanje.
             </p>

@@ -4646,6 +4646,9 @@ router.get("/dzemati-pregled", async (_req, res) => {
         displayName: usersTable.displayName,
         isActive: usersTable.isActive,
         trialUntil: usersTable.trialUntil,
+        termsAcceptedAt: usersTable.termsAcceptedAt,
+        privacyAcknowledgedAt: usersTable.privacyAcknowledgedAt,
+        administratorDeclarationAcceptedAt: usersTable.administratorDeclarationAcceptedAt,
       }).from(muallimProfiliTable)
         .innerJoin(usersTable, eq(usersTable.id, muallimProfiliTable.userId)),
       db.select({
@@ -4714,7 +4717,13 @@ router.get("/dzemati-pregled", async (_req, res) => {
         naziv: mekteb.naziv,
         grad: mekteb.grad,
         isActive: mekteb.isActive,
-        glavniMuallim: glavni ? { id: glavni.userId, displayName: glavni.displayName } : null,
+        glavniMuallim: glavni ? {
+          id: glavni.userId,
+          displayName: glavni.displayName,
+          termsAcceptedAt: glavni.termsAcceptedAt,
+          privacyAcknowledgedAt: glavni.privacyAcknowledgedAt,
+          administratorDeclarationAcceptedAt: glavni.administratorDeclarationAcceptedAt,
+        } : null,
         dozvoljenoMuallima: mekteb.dozvoljenoMuallima,
         brojMuallima: mMuallimi.length,
         aktivnihMuallima: mMuallimi.filter((m) => m.isActive).length,

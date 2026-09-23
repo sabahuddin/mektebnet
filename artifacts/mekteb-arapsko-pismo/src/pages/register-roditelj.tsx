@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/api";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
+import { AcknowledgementFields, emptyAcknowledgements } from "@/components/acknowledgements";
 import {
   bmacRegistrationProductLink,
   formatMektebTotalPrice,
@@ -77,6 +78,7 @@ export default function RegisterRoditeljPage() {
   const [isBiH, setIsBiH] = useState<boolean | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [acknowledgements, setAcknowledgements] = useState(emptyAcknowledgements);
   const [success, setSuccess] = useState(false);
 
   const [ucenikForm, setUcenikForm] = useState({ displayName: "", email: "", godine: "" });
@@ -146,6 +148,7 @@ export default function RegisterRoditeljPage() {
       const r = await apiRequest<{ success: boolean; displayName: string; username: string; password: string; trialUntil: string }>(
         "POST", "/auth/register-ucenik", {
           ...ucenikForm,
+          ...acknowledgements,
           godine: parseInt(ucenikForm.godine),
           billingRegion: isBiH === true ? "bih" : "dijaspora",
         }
@@ -169,6 +172,7 @@ export default function RegisterRoditeljPage() {
       const r = await apiRequest<{ success: boolean; displayName: string; username: string; password: string; trialUntil: string }>(
         "POST", "/auth/register-roditelj-v2", {
           ...roditeljForm,
+          ...acknowledgements,
           billingRegion: isBiH === true ? "bih" : "dijaspora",
         }
       );
@@ -189,7 +193,7 @@ export default function RegisterRoditeljPage() {
     setIsLoading(true);
     try {
       const r = await apiRequest<{ success: boolean; displayName: string; username: string; password: string; trialUntil: string }>(
-        "POST", "/auth/register-mekteb", mektebForm
+        "POST", "/auth/register-mekteb", { ...mektebForm, ...acknowledgements }
       );
       setCredentials({ username: r.username, password: r.password, displayName: r.displayName, trialUntil: r.trialUntil });
       setSuccess(true);
@@ -384,6 +388,7 @@ export default function RegisterRoditeljPage() {
                       </p>
                     </div>
 
+                    <AcknowledgementFields role="ucenik" values={acknowledgements} onChange={setAcknowledgements} />
                     <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />
 
                     <Button type="submit" size="lg" disabled={isLoading}
@@ -430,6 +435,7 @@ export default function RegisterRoditeljPage() {
                       </div>
                     </div>
 
+                    <AcknowledgementFields role="roditelj" values={acknowledgements} onChange={setAcknowledgements} />
                     <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />
 
                     <Button type="submit" size="lg" disabled={isLoading}
@@ -545,6 +551,7 @@ export default function RegisterRoditeljPage() {
                       </div>
                     </div>
 
+                    <AcknowledgementFields role="muallim" values={acknowledgements} onChange={setAcknowledgements} />
                     <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />
 
                     <Button type="submit" size="lg" disabled={isLoading}

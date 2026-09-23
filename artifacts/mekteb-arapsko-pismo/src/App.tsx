@@ -20,6 +20,7 @@ import LoginPage from "./pages/login";
 import RegisterRoditeljPage from "./pages/register-roditelj";
 import ZaboravljenaSifraPage from "./pages/zaboravljena-sifra";
 import ResetSifraPage from "./pages/reset-sifra";
+import ObaveznePotvrdePage from "./pages/obavezne-potvrde";
 
 // Main pages
 import Home from "./pages/home";
@@ -260,7 +261,8 @@ function Router() {
 }
 
 function HeartbeatMount() {
-  useHeartbeat();
+  const { user } = useAuth();
+  useHeartbeat(!user?.pendingAcknowledgements?.length);
   return null;
 }
 
@@ -277,7 +279,7 @@ function HeartbeatMount() {
  */
 function AppRoutes() {
   const { lang } = useLanguage();
-  const { isLoading } = useAuth();
+  const { isLoading, user } = useAuth();
 
   useEffect(() => {
     markCurrentAppHistoryEntry();
@@ -296,9 +298,17 @@ function AppRoutes() {
       base={import.meta.env.BASE_URL.replace(/\/$/, "")}
       hook={useMektebLocation}
     >
-      <Router key={lang} />
+      <AcknowledgementGate pending={Boolean(user?.pendingAcknowledgements?.length)} lang={lang} />
     </WouterRouter>
   );
+}
+
+function AcknowledgementGate({ pending, lang }: { pending: boolean; lang: string }) {
+  const [location] = useLocation();
+  if (pending && !["/uvjeti", "/privatnost", "/kolacici"].includes(location)) {
+    return <ObaveznePotvrdePage />;
+  }
+  return <Router key={lang} />;
 }
 
 function App() {

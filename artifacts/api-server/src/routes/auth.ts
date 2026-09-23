@@ -14,10 +14,49 @@ import {
   passwordResetTokensTable,
 } from "@workspace/db/schema";
 import { eq, and, isNull, gt, desc, inArray } from "drizzle-orm";
-import { signToken, requireAuth } from "../middlewares/auth.js";
+import { signToken, requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { sendRegistrationNotification, sendPasswordResetEmail } from "../lib/email.js";
 
 const router = Router();
+
+type AcknowledgementKey =
+  | "terms"
+  | "privacy"
+  | "administratorDeclaration"
+  | "parent";
+
+function pendingAcknowledgements(user: Pick<typeof usersTable.$inferSelect,
+  "role" | "termsAcceptedAt" | "privacyAcknowledgedAt" | "administratorDeclarationAcceptedAt" | "parentAcknowledgedAt">): AcknowledgementKey[] {
+  const pending: AcknowledgementKey[] = [];
+  if (!user.termsAcceptedAt) pending.push("terms");
+  if (!user.privacyAcknowledgedAt) pending.push("privacy");
+  if (user.role === "muallim" && !user.administratorDeclarationAcceptedAt) pending.push("administratorDeclaration");
+  if (user.role === "roditelj" && !user.parentAcknowledgedAt) pending.push("parent");
+  return pending;
+}
+
+function publicAuthUser(user: typeof usersTable.$inferSelect) {
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    role: user.role,
+    email: user.email,
+    isActive: user.isActive,
+    trialUntil: user.trialUntil ? user.trialUntil.toISOString() : null,
+    pendingAcknowledgements: pendingAcknowledgements(user),
+  };
+}
+
+function hasRegistrationAcknowledgements(
+  body: any,
+  role: "ucenik" | "roditelj" | "muallim",
+): boolean {
+  if (body?.termsAccepted !== true || body?.privacyAcknowledged !== true) return false;
+  if (role === "muallim" && body?.administratorDeclarationAccepted !== true) return false;
+  if (role === "roditelj" && body?.parentAcknowledged !== true) return false;
+  return true;
+}
 
 // Postavlja http-only cookie sa JWT-om za autentifikaciju zahtjeva ka
 // statičkom H5P sadržaju (`/uploads/h5p/*`). H5P player u browseru čini
@@ -104,18 +143,10 @@ router.post("/login", async (req, res) => {
       displayName: user.displayName,
     });
 
-    setH5pSessionCookie(res, token);
+    if (pendingAcknowledgements(user).length === 0) setH5pSessionCookie(res, token);
     res.json({
       token,
-      user: {
-        id: user.id,
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role,
-        email: user.email,
-        isActive: user.isActive,
-        trialUntil: user.trialUntil ? user.trialUntil.toISOString() : null,
-      },
+      user: publicAuthUser(user),
     });
   } catch (err) {
     console.error(err);
@@ -129,6 +160,10 @@ router.post("/register-roditelj", async (req, res) => {
     const { username, password, displayName, email } = req.body;
     if (!username || !password || !displayName) {
       res.status(400).json({ error: "Popunite sva obavezna polja" });
+      return;
+    }
+    if (!hasRegistrationAcknowledgements(req.body, "roditelj")) {
+      res.status(400).json({ error: "Morate pročitati i prihvatiti Uvjete, Pravila privatnosti i izjavu za roditelje" });
       return;
     }
 
@@ -150,6 +185,7 @@ router.post("/register-roditelj", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const acknowledgedAt = new Date();
 
     const [newUser] = await db.insert(usersTable).values({
       username: username.trim().toLowerCase(),
@@ -157,6 +193,9 @@ router.post("/register-roditelj", async (req, res) => {
       passwordHash,
       displayName: displayName.trim(),
       role: "roditelj",
+      termsAcceptedAt: acknowledgedAt,
+      privacyAcknowledgedAt: acknowledgedAt,
+      parentAcknowledgedAt: acknowledgedAt,
     }).returning();
 
     await db.insert(roditeljProfiliTable).values({ userId: newUser.id });
@@ -337,20 +376,50 @@ router.get("/me", requireAuth, async (req, res) => {
     const bearer = req.headers.authorization?.startsWith("Bearer ")
       ? req.headers.authorization.slice(7)
       : null;
-    if (bearer) {
+    if (bearer && pendingAcknowledgements(user).length === 0) {
       setH5pSessionCookie(res, bearer);
     }
-    res.json({
-      id: user.id,
-      username: user.username,
-      displayName: user.displayName,
-      role: user.role,
-      email: user.email,
-      isActive: user.isActive,
-      trialUntil: user.trialUntil ? user.trialUntil.toISOString() : null,
-    });
+    res.json(publicAuthUser(user));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// POST /api/auth/acknowledgements — records the current policy acknowledgements.
+// The server supplies timestamps; clients can only submit explicit true values.
+router.post("/acknowledgements", requireAuth, async (req, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId));
+    if (!user) {
+      res.status(404).json({ error: "Korisnik nije pronađen" });
+      return;
+    }
+    const now = new Date();
+    const patch: Partial<typeof usersTable.$inferInsert> = {};
+    if (req.body?.termsAccepted === true && !user.termsAcceptedAt) patch.termsAcceptedAt = now;
+    if (req.body?.privacyAcknowledged === true && !user.privacyAcknowledgedAt) patch.privacyAcknowledgedAt = now;
+    if (user.role === "muallim" && req.body?.administratorDeclarationAccepted === true && !user.administratorDeclarationAcceptedAt) {
+      patch.administratorDeclarationAcceptedAt = now;
+    }
+    if (user.role === "roditelj" && req.body?.parentAcknowledged === true && !user.parentAcknowledgedAt) {
+      patch.parentAcknowledgedAt = now;
+    }
+    const [updated] = Object.keys(patch).length
+      ? await db.update(usersTable).set(patch).where(eq(usersTable.id, user.id)).returning()
+      : [user];
+    // requireAuth caches acknowledgement state alongside account status. Clear
+    // it before replying so the very next protected request sees the write.
+    if (Object.keys(patch).length) invalidateUserStatusCache(user.id);
+    const bearer = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7)
+      : null;
+    if (bearer && pendingAcknowledgements(updated).length === 0) {
+      setH5pSessionCookie(res, bearer);
+    }
+    res.json({ user: publicAuthUser(updated), pendingAcknowledgements: pendingAcknowledgements(updated) });
+  } catch (err) {
+    console.error("[acknowledgements]", err);
+    res.status(500).json({ error: "Nije moguće sačuvati potvrde" });
   }
 });
 
@@ -460,10 +529,15 @@ router.post("/register-ucenik", async (req, res) => {
       res.status(400).json({ error: "Unesite ispravan broj godina" });
       return;
     }
+    if (!hasRegistrationAcknowledgements(req.body, "ucenik")) {
+      res.status(400).json({ error: "Morate pročitati i prihvatiti Uvjete i Pravila privatnosti" });
+      return;
+    }
 
     const firstName = displayName.trim().split(/\s+/)[0];
     const password = crypto.randomBytes(4).toString("hex");
     const passwordHash = await bcrypt.hash(password, 10);
+    const acknowledgedAt = new Date();
     const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const region = billingRegion === "bih" ? "bih" : "dijaspora";
 
@@ -487,6 +561,8 @@ router.post("/register-ucenik", async (req, res) => {
             role: "ucenik",
             isActive: false,
             trialUntil,
+            termsAcceptedAt: acknowledgedAt,
+            privacyAcknowledgedAt: acknowledgedAt,
           }).returning();
           break;
         } catch (e: any) {
@@ -543,6 +619,10 @@ router.post("/register-roditelj-v2", async (req, res) => {
       res.status(400).json({ error: "Ime i email su obavezni" });
       return;
     }
+    if (!hasRegistrationAcknowledgements(req.body, "roditelj")) {
+      res.status(400).json({ error: "Morate pročitati i prihvatiti Uvjete, Pravila privatnosti i izjavu za roditelje" });
+      return;
+    }
     // Provjera duplikata emaila prije insert-a — ljepša poruka nego "Greška servera"
     // koju bi vratio fallback na unique constraint violation.
     const normalizedEmail = email.trim().toLowerCase();
@@ -559,6 +639,7 @@ router.post("/register-roditelj-v2", async (req, res) => {
     const firstName = displayName.trim().split(/\s+/)[0];
     const password = crypto.randomBytes(4).toString("hex");
     const passwordHash = await bcrypt.hash(password, 10);
+    const acknowledgedAt = new Date();
     const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const region = billingRegion === "bih" ? "bih" : "dijaspora";
 
@@ -576,6 +657,9 @@ router.post("/register-roditelj-v2", async (req, res) => {
             role: "roditelj",
             isActive: false,
             trialUntil,
+            termsAcceptedAt: acknowledgedAt,
+            privacyAcknowledgedAt: acknowledgedAt,
+            parentAcknowledgedAt: acknowledgedAt,
           }).returning();
           break;
         } catch (e: any) {
@@ -811,6 +895,10 @@ router.post("/register-mekteb", async (req, res) => {
       res.status(400).json({ error: "Država je obavezna" });
       return;
     }
+    if (!hasRegistrationAcknowledgements(req.body, "muallim")) {
+      res.status(400).json({ error: "Morate pročitati i prihvatiti Uvjete, Pravila privatnosti i administratorsku izjavu" });
+      return;
+    }
 
     if (paket !== "do100" && paket !== "vise100") {
       res.status(400).json({ error: "Odaberite ispravan Standard ili Pro paket" });
@@ -840,6 +928,7 @@ router.post("/register-mekteb", async (req, res) => {
 
     const password = crypto.randomBytes(4).toString("hex");
     const passwordHash = await bcrypt.hash(password, 10);
+    const acknowledgedAt = new Date();
     const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // Iznos odgovara objavljenom jednom BMAC proizvodu za svaku kombinaciju.
@@ -861,6 +950,9 @@ router.post("/register-mekteb", async (req, res) => {
         role: "muallim",
         isActive: false,
         trialUntil,
+          termsAcceptedAt: acknowledgedAt,
+          privacyAcknowledgedAt: acknowledgedAt,
+          administratorDeclarationAcceptedAt: acknowledgedAt,
       }).returning();
       const [mekteb] = await tx.insert(mektebiTable).values({
         naziv: nazivMekteba.trim(),

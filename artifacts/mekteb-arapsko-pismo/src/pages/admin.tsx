@@ -108,6 +108,12 @@ function datumZaUnos(value: string | null | undefined): string {
   return value ? new Date(value).toISOString().slice(0, 10) : "";
 }
 
+function statusIzjave(value: string | null | undefined, label: string, t: (value: string) => string): React.ReactNode {
+  return value
+    ? <span className="text-emerald-700">{label}: {t("Prihvaćeno")} ({new Date(value).toLocaleDateString("bs-BA")})</span>
+    : <span className="text-amber-700">{label}: {t("Nije potvrđeno")}</span>;
+}
+
 type SortField = "displayName" | "createdAt" | "lastLoginAt" | "totalScreentimeSec";
 type SortDir = "asc" | "desc";
 
@@ -146,7 +152,13 @@ interface DzematPregled {
   naziv: string;
   grad: string | null;
   isActive: boolean;
-  glavniMuallim: { id: number; displayName: string } | null;
+  glavniMuallim: {
+    id: number;
+    displayName: string;
+    termsAcceptedAt: string | null;
+    privacyAcknowledgedAt: string | null;
+    administratorDeclarationAcceptedAt: string | null;
+  } | null;
   dozvoljenoMuallima: number;
   brojMuallima: number;
   aktivnihMuallima: number;
@@ -2468,6 +2480,13 @@ export default function AdminPage() {
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {t("Glavni muallim:")} <span className="font-bold text-foreground">{d.glavniMuallim?.displayName ?? t("Nije postavljen")}</span>
+                        {d.glavniMuallim && (
+                          <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-semibold">
+                            {statusIzjave(d.glavniMuallim.termsAcceptedAt, t("Uvjeti"), t)}
+                            {statusIzjave(d.glavniMuallim.privacyAcknowledgedAt, t("Privatnost"), t)}
+                            {statusIzjave(d.glavniMuallim.administratorDeclarationAcceptedAt, t("Administratorska izjava"), t)}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">

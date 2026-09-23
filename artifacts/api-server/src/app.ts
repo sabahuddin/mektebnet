@@ -3,8 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import path from "path";
 import { fileURLToPath } from "url";
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "./lib/jwt-secret";
+import { isTokenAllowedForH5p } from "./middlewares/auth.js";
 import { normalizeBosnianDashes } from "./lib/normalize-json";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -94,7 +93,7 @@ function parseCookie(header: string | undefined, name: string): string | null {
   }
   return null;
 }
-function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
+async function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
   // Kanonikaliziramo putanju PRIJE provjere kako se zabrana ne bi mogla zaobići
   // varijantama URL-a (`/./`, `//`, encoded segmenti) koje static sloj svejedno
   // resolve-a u isti fajl.
@@ -124,10 +123,13 @@ function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
     return;
   }
   try {
-    jwt.verify(token, JWT_SECRET);
-    next();
-  } catch {
+    if (await isTokenAllowedForH5p(token)) {
+      next();
+      return;
+    }
     res.status(401).json({ error: "Nevažeća sesija — prijavite se ponovo" });
+  } catch {
+    res.status(503).json({ error: "Greška pri provjeri sesije" });
   }
 }
 

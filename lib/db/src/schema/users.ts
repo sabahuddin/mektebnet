@@ -22,6 +22,10 @@ export const usersTable = pgTable("users", {
   // Presence/screentime — ažurirano preko POST /api/aktivnost/heartbeat svakih ~60s.
   lastSeenAt: timestamp("last_seen_at"),
   totalScreentimeSec: integer("total_screentime_sec").notNull().default(0),
+  termsAcceptedAt: timestamp("terms_accepted_at"),
+  privacyAcknowledgedAt: timestamp("privacy_acknowledged_at"),
+  administratorDeclarationAcceptedAt: timestamp("administrator_declaration_accepted_at"),
+  parentAcknowledgedAt: timestamp("parent_acknowledged_at"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true, lastLoginAt: true });

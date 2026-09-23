@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiRequest } from "@/lib/api";
 import { loginPushUser, logoutPushUser } from "@/lib/push";
+import type { AcknowledgementKey, AcknowledgementValues } from "@/components/acknowledgements";
 
 export interface AuthUser {
   id: number;
@@ -12,6 +13,7 @@ export interface AuthUser {
   isActive?: boolean;
   /** ISO datum do kojeg traje 30-dnevni probni period (null nakon aktivacije). */
   trialUntil?: string | null;
+  pendingAcknowledgements?: AcknowledgementKey[];
 }
 
 interface AuthContextType {
@@ -19,6 +21,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  confirmAcknowledgements: (values: AcknowledgementValues) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -104,6 +107,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginPushUser(res.user.id).catch(() => {});
   };
 
+  const confirmAcknowledgements = async (values: AcknowledgementValues) => {
+    if (!token) throw new Error("Prijavite se ponovo.");
+    const response = await apiRequest<{ user: AuthUser; pendingAcknowledgements: AcknowledgementKey[] }>(
+      "POST", "/auth/acknowledgements", values, token,
+    );
+    const updated = { ...response.user, pendingAcknowledgements: response.pendingAcknowledgements };
+    localStorage.setItem(USER_KEY, JSON.stringify(updated));
+    setUser(updated);
+  };
+
   const logout = () => {
     // Best-effort: tražimo backend da obriše HttpOnly H5P session cookie tako
     // da browser nakon logout-a više ne može pristupiti H5P static fajlovima.
@@ -123,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, confirmAcknowledgements, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

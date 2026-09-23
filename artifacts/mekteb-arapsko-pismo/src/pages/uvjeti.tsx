@@ -12,7 +12,7 @@ export default function UvjetiPage() {
             <FileText className="w-7 h-7" />
           </div>
           <h1 className="text-3xl font-black text-foreground">{t("Uvjeti korištenja")}</h1>
-          <p className="text-sm text-muted-foreground mt-2">{t("Posljednje ažuriranje")}: {t("juni 2026.")}</p>
+          <p className="text-sm text-muted-foreground mt-2">{t("Posljednje ažuriranje")}: septembar 2026.</p>
         </div>
 
         <div className="bg-white rounded-3xl border border-border/40 shadow-sm p-6 sm:p-10 space-y-8 text-[15px] leading-relaxed text-foreground/80">
@@ -45,6 +45,29 @@ export default function UvjetiPage() {
               <li>Korisnik je dužan pružiti tačne podatke i čuvati povjerljivost svoje lozinke.</li>
               <li>Vlasnik zadržava pravo da odbije ili ukine korisnički račun u slučaju kršenja uvjeta.</li>
             </ul>
+          </section>
+
+          <section id="izjava-muallima">
+            <h2 className="text-lg font-bold text-foreground mb-2">Izjava muallima o upravljanju podacima</h2>
+            <p>
+              Muallim koji dodaje učenike i roditelje potvrđuje da je ovlašten unositi njihove podatke
+              u svoju mektebsku grupu. Unosi samo podatke potrebne za nastavu i upravljanje grupom,
+              održava ih tačnim i ne dodaje osobe izvan svoje grupe. Podatke učenika koje može izvesti
+              u Excel ili ispisati koristi samo za nastavu i administraciju grupe, ne dijeli ih s
+              neovlaštenim osobama i odgovorno čuva preuzete ili ispisane kopije. Uklanjanje učenika
+              iz grupe nije isto što i trajno brisanje njegovog računa. Mekteb.net zadržava vlastite
+              obaveze zaštite i obrade podataka na Platformi.
+            </p>
+          </section>
+
+          <section id="izjava-roditelja">
+            <h2 className="text-lg font-bold text-foreground mb-2">Izjava roditelja ili staratelja</h2>
+            <p>
+              Roditelj ili staratelj potvrđuje da je ovlašten otvoriti roditeljski račun i povezati
+              se s profilima djece za koju brine. Podatke i rezultate djece koristi samo za praćenje
+              njihovog obrazovanja i ne pokušava pristupiti profilima druge djece. Za ispravku ili
+              brisanje podataka može se obratiti podršci putem kontakta navedenog u Pravilima privatnosti.
+            </p>
           </section>
 
           <section>

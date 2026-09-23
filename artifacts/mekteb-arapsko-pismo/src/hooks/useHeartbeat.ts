@@ -5,12 +5,12 @@ import { useAuth } from "@/context/auth";
 const TICK_MS = 60_000;
 const MAX_DELTA_SEC = 90;
 
-export function useHeartbeat() {
+export function useHeartbeat(enabled = true) {
   const { token, isAuthenticated } = useAuth();
   const lastTickRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!isAuthenticated || !token) return;
+    if (!enabled || !isAuthenticated || !token) return;
 
     const send = async () => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
@@ -38,5 +38,5 @@ export function useHeartbeat() {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [isAuthenticated, token]);
+  }, [enabled, isAuthenticated, token]);
 }

@@ -653,9 +653,48 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
 type LbScope = "group" | "mekteb" | "global";
 type LbGame = "memory" | "quiz" | "gradovi" | "zastave" | "sace" | "medena" | "pcelin" | "all";
 const LB_VALID_GAMES = new Set<string>(["memory", "quiz", "gradovi", "zastave", "sace", "medena", "pcelin", "all"]);
-interface LbEntry { rank: number; userId: number; displayName: string; mektebName: string | null; bestScore: number; totalGames: number; }
+interface LbEntry {
+  rank: number;
+  userId: number;
+  /** Kept for group/mekteb views, where members know one another. */
+  displayName: string;
+  /** Public-safe identifier used by the global leaderboard. */
+  username: string;
+  mektebName: string | null;
+  bestScore: number;
+  totalGames: number;
+}
 const lbCache = new Map<string, { ts: number; data: LbEntry[] }>();
 const LB_TTL_MS = 60 * 1000;
+
+/** Global rankings are public across unrelated groups, so never project a real name. */
+export function leaderboardPublicName(scope: LbScope, displayName: string, username: string): string {
+  return scope === "global" ? username : displayName;
+}
+
+export function projectLeaderboardEntry(
+  scope: LbScope,
+  row: {
+    user_id: number;
+    display_name: string;
+    username: string;
+    mekteb_name: string | null;
+    best_score: number;
+    total_games: number;
+  },
+  rank: number,
+): LbEntry {
+  return {
+    rank,
+    userId: row.user_id,
+    displayName: leaderboardPublicName(scope, row.display_name, row.username),
+    username: row.username,
+    // A global ranking must not disclose a student's school affiliation.
+    mektebName: scope === "global" ? null : row.mekteb_name,
+    bestScore: row.best_score,
+    totalGames: row.total_games,
+  };
+}
 
 async function getUserScopeIds(userId: number): Promise<{ grupaId: number | null; mektebId: number | null }> {
   const r = await exec<{ grupa_id: number | null; mekteb_id: number | null }>(sql`
@@ -718,7 +757,7 @@ router.get("/leaderboard", requireAuth, requireRole("ucenik"), async (req: Reque
     // Za jednu igru: rank po MAX(score). Limit 50 (top 50).
     // LEFT JOIN ucenik_profili → mektebi za prikaz naziva mekteba (LbEntry.mektebName).
     const rows = game === "all"
-      ? await exec<{ user_id: number; display_name: string; mekteb_name: string | null; best_score: number; total_games: number }>(sql`
+      ? await exec<{ user_id: number; display_name: string; username: string; mekteb_name: string | null; best_score: number; total_games: number }>(sql`
         WITH best_per_game AS (
           SELECT gs.user_id, gs.game_id, MAX(gs.score)::int AS best_in_game, COUNT(*)::int AS games_in_game
           FROM game_sessions gs
@@ -727,6 +766,7 @@ router.get("/leaderboard", requireAuth, requireRole("ucenik"), async (req: Reque
         )
         SELECT bpg.user_id,
                u.display_name,
+               u.username,
                m.naziv AS mekteb_name,
                COALESCE(SUM(bpg.best_in_game), 0)::int AS best_score,
                COALESCE(SUM(bpg.games_in_game), 0)::int AS total_games
@@ -737,14 +777,15 @@ router.get("/leaderboard", requireAuth, requireRole("ucenik"), async (req: Reque
         LEFT JOIN mektebi m ON m.id = up_m.mekteb_id
         WHERE u.role = 'ucenik'
           ${scopeWhere}
-        GROUP BY bpg.user_id, u.display_name, m.naziv
+         GROUP BY bpg.user_id, u.display_name, u.username, m.naziv
         HAVING COALESCE(SUM(bpg.best_in_game), 0) > 0
         ORDER BY best_score DESC, total_games DESC
         LIMIT 50
       `)
-      : await exec<{ user_id: number; display_name: string; mekteb_name: string | null; best_score: number; total_games: number }>(sql`
+      : await exec<{ user_id: number; display_name: string; username: string; mekteb_name: string | null; best_score: number; total_games: number }>(sql`
         SELECT gs.user_id,
-               u.display_name,
+                u.display_name,
+                u.username,
                m.naziv AS mekteb_name,
                MAX(gs.score)::int AS best_score,
                COUNT(*)::int AS total_games
@@ -757,20 +798,13 @@ router.get("/leaderboard", requireAuth, requireRole("ucenik"), async (req: Reque
           AND u.role = 'ucenik'
           ${gameFilter}
           ${scopeWhere}
-        GROUP BY gs.user_id, u.display_name, m.naziv
+         GROUP BY gs.user_id, u.display_name, u.username, m.naziv
         HAVING MAX(gs.score) > 0
         ORDER BY best_score DESC, total_games DESC
         LIMIT 50
       `);
 
-    const entries: LbEntry[] = rows.rows.map((r, idx) => ({
-      rank: idx + 1,
-      userId: r.user_id,
-      displayName: r.display_name,
-      mektebName: r.mekteb_name,
-      bestScore: r.best_score,
-      totalGames: r.total_games,
-    }));
+    const entries: LbEntry[] = rows.rows.map((r, idx) => projectLeaderboardEntry(scope, r, idx + 1));
     lbCache.set(cacheKey, { ts: Date.now(), data: entries });
     res.json({ scope, game, entries });
   } catch (err) {

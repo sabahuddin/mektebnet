@@ -26,6 +26,11 @@ declare global {
 interface UserStatusCacheEntry {
   isActive: boolean;
   trialUntilMs: number | null;
+  role: string;
+  termsAcceptedAt: Date | null;
+  privacyAcknowledgedAt: Date | null;
+  administratorDeclarationAcceptedAt: Date | null;
+  parentAcknowledgedAt: Date | null;
   cachedAt: number;
 }
 const USER_STATUS_TTL_MS = 30 * 1000;
@@ -37,13 +42,26 @@ async function fetchUserStatus(userId: number): Promise<UserStatusCacheEntry | n
   if (cached && now - cached.cachedAt < USER_STATUS_TTL_MS) return cached;
 
   const [u] = await db
-    .select({ isActive: usersTable.isActive, trialUntil: usersTable.trialUntil })
+    .select({
+      isActive: usersTable.isActive,
+      trialUntil: usersTable.trialUntil,
+      role: usersTable.role,
+      termsAcceptedAt: usersTable.termsAcceptedAt,
+      privacyAcknowledgedAt: usersTable.privacyAcknowledgedAt,
+      administratorDeclarationAcceptedAt: usersTable.administratorDeclarationAcceptedAt,
+      parentAcknowledgedAt: usersTable.parentAcknowledgedAt,
+    })
     .from(usersTable)
     .where(eq(usersTable.id, userId));
   if (!u) return null;
   const entry: UserStatusCacheEntry = {
     isActive: u.isActive,
     trialUntilMs: u.trialUntil ? u.trialUntil.getTime() : null,
+    role: u.role,
+    termsAcceptedAt: u.termsAcceptedAt,
+    privacyAcknowledgedAt: u.privacyAcknowledgedAt,
+    administratorDeclarationAcceptedAt: u.administratorDeclarationAcceptedAt,
+    parentAcknowledgedAt: u.parentAcknowledgedAt,
     cachedAt: now,
   };
   userStatusCache.set(userId, entry);
@@ -53,6 +71,24 @@ async function fetchUserStatus(userId: number): Promise<UserStatusCacheEntry | n
 // Eksterno korisno za invalidaciju cache-a (npr. nakon admin promjene).
 export function invalidateUserStatusCache(userId: number) {
   userStatusCache.delete(userId);
+}
+
+/** Validates a token for H5P static assets without exposing its payload. */
+export async function isTokenAllowedForH5p(token: string): Promise<boolean> {
+  let payload: JwtPayload;
+  try {
+    payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+  } catch {
+    return false;
+  }
+  const status = await fetchUserStatus(payload.userId);
+  if (!status) return false;
+  const trialActive = status.trialUntilMs ? status.trialUntilMs > Date.now() : false;
+  if (!status.isActive && !trialActive) return false;
+  if (!status.termsAcceptedAt || !status.privacyAcknowledgedAt) return false;
+  if (status.role === "muallim" && !status.administratorDeclarationAcceptedAt) return false;
+  if (status.role === "roditelj" && !status.parentAcknowledgedAt) return false;
+  return true;
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -73,8 +109,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   // Re-check user status iz DB (cached). Token je dugotrajan (30d), pa moramo
   // poštovati admin deaktivaciju i istek 30-dnevnog triala u realnom vremenu.
+  let status: UserStatusCacheEntry | null;
   try {
-    const status = await fetchUserStatus(payload.userId);
+    status = await fetchUserStatus(payload.userId);
     if (!status) {
       res.status(401).json({ error: "Korisnik više ne postoji" });
       return;
@@ -91,6 +128,21 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   } catch (e) {
     // U slučaju DB greške, fail-closed (sigurnije). Korisnik će ponovo pokušati.
     res.status(503).json({ error: "Greška pri provjeri statusa naloga" });
+    return;
+  }
+
+  if (!status) {
+    res.status(401).json({ error: "Korisnik više ne postoji" });
+    return;
+  }
+  const pending = !status.termsAcceptedAt || !status.privacyAcknowledgedAt
+    || (status.role === "muallim" && !status.administratorDeclarationAcceptedAt)
+    || (status.role === "roditelj" && !status.parentAcknowledgedAt);
+  if (pending && req.path !== "/me" && req.path !== "/acknowledgements") {
+    res.status(403).json({
+      code: "ACKNOWLEDGEMENTS_REQUIRED",
+      error: "Potrebno je pročitati i potvrditi uslove korištenja prije nastavka.",
+    });
     return;
   }
 
