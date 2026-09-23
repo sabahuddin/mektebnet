@@ -77,7 +77,7 @@ export default function KuranStranicaPage() {
 
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto pb-28">
+      <div className="max-w-3xl mx-auto pb-44 sm:pb-32">
         <div className="mb-5 flex items-center justify-between gap-2">
           <Link
             href="/kuran"
@@ -167,8 +167,10 @@ export default function KuranStranicaPage() {
           onToggle={audio.togglePlay}
           onStop={audio.stop}
           canStop={audio.activeKey != null}
-          repeatOne={audio.repeatOne}
-          onToggleRepeat={() => audio.setRepeatOne((r) => !r)}
+          repeatCount={audio.repeatCount}
+          onRepeatCountChange={audio.setRepeatCount}
+          playbackRate={audio.playbackRate}
+          onPlaybackRateChange={audio.setPlaybackRate}
           title={t("Stranica {br}", { br: String(pageNum) })}
           subtitle={
             active != null

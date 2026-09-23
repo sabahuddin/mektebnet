@@ -13,7 +13,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { installAudioMute, isAudioMuted, setAudioMuted, subscribeAudioMuted } from "@/lib/audio-mute";
 import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
 import { TrialBanner } from "@/components/trial-banner";
-import { ContactForm } from "@/components/contact-form";
 
 /** Inicijali iz displayName-a, max 2 slova (npr. "Tarik Avdić" → "TA"). */
 function getInitials(name?: string | null): string {
@@ -177,11 +176,11 @@ export function Layout({ children }: LayoutProps) {
     setAudioMutedState(next);
   };
 
-  // Razvojni moduli su dostupni samo adminu za interni pregled.
+  // Kur'an je dostupan svima, razvojni moduli ostaju samo za admina.
   const mainNavLinks: NavLink[] = [
     { href: "/", label: t("nav.pocetna"), icon: Home },
     { href: "/ilmihal", label: t("nav.ilmihal"), icon: BookOpen },
-    ...(user?.role === "admin" ? [{ href: "/kuran", label: t("Kur'an"), icon: BookA } as NavLink] : []),
+    { href: "/kuran", label: t("Kur'an"), icon: BookA },
     ...(user?.role === "admin"
       ? [{ href: "/kvizovi", label: t("nav.kvizovi"), icon: HelpCircle } as NavLink]
       : []),
@@ -500,9 +499,7 @@ export function Layout({ children }: LayoutProps) {
               <h4 className="font-bold text-xs md:text-sm text-foreground mb-2 md:mb-3 uppercase tracking-wide">{t("Platforma")}</h4>
               <ul className="space-y-1.5 md:space-y-2 text-[13px] md:text-sm">
                 <li><Link href="/ilmihal" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.ilmihal")}</Link></li>
-                {user?.role === "admin" && (
-                  <li><Link href="/kuran" className="text-muted-foreground hover:text-primary transition-colors">{t("Kur'an")}</Link></li>
-                )}
+                <li><Link href="/kuran" className="text-muted-foreground hover:text-primary transition-colors">{t("Kur'an")}</Link></li>
                 {user?.role === "admin" && (
                   <li><Link href="/kvizovi" className="text-muted-foreground hover:text-primary transition-colors">{t("nav.kvizovi")}</Link></li>
                 )}
@@ -525,14 +522,6 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
           </div>
-
-          {location !== "/kontakt" && (
-            <section aria-labelledby="footer-kontakt-naslov" className="mx-auto mt-8 w-full max-w-lg border-t border-border/40 pt-7">
-              <h3 id="footer-kontakt-naslov" className="mb-2 text-center text-lg font-bold text-foreground">{t("Kontakt forma")}</h3>
-              <p className="mb-5 text-center text-sm text-muted-foreground">{t("Imate pitanje ili prijedlog? Javite nam se!")}</p>
-              <ContactForm />
-            </section>
-          )}
 
           <div className="mt-5 md:mt-8 pt-4 md:pt-6 border-t border-border/30 flex flex-col items-center justify-center gap-2 md:gap-3 text-center text-[12px] md:text-sm text-muted-foreground">
             <div>© {new Date().getFullYear()} · mekteb.net</div>

@@ -28,7 +28,7 @@ export default function Home() {
   const { user } = useAuth();
   const { t } = useLanguage();
 
-  // Razvojni moduli su namijenjeni samo adminu za interni pregled.
+  // Kur'an je javan; ostali razvojni moduli ostaju ograničeni.
   const MODULES: ModuleCard[] = [
     {
       href: "/kuran",
@@ -167,7 +167,7 @@ export default function Home() {
 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10" data-testid="home-modules">
-        {MODULES.filter(mod => user?.role === "admin" || (mod.href !== "/kuran" && mod.href !== "/arapsko-pismo")).map((mod, i) => {
+        {MODULES.filter(mod => user?.role === "admin" || mod.href !== "/arapsko-pismo").map((mod, i) => {
           // Sadržaj kartice — koristi se i u Link i u "div" varijanti
           // (za onemogućenu Sufara karticu sa USKORO badge-om).
           const cardInner = (

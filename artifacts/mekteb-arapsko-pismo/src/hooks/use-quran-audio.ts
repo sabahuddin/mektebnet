@@ -40,15 +40,19 @@ export function useQuranAudio(items: PlayItem[], reciterId: string) {
 
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [repeatOne, setRepeatOne] = useState(false);
+  const [repeatCount, setRepeatCount] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(1);
 
   const activeKeyRef = useRef<string | null>(null);
-  const repeatRef = useRef(false);
+  const repeatCountRef = useRef(1);
+  const completedRef = useRef(0);
+  const playbackRateRef = useRef(1);
   const itemsRef = useRef(items);
   const folderRef = useRef(reciterById(reciterId).folder);
   const playToken = useRef(0);
 
-  repeatRef.current = repeatOne;
+  repeatCountRef.current = repeatCount;
+  playbackRateRef.current = playbackRate;
   itemsRef.current = items;
   folderRef.current = reciterById(reciterId).folder;
 
@@ -62,7 +66,9 @@ export function useQuranAudio(items: PlayItem[], reciterId: string) {
       const audio = audioRef.current;
       if (!audio) return;
       const token = ++playToken.current;
+      completedRef.current = 0;
       audio.src = ayahAudioUrl(it.surah, it.numberInSurah, folderRef.current);
+      audio.playbackRate = playbackRateRef.current;
       const k = ayahKey(it);
       setActive(k);
       audio.play().catch(() => {
@@ -80,12 +86,15 @@ export function useQuranAudio(items: PlayItem[], reciterId: string) {
   const handleEnded = useCallback(() => {
     const k = activeKeyRef.current;
     const list = itemsRef.current;
-    if (repeatRef.current && k) {
-      const cur = list.find((i) => ayahKey(i) === k);
-      if (cur) {
-        playItem(cur);
-        return;
+    if (!k) return;
+    completedRef.current++;
+    if (completedRef.current < repeatCountRef.current) {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(() => setIsPlaying(false));
       }
+      return;
     }
     const idx = list.findIndex((i) => ayahKey(i) === k);
     if (idx >= 0 && idx < list.length - 1) {
@@ -119,6 +128,7 @@ export function useQuranAudio(items: PlayItem[], reciterId: string) {
       audio.currentTime = 0;
     }
     setIsPlaying(false);
+    completedRef.current = 0;
     setActive(null);
   }, [setActive]);
 
@@ -141,7 +151,9 @@ export function useQuranAudio(items: PlayItem[], reciterId: string) {
     if (!cur) return;
     const wasPlaying = !audio.paused;
     const token = ++playToken.current;
+    completedRef.current = 0;
     audio.src = ayahAudioUrl(cur.surah, cur.numberInSurah, reciterById(reciterId).folder);
+    audio.playbackRate = playbackRateRef.current;
     if (wasPlaying) {
       audio.play().catch(() => {
         if (playToken.current === token) setIsPlaying(false);
@@ -149,12 +161,17 @@ export function useQuranAudio(items: PlayItem[], reciterId: string) {
     }
   }, [reciterId]);
 
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = playbackRate;
+  }, [playbackRate]);
+
   // Promjena sadržaja (nova sura/stranica): resetuj reprodukciju.
   useEffect(() => {
     playToken.current++;
     const audio = audioRef.current;
     if (audio) audio.pause();
     setIsPlaying(false);
+    completedRef.current = 0;
     setActive(null);
   }, [items, setActive]);
 
@@ -175,8 +192,10 @@ export function useQuranAudio(items: PlayItem[], reciterId: string) {
     audioRef,
     activeKey,
     isPlaying,
-    repeatOne,
-    setRepeatOne,
+    repeatCount,
+    setRepeatCount,
+    playbackRate,
+    setPlaybackRate,
     playItem,
     togglePlay,
     stop,

@@ -255,7 +255,7 @@ export async function fetchPage(p: number): Promise<PageAyah[]> {
 }
 
 export function revelationLabel(type: string): string {
-  if (type === "Meccan") return "Mekkanska";
-  if (type === "Medinan") return "Medinska";
+  if (type === "Meccan") return "Mekka";
+  if (type === "Medinan") return "Medina";
   return type;
 }

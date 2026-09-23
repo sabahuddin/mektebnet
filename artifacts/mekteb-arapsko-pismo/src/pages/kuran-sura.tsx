@@ -70,7 +70,7 @@ export default function KuranSuraPage() {
 
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto pb-28">
+      <div className="max-w-3xl mx-auto pb-44 sm:pb-32">
         {/* Header sure */}
         <div className="mb-5 flex items-center justify-between gap-2">
           <Link
@@ -89,39 +89,33 @@ export default function KuranSuraPage() {
         </div>
 
         {isLoading ? (
-          <Skeleton className="h-28 rounded-3xl mb-6" />
+          <Skeleton className="h-32 rounded-3xl mb-4" />
         ) : meta ? (
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-teal-700 text-primary-foreground p-6 text-center mb-6">
-            <div className="relative z-10">
-              <div className="text-xs font-bold uppercase tracking-wider text-white/70">
-                {t("Sura {broj} · {tip} · {n} ajeta", { broj: String(meta.number), tip: t(revelationLabel(meta.revelationType)), n: String(meta.numberOfAyahs) })}
+          <div className="rounded-3xl bg-gradient-to-br from-primary to-teal-700 text-primary-foreground px-5 py-4 sm:px-6 mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+              <div className="min-w-0">
+                <div className="text-[11px] font-bold tracking-wide text-white/75">
+                  {t("Sura {broj} · {tip} · {n} ajeta", { broj: String(meta.number), tip: t(revelationLabel(meta.revelationType)), n: String(meta.numberOfAyahs) })}
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black leading-tight">{nazivSure}</h1>
               </div>
-              <div
-                className="text-4xl sm:text-5xl my-2"
-                style={{ fontFamily: "'UthmanicHafs', 'Amiri Quran', serif" }}
-                dir="rtl"
-              >
+              <div className="text-3xl sm:text-4xl leading-normal text-white"
+                style={{ fontFamily: "'UthmanicHafs', 'Amiri Quran', serif" }} dir="rtl">
                 {surahArabicDisplayName(meta.name)}
               </div>
-              <div className="font-black text-lg">{nazivSure}</div>
             </div>
+            {showBismillah && (
+              <div className="mt-2 pt-2 border-t border-white/20 text-center text-2xl sm:text-3xl leading-relaxed text-white"
+                style={{ fontFamily: "'UthmanicHafs', 'Amiri Quran', serif" }} dir="rtl">
+                {BISMILLAH}
+              </div>
+            )}
           </div>
         ) : null}
 
         {error && (
           <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-destructive font-semibold text-sm mb-4">
             {error}
-          </div>
-        )}
-
-        {/* Bismilla */}
-        {!isLoading && showBismillah && (
-          <div
-            className="text-center text-3xl sm:text-4xl text-primary mb-6 leading-loose"
-            style={{ fontFamily: "'UthmanicHafs', 'Amiri Quran', serif" }}
-            dir="rtl"
-          >
-            {BISMILLAH}
           </div>
         )}
 
@@ -176,8 +170,10 @@ export default function KuranSuraPage() {
           onToggle={audio.togglePlay}
           onStop={audio.stop}
           canStop={audio.activeKey != null}
-          repeatOne={audio.repeatOne}
-          onToggleRepeat={() => audio.setRepeatOne((r) => !r)}
+          repeatCount={audio.repeatCount}
+          onRepeatCountChange={audio.setRepeatCount}
+          playbackRate={audio.playbackRate}
+          onPlaybackRateChange={audio.setPlaybackRate}
           title={`${surahNum}. ${nazivSure}`}
           subtitle={
             activeAyahNum != null ? t("Ajet {n} / {ukupno}", { n: String(activeAyahNum), ukupno: String(meta.numberOfAyahs) }) : t("Odaberi učača i klikni ajet")

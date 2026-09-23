@@ -56,7 +56,7 @@ import KvizPage from "./pages/kviz";
 import CitaonicaPage from "./pages/citaonica";
 import CitaonicaKnjigaPage from "./pages/citaonica-knjiga";
 
-// Kur'an — admin može pregledati aktivni modul dok je javni pristup u razvoju.
+// Kur'an je dostupan svim posjetiocima.
 import KuranPage from "./pages/kuran";
 import KuranSuraPage from "./pages/kuran-sura";
 import KuranStranicaPage from "./pages/kuran-stranica";
@@ -116,21 +116,6 @@ const queryClient = new QueryClient({
     queries: { refetchOnWindowFocus: false, staleTime: 5 * 60 * 1000 },
   },
 });
-
-function KuranAdminLandingRoute() {
-  const { user } = useAuth();
-  return user?.role === "admin" ? <KuranPage /> : <NotFound />;
-}
-
-function KuranAdminSuraRoute() {
-  const { user } = useAuth();
-  return user?.role === "admin" ? <KuranSuraPage /> : <NotFound />;
-}
-
-function KuranAdminPageRoute() {
-  const { user } = useAuth();
-  return user?.role === "admin" ? <KuranStranicaPage /> : <NotFound />;
-}
 
 function SufaraAdminGate({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -197,10 +182,10 @@ function Router() {
       <Route path="/citaonica" component={CitaonicaPage} />
       <Route path="/citaonica/:slug" component={CitaonicaKnjigaPage} />
 
-      {/* Kur'an — aktivan za admina, razvojna poruka za ostale korisnike */}
-      <Route path="/kuran" component={KuranAdminLandingRoute} />
-      <Route path="/kuran/stranica/:p" component={KuranAdminPageRoute} />
-      <Route path="/kuran/:n" component={KuranAdminSuraRoute} />
+      {/* Kur'an — javno dostupan */}
+      <Route path="/kuran" component={KuranPage} />
+      <Route path="/kuran/stranica/:p" component={KuranStranicaPage} />
+      <Route path="/kuran/:n" component={KuranSuraPage} />
 
       {/* Roditelj panel */}
       <Route path="/roditelj/kalendar" component={RoditeljKalendarPage} />
