@@ -5,9 +5,10 @@ import { apiRequest } from "@/lib/api";
 import { useLanguage } from "@/context/language";
 import { useAuth } from "@/context/auth";
 import {
-  bmacMektebAddonDetails,
   bmacRegistrationProductLink,
   formatMektebTotalPrice,
+  MEKTEB_OFFERS,
+  mektebOfferLink,
   type MektebPaket,
 } from "@/lib/billing";
 import { Button } from "@/components/ui/button";
@@ -25,24 +26,6 @@ const UCENIK_PRICE_EUR = "20 €";
 // Porodična (roditeljska) — jedinstvena cijena za do 4 djece.
 const RODITELJ_PRICE_BIH = "30 KM";
 const RODITELJ_PRICE_EUR = "30 €";
-
-// Mektebski paketi — 2 opcije.
-const MEKTEB_PAKETI: Array<{
-  id: MektebPaket;
-  naziv: string;
-  opis: string;
-}> = [
-  {
-    id: "do100",
-    naziv: "Mekteb Standard",
-    opis: "Do 100 učenika · uključuje 1 muallima",
-  },
-  {
-    id: "vise100",
-    naziv: "Mekteb Pro",
-    opis: "Do 500 učenika · uključuje 5 muallima",
-  },
-];
 
 const DRZAVE = [
   "Bosna i Hercegovina", "Hrvatska", "Srbija", "Crna Gora", "Kosovo",
@@ -136,6 +119,10 @@ export default function RegisterRoditeljPage() {
 
   const ucenikPrice = isBiH ? UCENIK_PRICE_BIH : UCENIK_PRICE_EUR;
   const roditeljPrice = isBiH ? RODITELJ_PRICE_BIH : RODITELJ_PRICE_EUR;
+  // Mektebska regija zavisi od odabrane države, ne od IP adrese muallima.
+  const mektebIsBiH = mektebForm.drzava
+    ? mektebForm.drzava === "Bosna i Hercegovina"
+    : isBiH === true;
 
   const validateCaptcha = () => {
     if (parseInt(captchaAnswer) !== captcha.answer) {
@@ -225,19 +212,9 @@ export default function RegisterRoditeljPage() {
       year: "numeric",
     });
     const copyText = `Korisničko ime: ${credentials.username}\nLozinka: ${credentials.password}`;
-    const paymentLink = bmacRegistrationProductLink(
-      activeTab,
-      isBiH === true,
-      mektebForm.paket,
-    );
-    const mektebAddon =
-      activeTab === "mekteb"
-        ? bmacMektebAddonDetails(
-            mektebForm.paket,
-            isBiH === true,
-            mektebForm.koliko_muallima,
-          )
-        : null;
+    const paymentLink = activeTab === "mekteb"
+      ? mektebOfferLink(mektebForm.paket, mektebIsBiH, mektebForm.koliko_muallima)
+      : bmacRegistrationProductLink(activeTab, isBiH === true);
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4"
         style={{ backgroundImage: "radial-gradient(circle at 50% 0%, hsl(var(--primary)/0.08) 0%, transparent 70%)" }}>
@@ -289,40 +266,18 @@ export default function RegisterRoditeljPage() {
               </div>
             </div>
 
-            <a href={paymentLink} target="_blank" rel="noopener noreferrer"
-              className="block w-full text-center bg-primary/5 border border-primary/20 hover:bg-primary/10 transition rounded-xl px-4 py-3 mb-3 text-sm font-bold text-primary flex items-center justify-center gap-2">
-              <ExternalLink className="w-4 h-4" />
-              {activeTab === "mekteb"
-                ? t("Plati osnovni paket")
-                : t("Plati odabranu pretplatu")}
-            </a>
-
-            {mektebAddon && mektebAddon.addonCount > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3 text-sm">
-                <div className="font-bold text-blue-900">
-                  {t("Potrebno dodatnih muallimskih računa:")} {mektebAddon.addonCount}
-                </div>
-                <div className="text-blue-800 mt-1">
-                  {mektebAddon.addonCount} × {mektebAddon.addonPriceLabel} / {t("12 mjeseci nakon triala")}
-                </div>
-                <div className="font-bold text-blue-900 mt-1">
-                  {t("Ukupna cijena za 12 mjeseci nakon probnog perioda:")}{" "}
-                  {formatMektebTotalPrice(
-                    mektebForm.paket,
-                    isBiH === true,
-                    mektebForm.koliko_muallima,
-                  )}
-                </div>
-                <a
-                  href={mektebAddon.addonLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-bold px-4 py-2.5 transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  {t("Dodaj Addon za dodatne muallime")}
-                </a>
-              </div>
+            {activeTab === "mekteb" && (
+              <p className="mb-3 text-sm font-bold text-foreground">
+                {t("Ukupna cijena za 12 mjeseci nakon probnog perioda:")}{" "}
+                {formatMektebTotalPrice(mektebForm.paket, mektebIsBiH, mektebForm.koliko_muallima)}
+              </p>
+            )}
+            {paymentLink && (
+              <a href={paymentLink} target="_blank" rel="noopener noreferrer"
+                className="block w-full text-center bg-primary/5 border border-primary/20 hover:bg-primary/10 transition rounded-xl px-4 py-3 mb-3 text-sm font-bold text-primary flex items-center justify-center gap-2">
+                <ExternalLink className="w-4 h-4" />
+                {t("Plati odabranu pretplatu")}
+              </a>
             )}
 
             <Button onClick={() => setLocation("/login")} size="lg" className="w-full rounded-xl">
@@ -563,36 +518,24 @@ export default function RegisterRoditeljPage() {
                     <div>
                       <label className="text-sm font-bold text-foreground mb-2 block">{t("Odaberite paket")}</label>
                       <div className="flex flex-col gap-2">
-                        {MEKTEB_PAKETI.map(p => (
-                          <button key={p.id} type="button" onClick={() => setMektebForm(prev => ({ ...prev, paket: p.id }))}
+                        {MEKTEB_OFFERS[mektebIsBiH ? "bih" : "dijaspora"].map(p => (
+                          <button key={`${p.paket}-${p.muallims}`} type="button"
+                            onClick={() => setMektebForm(prev => ({ ...prev, paket: p.paket, koliko_muallima: p.muallims }))}
                             className={`flex items-center justify-between p-3.5 rounded-xl border-2 text-left transition-all ${
-                              mektebForm.paket === p.id
+                              mektebForm.paket === p.paket && mektebForm.koliko_muallima === p.muallims
                                 ? "border-primary bg-primary/5"
                                 : "border-border/50 hover:border-primary/30"
                             }`}>
                             <div className="min-w-0 flex-1 pr-2">
-                              <div className="font-bold text-foreground text-sm">{p.naziv}</div>
-                              <div className="text-xs text-muted-foreground">{p.opis}</div>
-                              {isBiH !== null && mektebForm.paket === p.id && (
-                                <div className="mt-1 text-[10px] leading-snug text-muted-foreground">
-                                  {bmacMektebAddonDetails(
-                                    p.id,
-                                    isBiH,
-                                    mektebForm.koliko_muallima,
-                                  ).addonCount > 0
-                                    ? t("U cijenu su dodani Addoni za dodatne muallime.")
-                                    : t("Nije potreban dodatni Addon.")}
-                                </div>
-                              )}
+                              <div className="font-bold text-foreground text-sm">
+                                {p.paket === "vise100" ? "Mekteb Pro" : "Mekteb Standard"}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("{m} muallima · do {u} učenika", { m: String(p.muallims), u: String(p.students) })}
+                              </div>
                             </div>
                             <span className="text-xs font-bold text-primary shrink-0 ml-2 text-right">
-                              {isBiH === null
-                                ? "..."
-                                : formatMektebTotalPrice(
-                                    p.id,
-                                    isBiH,
-                                    mektebForm.koliko_muallima,
-                                  )}
+                              {formatMektebTotalPrice(p.paket, mektebIsBiH, p.muallims)}
                               <div className="text-[10px] font-normal text-muted-foreground">
                                 / {t("12 mjeseci nakon triala")}
                               </div>
@@ -600,24 +543,6 @@ export default function RegisterRoditeljPage() {
                           </button>
                         ))}
                       </div>
-                      {isBiH !== null && (
-                        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                          {isBiH
-                            ? t("Dodatni muallim: 30 BAM (15 €) za 12 mjeseci nakon triala.")
-                            : t("Dodatni muallim: 30 € za 12 mjeseci nakon triala.")}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Koliko muallimskih računa je potrebno?")}</label>
-                      <select value={mektebForm.koliko_muallima}
-                        onChange={e => setMektebForm(p => ({ ...p, koliko_muallima: parseInt(e.target.value) }))}
-                        className="w-full h-11 rounded-xl border border-border/70 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
-                          <option key={n} value={n}>{n}</option>
-                        ))}
-                      </select>
                     </div>
 
                     <CaptchaField captcha={captcha} value={captchaAnswer} onChange={setCaptchaAnswer} label={t("login.zastitaOdSpama")} />

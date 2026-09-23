@@ -26,23 +26,34 @@ const BMAC_PRODUCT_IDS = {
 type RegistrationType = "ucenik" | "roditelj" | "mekteb";
 export type MektebPaket = "do100" | "vise100";
 
-const MEKTEB_PRICING = {
-  do100: {
-    includedMuallims: 1,
-    bih: { baseBam: 200, baseEur: 100 },
-    dijaspora: { baseEur: 200 },
-  },
-  vise100: {
-    includedMuallims: 5,
-    bih: { baseBam: 300, baseEur: 150 },
-    dijaspora: { baseEur: 300 },
-  },
+// Svaki red je jedan Shop proizvod / jedna uplata. Cijene su cijene
+// objavljenih proizvoda (varijanta +3 ima zasebnu cijenu, nije 3 × addon).
+export const MEKTEB_OFFERS = {
+  bih: [
+    { paket: "do100", muallims: 1, students: 100, eur: 100, bam: 200, productId: 547350 },
+    { paket: "do100", muallims: 2, students: 130, eur: 115, bam: 230, productId: 578827 },
+    { paket: "do100", muallims: 3, students: 160, eur: 130, bam: 260, productId: 578828 },
+    { paket: "do100", muallims: 4, students: 190, eur: 140, bam: 280, productId: 578830 },
+    { paket: "vise100", muallims: 5, students: 500, eur: 150, bam: 300, productId: 547351 },
+  ],
+  dijaspora: [
+    { paket: "do100", muallims: 1, students: 100, eur: 200, productId: 547349 },
+    { paket: "do100", muallims: 2, students: 130, eur: 230, productId: 578818 },
+    { paket: "do100", muallims: 3, students: 160, eur: 260, productId: 578820 },
+    { paket: "do100", muallims: 4, students: 190, eur: 280, productId: 578821 },
+    { paket: "vise100", muallims: 5, students: 500, eur: 300, productId: 547352 },
+  ],
 } as const;
 
-const ADDON_PRICING = {
-  bih: { bam: 30, eur: 15, productId: 547355 },
-  dijaspora: { eur: 30, productId: 547356 },
-} as const;
+export function mektebOffer(paket: MektebPaket, isBiH: boolean, muallims: number) {
+  return MEKTEB_OFFERS[isBiH ? "bih" : "dijaspora"]
+    .find(offer => offer.paket === paket && offer.muallims === muallims);
+}
+
+export function mektebOfferLink(paket: MektebPaket, isBiH: boolean, muallims: number): string | null {
+  const offer = mektebOffer(paket, isBiH, muallims);
+  return offer ? `https://buymeacoffee.com/mekteb/e/${offer.productId}` : null;
+}
 
 /**
  * Direktan BMAC proizvod za odabranu registraciju. BMAC koristi `B` proizvode
@@ -66,44 +77,14 @@ export function bmacRegistrationProductLink(
   return `https://buymeacoffee.com/mekteb/e/${productId}`;
 }
 
-export function bmacMektebAddonDetails(
-  mektebPaket: MektebPaket,
-  isBiH: boolean,
-  requestedMuallims: number,
-) {
-  const includedMuallims = MEKTEB_PRICING[mektebPaket].includedMuallims;
-  const addonCount = Math.max(0, requestedMuallims - includedMuallims);
-  const addon = isBiH ? ADDON_PRICING.bih : ADDON_PRICING.dijaspora;
-
-  return {
-    includedMuallims,
-    addonCount,
-    addonLink: `https://buymeacoffee.com/mekteb/e/${addon.productId}`,
-    addonPriceLabel: isBiH
-      ? `${ADDON_PRICING.bih.bam} BAM (${ADDON_PRICING.bih.eur} €)`
-      : `${ADDON_PRICING.dijaspora.eur} €`,
-  };
-}
-
 export function formatMektebTotalPrice(
   mektebPaket: MektebPaket,
   isBiH: boolean,
   requestedMuallims: number,
 ): string {
-  const { addonCount } = bmacMektebAddonDetails(
-    mektebPaket,
-    isBiH,
-    requestedMuallims,
-  );
-
-  if (isBiH) {
-    const packagePrice = MEKTEB_PRICING[mektebPaket].bih;
-    const addon = ADDON_PRICING.bih;
-    return `${packagePrice.baseBam + addonCount * addon.bam} BAM (${packagePrice.baseEur + addonCount * addon.eur} €)`;
-  }
-
-  const packagePrice = MEKTEB_PRICING[mektebPaket].dijaspora;
-  return `${packagePrice.baseEur + addonCount * ADDON_PRICING.dijaspora.eur} €`;
+  const offer = mektebOffer(mektebPaket, isBiH, requestedMuallims);
+  if (!offer) throw new Error("Nema proizvoda za odabrani broj muallima");
+  return "bam" in offer ? `${offer.bam} BAM (${offer.eur} €)` : `${offer.eur} €`;
 }
 
 /**

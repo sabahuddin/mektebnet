@@ -2464,7 +2464,7 @@ export default function AdminPage() {
                             id={`pretplata-licence-${d.id}`}
                             type="number"
                             min={1}
-                            defaultValue={d.pretplata?.licencesPurchased || d.ukupnoLicenci || (d.billingPaket === "vise100" ? 500 : 100)}
+                            defaultValue={d.pretplata?.licencesPurchased || d.ukupnoLicenci || (d.billingPaket === "vise100" ? 500 : 100 + Math.max(0, d.dozvoljenoMuallima - 1) * 30)}
                             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
                           />
                         </div>
@@ -2477,8 +2477,7 @@ export default function AdminPage() {
                             type="number"
                             min={0}
                             defaultValue={d.pretplata?.iznos ?? (
-                              (d.billingPaket === "vise100" ? 300 : 200) +
-                              Math.max(0, d.dozvoljenoMuallima - (d.billingPaket === "vise100" ? 5 : 1)) * 30
+                              d.billingPaket === "vise100" ? 300 : [200, 230, 260, 280][Math.min(3, Math.max(0, d.dozvoljenoMuallima - 1))]
                             )}
                             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-bold"
                           />

@@ -1,5 +1,5 @@
 import { CreditCard, ExternalLink, ShieldCheck } from "lucide-react";
-import { BMAC_SHOP_LINK, bmacRegistrationProductLink, trialDaysLeft } from "@/lib/billing";
+import { BMAC_SHOP_LINK, bmacRegistrationProductLink, mektebOfferLink, trialDaysLeft } from "@/lib/billing";
 import { useLanguage } from "@/context/language";
 
 export interface SubscriptionProfile {
@@ -12,6 +12,7 @@ export interface SubscriptionProfile {
   expectedAmount: number | null;
   currency: "BAM" | "EUR" | null;
   licenceCount: number | null;
+  mektebMuallimCount: number | null;
   licenceStart: string | null;
   licenceEnd: string | null;
   subscription: {
@@ -38,10 +39,10 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
   const days = trialDaysLeft(data.trialUntil);
   const paymentLink = data.billingRegion
     ? data.planType === "mekteb-standard" || data.planType === "mekteb-pro"
-      ? bmacRegistrationProductLink(
-          "mekteb",
-          data.billingRegion === "bih",
+      ? mektebOfferLink(
           data.planType === "mekteb-pro" ? "vise100" : "do100",
+          data.billingRegion === "bih",
+          data.mektebMuallimCount ?? (data.planType === "mekteb-pro" ? 5 : 1),
         )
       : bmacRegistrationProductLink(
           data.planType === "family" ? "roditelj" : "ucenik",
@@ -165,7 +166,12 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
           {t("Za ovaj stariji račun regija naplate nije sačuvana. Odaberite odgovarajući BiH ili dijaspora proizvod u Shopu.")}
         </p>
       )}
-      {data.canRenew && (
+      {data.canRenew && !paymentLink && (
+        <p className="mt-3 text-xs text-amber-800">
+          {t("Za odabrani broj muallima nema jedinstvenog proizvoda za uplatu. Obratite se administratoru.")}
+        </p>
+      )}
+      {data.canRenew && paymentLink && (
         <a
           href={paymentLink}
           target="_blank"

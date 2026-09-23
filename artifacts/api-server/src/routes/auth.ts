@@ -638,6 +638,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
     let subscriptionOwnerId: number | null = null;
     let canRenew = false;
     let storedBillingRegion: "bih" | "dijaspora" | null = null;
+    let mektebMuallimCount: number | null = null;
 
     if (role === "roditelj") {
       const isSelfRegistered = Boolean(account.email?.trim());
@@ -679,6 +680,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
           : [];
         if (mekteb) {
           coverage = "mekteb";
+          mektebMuallimCount = mekteb.dozvoljenoMuallima;
           planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
           subscriptionOwnerId = mekteb.glavniMuallimId;
           storedBillingRegion =
@@ -699,6 +701,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
         : [];
       if (mekteb) {
         coverage = "mekteb";
+        mektebMuallimCount = mekteb.dozvoljenoMuallima;
         planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
         subscriptionOwnerId = mekteb.glavniMuallimId ?? userId;
         canRenew = profile?.isGlavni === true && subscriptionOwnerId === userId;
@@ -732,6 +735,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
 
       if (mekteb) {
         coverage = "mekteb";
+        mektebMuallimCount = mekteb.dozvoljenoMuallima;
         planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
         subscriptionOwnerId = mekteb.glavniMuallimId;
         storedBillingRegion =
@@ -779,6 +783,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
       expectedAmount: canSeeBillingDetails ? expectedAmount : null,
       currency: canSeeBillingDetails ? currency : null,
       licenceCount: canSeeBillingDetails ? subscription?.licencesPurchased ?? null : null,
+      mektebMuallimCount: canSeeBillingDetails ? mektebMuallimCount : null,
       licenceStart: subscription?.activatedAt ?? null,
       licenceEnd: subscription?.expiresAt ?? null,
       subscription: canSeeBillingDetails ? subscription ?? null : null,
@@ -812,7 +817,14 @@ router.post("/register-mekteb", async (req, res) => {
     const paketNaziv = billingPaket === "do100"
       ? "Mektebska pretplata (do 100 učenika)"
       : "Mektebska pretplata XL (više od 100 učenika)";
-    const licenceCount = billingPaket === "vise100" ? 500 : 100;
+    const dozvoljenoMuallima = Number(koliko_muallima);
+    const licenceCount = billingPaket === "vise100" ? 500 : 100 + (dozvoljenoMuallima - 1) * 30;
+    if (!Number.isInteger(dozvoljenoMuallima) ||
+        (billingPaket === "do100" && (dozvoljenoMuallima < 1 || dozvoljenoMuallima > 4)) ||
+        (billingPaket === "vise100" && dozvoljenoMuallima !== 5)) {
+      res.status(400).json({ error: "Odaberite dostupnu kombinaciju paketa i broja muallima" });
+      return;
+    }
 
     const usernameClean = String(korisnickoIme).trim().toLowerCase().replace(/\s+/g, ".");
     const existing = await db.select().from(usersTable).where(eq(usersTable.username, usernameClean));
@@ -825,11 +837,10 @@ router.post("/register-mekteb", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const trialUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    const dozvoljenoMuallima = Math.max(1, parseInt(String(koliko_muallima), 10) || 1);
-    const includedMuallims = billingPaket === "vise100" ? 5 : 1;
-    const addonCount = Math.max(0, dozvoljenoMuallima - includedMuallims);
-    const subscriptionAmount =
-      (billingPaket === "vise100" ? 300 : 200) + addonCount * 30;
+    // Iznos odgovara objavljenom jednom BMAC proizvodu za svaku kombinaciju.
+    const subscriptionAmount = billingPaket === "vise100"
+      ? 300
+      : [200, 230, 260, 280][dozvoljenoMuallima - 1]!;
     const subscriptionCurrency = billingRegion === "bih" ? "BAM" : "EUR";
 
     // Atomarno: mekteb + glavni muallim user + muallim profil. Glavni muallim je
