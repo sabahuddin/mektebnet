@@ -21,3 +21,10 @@ Bismilla i naslov sure prikazuju se samo kad stranica sadrži **prvi ajet nove s
 **Why:** korisnik je ukazao da ponavljanje bismille i naslova sure na svakoj Mushaf stranici netačno predstavlja tekst i zauzima prostor za ajete.
 
 **How to apply:** za oznaku početka sure gledaj broj ajeta unutar sure, ne prvi ajet učitan na stranici. Na stranici koja počinje usred sure odmah prikaži ajete.
+
+## Jednaka zaglavlja u prikazu sure i stranice
+Zeleno zaglavlje čitača mora imati jednaku visinu u oba prikaza; bismilla na početku sure pripada prostoru s ajetima ispod zaglavlja, a ne unutar zaglavlja.
+
+**Why:** korisnik traži da prebacivanje između „Sure” i „Stranice” ne mijenja veličinu zaglavlja, bez povećanja oba zaglavlja na visinu koju zauzima bismilla.
+
+**How to apply:** kada dodaješ podatke o suri ili stranici, ne povećavaj zaglavlje jednog prikaza; dodatni sadržaj stavi ispod njega, uz tekst.

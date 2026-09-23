@@ -8,13 +8,12 @@ import { AudioBar } from "@/components/quran/audio-bar";
 import { useQuranAudio, useReciter, type PlayItem } from "@/hooks/use-quran-audio";
 import {
   fetchPage,
-  surahName,
   QURAN_PAGES,
   type PageAyah,
 } from "@/lib/quran";
 
 export default function KuranStranicaPage() {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { p } = useParams<{ p: string }>();
   const pageNum = Math.max(1, Math.min(QURAN_PAGES, parseInt(p || "1", 10) || 1));
   const [, navigate] = useLocation();
@@ -70,15 +69,11 @@ export default function KuranStranicaPage() {
     navigate(`/kuran/stranica/${clamped}`);
   };
 
-  const active = audio.activeKey
-    ? { surah: Number(audio.activeKey.split(":")[0]), ayah: Number(audio.activeKey.split(":")[1]) }
-    : null;
-
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto pb-44 sm:pb-32">
+      <div className="max-w-3xl mx-auto pb-36 sm:pb-28">
         {/* Odabir stranice */}
-        <div className="rounded-2xl bg-gradient-to-br from-primary to-teal-700 text-primary-foreground px-3 py-3 sm:px-5 mb-3 flex flex-wrap items-center justify-center sm:justify-between gap-x-3 gap-y-1">
+        <div className="h-[104px] sm:h-[88px] rounded-2xl bg-gradient-to-br from-primary to-teal-700 text-primary-foreground px-3 py-3 sm:px-5 mb-3 flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-x-3 gap-y-1">
           <div className="text-[11px] font-bold uppercase tracking-wider text-white/85 text-center">
             {t("Mushaf · stranica {br} / {ukupno}", { br: String(pageNum), ukupno: String(QURAN_PAGES) })}
           </div>
@@ -160,12 +155,6 @@ export default function KuranStranicaPage() {
           onRepeatCountChange={audio.setRepeatCount}
           playbackRate={audio.playbackRate}
           onPlaybackRateChange={audio.setPlaybackRate}
-          title={t("Stranica {br}", { br: String(pageNum) })}
-          subtitle={
-            active != null
-              ? t("{sura} · ajet {br}", { sura: surahName(active.surah, lang), br: String(active.ayah) })
-              : t("Odaberi učača i klikni ajet")
-          }
           reciterId={reciterId}
           onReciterChange={setReciterId}
         />
