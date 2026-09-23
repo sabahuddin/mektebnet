@@ -525,6 +525,26 @@ router.get("/mekteb/muallimi", async (req, res) => {
   }
 });
 
+// Kratka lista za dodjelu grupi — dostupna i običnom muallimu istog mekteba.
+router.get("/mekteb/muallimi-za-grupe", async (req, res) => {
+  try {
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!ctx?.mektebId) {
+      res.status(403).json({ error: "Muallim nije član mekteba" }); return;
+    }
+    const rows = await db.select({
+      userId: usersTable.id,
+      displayName: usersTable.displayName,
+    }).from(muallimProfiliTable)
+      .innerJoin(usersTable, eq(usersTable.id, muallimProfiliTable.userId))
+      .where(and(eq(muallimProfiliTable.mektebId, ctx.mektebId), eq(usersTable.isActive, true)));
+    res.json(rows.sort((a, b) => a.displayName.localeCompare(b.displayName)));
+  } catch (err) {
+    req.log.error({ err }, "Lista muallima za grupe");
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 // POST /api/muallim/mekteb/muallimi — kreiraj novog muallima (glavni only).
 // Vraća plaintext kredencijale JEDNOM (ne čuvaju se) da ih glavni podijeli.
 router.post("/mekteb/muallimi", async (req, res) => {
@@ -1159,9 +1179,9 @@ router.get("/grupe", async (req, res) => {
 // Samo vlasnik grupe, admin, ili glavni muallim džemata.
 router.post("/grupe/:id/muallimi", async (req, res) => {
   try {
-    const grupaId = parseInt(req.params.id);
-    const { muallimId } = req.body as { muallimId?: number };
-    if (!grupaId || !muallimId) {
+    const grupaId = Number(req.params.id);
+    const muallimId = Number(req.body?.muallimId);
+    if (!Number.isSafeInteger(grupaId) || grupaId <= 0 || !Number.isSafeInteger(muallimId) || muallimId <= 0) {
       res.status(400).json({ error: "grupaId i muallimId su obavezni" }); return;
     }
     const userId = req.user!.userId;
@@ -1172,25 +1192,41 @@ router.post("/grupe/:id/muallimi", async (req, res) => {
     const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
     const isVlasnik = grupa.muallimId === userId;
-    const isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId);
+    const ownerCtx = await getMektebCtx(grupa.muallimId);
+    const isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId && ctx.mektebId === ownerCtx?.mektebId);
     if (!isAdmin && !isVlasnik && !isGlavniInSameMekteb) {
       res.status(403).json({ error: "Samo vlasnik ili glavni muallim mogu dodavati muallime grupi" }); return;
     }
 
     // Provjeri da ciljni muallim postoji i pripada istom mektebu
-    const targetCtx = await getMektebCtx(muallimId);
-    if (!isAdmin && ctx?.mektebId && targetCtx?.mektebId !== ctx.mektebId) {
-      res.status(403).json({ error: "Muallim ne pripada ovom džematu" }); return;
+    const [target] = await db.select({ id: usersTable.id }).from(usersTable)
+      .innerJoin(muallimProfiliTable, eq(muallimProfiliTable.userId, usersTable.id))
+      .where(and(eq(usersTable.id, muallimId), eq(usersTable.isActive, true),
+        eq(muallimProfiliTable.mektebId, ownerCtx?.mektebId ?? -1)));
+    if (!ownerCtx?.mektebId || !target) {
+      res.status(400).json({ error: "Muallim mora biti aktivan član istog mekteba" }); return;
     }
     if (muallimId === grupa.muallimId) {
       res.status(400).json({ error: "Taj muallim je već primarni vlasnik grupe" }); return;
     }
 
-    await db.execute(sql`
-      INSERT INTO grupa_muallimi (grupa_id, muallim_id)
-      VALUES (${grupaId}, ${muallimId})
-      ON CONFLICT (grupa_id, muallim_id) DO NOTHING
-    `);
+    const added = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM grupe WHERE id = ${grupaId} FOR UPDATE`);
+      const existing = await tx.execute(sql`
+        SELECT muallim_id FROM grupa_muallimi WHERE grupa_id = ${grupaId}
+      `);
+      if (existing.rows.some(r => Number(r.muallim_id) === muallimId)) return false;
+      if (existing.rows.length >= 2) return null;
+      await tx.execute(sql`
+        INSERT INTO grupa_muallimi (grupa_id, muallim_id)
+        VALUES (${grupaId}, ${muallimId})
+        ON CONFLICT (grupa_id, muallim_id) DO NOTHING
+      `);
+      return true;
+    });
+    if (added === null) {
+      res.status(409).json({ error: "Grupa može imati najviše tri muallima" }); return;
+    }
     const [muallimUser] = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.id, muallimId));
     res.json({ ok: true, muallim: { id: muallimUser.id, displayName: muallimUser.displayName } });
@@ -1215,7 +1251,8 @@ router.delete("/grupe/:id/muallimi/:muallimId", async (req, res) => {
     const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
     const isVlasnik = grupa.muallimId === userId;
-    const isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId);
+    const ownerCtx = await getMektebCtx(grupa.muallimId);
+    const isGlavniInSameMekteb = !!(ctx?.isGlavni && ctx.mektebId && ctx.mektebId === ownerCtx?.mektebId);
     if (!isAdmin && !isVlasnik && !isGlavniInSameMekteb) {
       res.status(403).json({ error: "Samo vlasnik ili glavni muallim mogu uklanjati muallime" }); return;
     }
@@ -1240,6 +1277,12 @@ router.post("/grupe/:id/arhiviraj", async (req, res) => {
     const userRole = req.user!.role;
     const grupa = await verifyGrupaAccess(grupaId, userId, userRole);
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+    const ctx = await getMektebCtx(userId);
+    const ownerCtx = await getMektebCtx(grupa.muallimId);
+    if (userRole !== "admin" && grupa.muallimId !== userId &&
+      !(ctx?.isGlavni && ctx.mektebId && ctx.mektebId === ownerCtx?.mektebId)) {
+      res.status(403).json({ error: "Samo odgovorni ili glavni muallim mogu arhivirati grupu" }); return;
+    }
 
     let transitioned = false;
     await db.transaction(async (tx) => {
@@ -1284,11 +1327,14 @@ router.post("/grupe/:id/vrati", async (req, res) => {
     const grupaId = parseInt(req.params.id);
     const userId = req.user!.userId;
     const isAdmin = req.user!.role === "admin";
-    const grupaWhere = isAdmin
-      ? eq(grupeTable.id, grupaId)
-      : and(eq(grupeTable.id, grupaId), eq(grupeTable.muallimId, userId));
-    const [grupa] = await db.select().from(grupeTable).where(grupaWhere);
+    const [grupa] = await db.select().from(grupeTable).where(eq(grupeTable.id, grupaId));
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+    const ctx = await getMektebCtx(userId);
+    const ownerCtx = await getMektebCtx(grupa.muallimId);
+    if (!isAdmin && grupa.muallimId !== userId &&
+      !(ctx?.isGlavni && ctx.mektebId && ctx.mektebId === ownerCtx?.mektebId)) {
+      res.status(403).json({ error: "Samo odgovorni ili glavni muallim mogu vratiti grupu" }); return;
+    }
     await db.execute(sql`UPDATE grupe SET is_archived = false, archived_at = NULL, is_active = true WHERE id = ${grupaId}`);
     res.json({ success: true });
   } catch (err) {
@@ -1451,10 +1497,20 @@ router.put("/grupe/:id", async (req, res) => {
       if (ciljni) updateData.muallimId = Number(bodyMuallimId);
     }
 
-    const [updated] = await db.update(grupeTable)
-      .set(updateData)
-      .where(eq(grupeTable.id, grupaId))
-      .returning();
+    const updated = await db.transaction(async tx => {
+      await tx.execute(sql`SELECT id FROM grupe WHERE id = ${grupaId} FOR UPDATE`);
+      const [result] = await tx.update(grupeTable)
+        .set(updateData)
+        .where(eq(grupeTable.id, grupaId))
+        .returning();
+      if (updateData.muallimId) {
+        await tx.execute(sql`
+          DELETE FROM grupa_muallimi
+          WHERE grupa_id = ${grupaId} AND muallim_id = ${Number(updateData.muallimId)}
+        `);
+      }
+      return result;
+    });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
@@ -1469,6 +1525,12 @@ router.delete("/grupe/:id", async (req, res) => {
     const userRole = req.user!.role;
     const grupa = await verifyGrupaAccess(grupaId, userId, userRole);
     if (!grupa) { res.status(404).json({ error: "Grupa nije pronađena" }); return; }
+    const ctx = await getMektebCtx(userId);
+    const ownerCtx = await getMektebCtx(grupa.muallimId);
+    if (userRole !== "admin" && grupa.muallimId !== userId &&
+      !(ctx?.isGlavni && ctx.mektebId && ctx.mektebId === ownerCtx?.mektebId)) {
+      res.status(403).json({ error: "Samo odgovorni ili glavni muallim mogu obrisati grupu" }); return;
+    }
 
     // Arhivirana grupa je zaštićena od brisanja — prvo je vrati iz arhive.
     const arhCheck = await db.execute(sql`SELECT is_archived FROM grupe WHERE id = ${grupaId}`);

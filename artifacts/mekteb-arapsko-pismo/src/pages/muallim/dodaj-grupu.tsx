@@ -136,9 +136,9 @@ export default function DodajGrupuPage() {
         toast({ title: t("Sačuvano!"), description: t(`Grupa "{naziv}" je ažurirana`, { naziv }) });
         setLocation(`/muallim/grupa/${editId}`);
       } else {
-        await apiRequest("POST", "/muallim/grupe", payload, token);
+        const nova = await apiRequest<Grupa>("POST", "/muallim/grupe", payload, token);
         toast({ title: t("Grupa kreirana!"), description: t(`"{naziv}" je uspješno dodana`, { naziv }) });
-        setLocation("/muallim");
+        setLocation(`/muallim/grupa/${nova.id}`);
       }
     } catch {
       toast({ title: t("Greška"), description: isEdit ? t("Nije moguće sačuvati izmjene") : t("Nije moguće kreirati grupu"), variant: "destructive" });
@@ -195,6 +195,9 @@ export default function DodajGrupuPage() {
               </select>
             </div>
           )}
+          <p className="text-xs text-muted-foreground">
+            {t("Još jednog ili dva muallima možete dodati na stranici grupe nakon kreiranja.")}
+          </p>
 
           <div>
             <label className="text-sm font-bold text-foreground mb-1.5 block">
