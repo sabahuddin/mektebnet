@@ -38,10 +38,9 @@ export default function IlmihalSvePage() {
   const { toast } = useToast();
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [loading, setLoading] = useState(true);
-  // Akordion: koji nivoi su otvoreni. Po defaultu SVI ZATVORENI da
-  // korisnik ne mora skrolati Nivo 1+2 da bi došao do Nivoa 3.
+  // Prvi nivo je otvoren po dolasku, ostali su sklopljeni radi kraćeg skrolanja.
   const [openNivoi, setOpenNivoi] = useState<Record<number, boolean>>({
-    1: false,
+    1: true,
     2: false,
     3: false,
   });
@@ -61,6 +60,8 @@ export default function IlmihalSvePage() {
   const [newSubject, setNewSubject] = useState("");
   const [publicReview, setPublicReview] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadCount, setReloadCount] = useState(0);
 
   // Prijavljeni učenik može otvoriti bilo koju lekciju u sva tri nivoa.
   // Zaključane su samo lekcije s eksplicitnim, još nezavršenim preduvjetima.
@@ -70,11 +71,18 @@ export default function IlmihalSvePage() {
 
   useEffect(() => {
     setLoading(true);
+    setLoadError(false);
     apiRequest<Lekcija[]>("GET", "/content/ilmihal", undefined, token || undefined)
-      .then((data) => setLekcije(Array.isArray(data) ? data : []))
-      .catch(() => setLekcije([]))
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error("Neispravan odgovor servera");
+        setLekcije(data);
+      })
+      .catch(() => {
+        setLekcije([]);
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
-  }, [token, lang]);
+  }, [token, lang, reloadCount]);
 
   const groupedByNivo: Record<number, Lekcija[]> = useMemo(() => {
     const g: Record<number, Lekcija[]> = { 1: [], 2: [], 3: [] };
@@ -301,6 +309,14 @@ export default function IlmihalSvePage() {
 
         {loading ? (
           <div className="text-center text-amber-800/70 py-10">{t("Učitavanje…")}</div>
+        ) : loadError ? (
+          <div role="alert" className="text-center text-amber-900 py-10">
+            <p>{t("Lekcije trenutno nije moguće učitati.")}</p>
+            <button type="button" onClick={() => setReloadCount((count) => count + 1)}
+              className="mt-3 rounded-xl border border-amber-400 px-4 py-2 font-semibold hover:bg-amber-50">
+              {t("Pokušaj ponovo")}
+            </button>
+          </div>
         ) : total === 0 && !isAdmin && !isMuallim ? (
           <div className="text-center text-amber-800/70 py-10">
             {t("Trenutno nema dostupnih lekcija.")}
@@ -341,6 +357,9 @@ export default function IlmihalSvePage() {
                       <h2 className="text-xl sm:text-2xl font-extrabold text-amber-900 truncate">
                         {info.naslov}
                       </h2>
+                      {!token && <span className="text-xs font-medium text-amber-800/80">
+                        {allItems.length} {t("lekcija")}
+                      </span>}
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {token && (
