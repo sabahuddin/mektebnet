@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { PlanLekcijaModul, MAX_CASOVA, nazivVrste } from "@/components/plan-lekcija-modul";
 import { goBackOr } from "@/lib/back-navigation";
+import { lessonHref } from "@/lib/quran-assignment";
 import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
@@ -3836,7 +3837,7 @@ export default function MuallimPanel() {
                                          dl.naslov === z.lekcijaNaslov || dl.izvorniNaslov === z.lekcijaNaslov
                                        )?.slug;
                                       return matchSlug ? (
-                                        <Link href={`/ilmihal/${matchSlug}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                        <Link href={lessonHref(matchSlug)} className="text-xs text-primary hover:underline flex items-center gap-1">
                                           <BookOpen className="w-3 h-3" /> {z.lekcijaNaslov}
                                         </Link>
                                       ) : (

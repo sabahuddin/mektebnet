@@ -2840,6 +2840,8 @@ router.get("/prisustvo", async (req, res) => {
 router.post("/ocjene", async (req, res) => {
   try {
     const { ucenikId, grupaId, lekcijaNaziv, lekcijaSlug, napomena, napametStavkaId } = req.body;
+    const quranPageMatch = typeof lekcijaSlug === "string" ? /^kuran-stranica-([1-9]\d*)$/.exec(lekcijaSlug) : null;
+    const quranPage = quranPageMatch && Number(quranPageMatch[1]) <= 604 ? Number(quranPageMatch[1]) : null;
     const ocjenaOpisna = req.body.ocjenaOpisna === "uradjeno" || req.body.ocjenaOpisna === "neuradjeno"
       ? req.body.ocjenaOpisna as "uradjeno" | "neuradjeno"
       : null;
@@ -2854,17 +2856,17 @@ router.post("/ocjene", async (req, res) => {
     const datum = typeof req.body.datum === "string" && req.body.datum.trim()
       ? req.body.datum.trim()
       : new Date().toISOString().slice(0, 10);
-    const [odabranaLekcija] = lekcijaSlug
+    const [odabranaLekcija] = lekcijaSlug && !quranPage
       ? await db.select({
           naslov: ilmihalLekcijeTable.naslov,
           predmet: ilmihalLekcijeTable.predmet,
         }).from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, String(lekcijaSlug)))
       : [];
-    if (!napametStavkaId && (!odabranaLekcija || !lekcijaNaziv)) {
+    if (!napametStavkaId && ((!odabranaLekcija && !quranPage) || !lekcijaNaziv || (quranPage && lekcijaNaziv !== `Kur'an - stranica ${quranPage}`))) {
       res.status(400).json({ error: "Odaberite lekciju za ocjenu" });
       return;
     }
-    const predmet = odabranaLekcija?.predmet || (odabranaLekcija ? "Ostali sadržaji" : null);
+    const predmet = quranPage ? "Kur'an" : odabranaLekcija?.predmet || (odabranaLekcija ? "Ostali sadržaji" : null);
     const ctx = await getMektebCtx(req.user!.userId);
     const program = grupaId
       ? await getNapametKatalog({
@@ -6017,6 +6019,8 @@ router.get("/zadace", async (req, res) => {
 router.post("/zadace", async (req, res) => {
   try {
     const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds, tipDodjele } = req.body;
+    const quranPageMatch = typeof lekcijaSlug === "string" ? /^kuran-stranica-([1-9]\d*)$/.exec(lekcijaSlug) : null;
+    const quranPage = quranPageMatch && Number(quranPageMatch[1]) <= 604 ? Number(quranPageMatch[1]) : null;
     if (Array.isArray(req.body?.priloziIds) && req.body.priloziIds.length > 0) {
       res.status(400).json({ error: "Materijali za nastavu dostupni su samo u Pripremi za nastavu" });
       return;
@@ -6046,12 +6050,19 @@ router.post("/zadace", async (req, res) => {
 
     let canonicalSlug: string | null = null;
     if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
-      const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov, dostupnost: ilmihalLekcijeTable.dostupnost })
-        .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
-      if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
-        res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
+      if (quranPage) {
+        if (String(lekcijaNaslov || "").trim() !== `Kur'an - stranica ${quranPage}`) {
+          res.status(400).json({ error: "Odabrana stranica Kur'ana nije ispravna" }); return;
+        }
+        canonicalSlug = `kuran-stranica-${quranPage}`;
+      } else {
+        const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov, dostupnost: ilmihalLekcijeTable.dostupnost })
+          .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
+        if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
+          res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
+        }
+        canonicalSlug = lekcija.slug;
       }
-      canonicalSlug = lekcija.slug;
     } else if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) {
       const lekcije = await db.select({ slug: ilmihalLekcijeTable.slug })
         .from(ilmihalLekcijeTable)
@@ -6077,7 +6088,7 @@ router.post("/zadace", async (req, res) => {
       const [created] = await tx.insert(zadaceTable).values({
         grupaId, muallimId: req.user!.userId, naslov: naslovFinal, opis: opis || null,
         rokDo: rokDo || null, lekcijaNaslov: lekcijaNaslov || null, lekcijaSlug: canonicalSlug,
-        lekcijaTip: canonicalSlug ? "ilmihal" : (lekcijaTip || null),
+        lekcijaTip: quranPage ? "kuran" : canonicalSlug ? "ilmihal" : (lekcijaTip || null),
       }).returning();
       if (validUcenikIds.length) await tx.insert(zadaceUceniciTable).values(validUcenikIds.map(ucenikId => ({ zadacaId: created.id, ucenikId })));
       return created;

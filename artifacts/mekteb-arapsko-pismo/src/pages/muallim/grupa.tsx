@@ -18,6 +18,7 @@ import { useLanguage } from "@/context/language";
 import { goBackOr } from "@/lib/back-navigation";
 import { isOnline, formatScreentime } from "@/lib/utils";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
+import { quranPageFromSlug } from "@/lib/quran-assignment";
 import type { NapametStavka } from "@/components/NapametPregled";
 import { PlanLekcijaModul } from "@/components/plan-lekcija-modul";
 import { NapametLokalniProgramEditor } from "@/components/NapametLokalniProgramEditor";
@@ -616,7 +617,7 @@ export default function GrupaPage() {
         rokDo: null,
         lekcijaNaslov: izvorniNaslov,
         lekcijaSlug: imaLekciju ? newZadaca.lekcijaSlug : null,
-        lekcijaTip: imaLekciju ? "ilmihal" : null,
+        lekcijaTip: imaLekciju ? (quranPageFromSlug(newZadaca.lekcijaSlug) ? "kuran" : "ilmihal") : null,
         priloziIds: zadacaTarget ? [] : Array.from(zadPriloziIds),
         ucenikIds: zadacaTarget ? [zadacaTarget.id] : [],
       }, token);
@@ -1361,6 +1362,7 @@ export default function GrupaPage() {
                   <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                   <LekcijaPicker
                     lekcije={ilmihalLekcije}
+                    includeQuranPages
                     value={newOcjena.lekcijaNaziv}
                     onChange={v => setNewOcjena(o => ({ ...o, lekcijaNaziv: v, lekcijaSlug: "" }))}
                     onSelectLesson={lekcija => {
@@ -1529,12 +1531,13 @@ export default function GrupaPage() {
                     <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija (opcionalno)")}</label>
                     <LekcijaPicker
                       lekcije={ilmihalLekcije}
+                      includeQuranPages
                       value={newZadaca.lekcijaNaslov}
-                      onChange={v => setNewZadaca(z => ({ ...z, lekcijaNaslov: v }))}
+                      onChange={v => setNewZadaca(z => ({ ...z, lekcijaNaslov: v, lekcijaSlug: "" }))}
                       onSelectLesson={async lekcija => {
                         setNewZadaca(z => ({ ...z, lekcijaSlug: lekcija?.slug || "" }));
                         setZadPriloziIds(new Set());
-                        if (zadacaTarget || !lekcija?.slug || !token) { setZadMaterijali([]); return; }
+                        if (zadacaTarget || !lekcija?.slug || quranPageFromSlug(lekcija.slug) || !token) { setZadMaterijali([]); return; }
                         try {
                           const data = await apiRequest<{ prilozi?: NastavniMaterijal[] }>("GET", `/content/ilmihal/${lekcija.slug}`, undefined, token);
                           setZadMaterijali((data.prilozi || []).filter(p => p.kind === "file" || p.kind === "url"));
@@ -1543,7 +1546,7 @@ export default function GrupaPage() {
                       placeholder={t("Pretraži lekciju ili upiši broj…")}
                     />
                 </div>
-                {!zadacaTarget && newZadaca.lekcijaSlug && (
+                {!zadacaTarget && newZadaca.lekcijaSlug && !quranPageFromSlug(newZadaca.lekcijaSlug) && (
                   <div>
                     <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Materijali za nastavu")}</label>
                     {zadMaterijali.length === 0 ? <p className="text-xs text-muted-foreground italic">{t("Ova lekcija nema dostupnih materijala.")}</p> : (

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { useLanguage } from "@/context/language";
+import { QURAN_PAGES } from "@/lib/quran";
 
 export interface LekcijaOption {
   id: number;
@@ -16,6 +17,7 @@ interface Props {
   /** Poziva se samo kad je konkretna lekcija odabrana ili izbor obrisan. */
   onSelectLesson?: (lekcija: LekcijaOption | null) => void;
   placeholder?: string;
+  includeQuranPages?: boolean;
 }
 
 function normalize(s: string): string {
@@ -30,7 +32,7 @@ function normalize(s: string): string {
     .replace(/ć/g, "c");
 }
 
-export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeholder }: Props) {
+export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeholder, includeQuranPages = false }: Props) {
   const { t } = useLanguage();
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
@@ -51,20 +53,26 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
     () => lekcije.map((l, i) => ({ ...l, broj: i + 1 })),
     [lekcije]
   );
+  const quranPages = useMemo(() => includeQuranPages
+    ? Array.from({ length: QURAN_PAGES }, (_, index) => {
+        const page = index + 1;
+        return { id: -page, nivo: 4, naslov: `Kur'an - stranica ${page}`, slug: `kuran-stranica-${page}`, broj: page };
+      })
+    : [], [includeQuranPages]);
 
-  const selected = numbered.find(l => l.naslov === value);
+  const selected = [...numbered, ...quranPages].find(l => l.naslov === value);
 
   useEffect(() => {
     const selectedNivo = selected?.nivo;
-    if (selectedNivo != null && selectedNivo >= 1 && selectedNivo <= 3) setActiveNivo(selectedNivo);
+    if (selectedNivo != null && selectedNivo >= 1 && selectedNivo <= 4) setActiveNivo(selectedNivo);
   }, [selected?.nivo]);
 
   const matches = useMemo(() => {
     const q = normalize(query.trim());
-    const nivoLekcije = numbered.filter(l => l.nivo === activeNivo);
+    const nivoLekcije = activeNivo === 4 ? quranPages : numbered.filter(l => l.nivo === activeNivo);
     if (q.length < 2) return nivoLekcije;
     return nivoLekcije.filter(l => normalize(l.naslov).includes(q) || String(l.broj) === q);
-  }, [numbered, query, activeNivo]);
+  }, [numbered, quranPages, query, activeNivo]);
 
   const pick = (l: typeof numbered[number]) => {
     onChange(l.naslov);
@@ -110,14 +118,14 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
       </div>
       {selected && !open && (
         <div className="text-[11px] text-muted-foreground mt-1 px-1">
-          #{selected.broj} • {t("Nivo {nivo}", { nivo: String(selected.nivo) })}
+          {selected.nivo === 4 ? `${t("Kur'an")} • ${t("Stranica {br}", { br: String(selected.broj) })}` : `#${selected.broj} • ${t("Nivo {nivo}", { nivo: String(selected.nivo) })}`}
         </div>
       )}
       {open && (
         <div className="absolute z-50 mt-1 w-full max-h-80 overflow-auto bg-white border border-border rounded-xl shadow-lg">
-          <div className="sticky top-0 z-10 grid grid-cols-3 gap-1 border-b border-border bg-white p-2" role="tablist" aria-label={t("Nivo")}>
-            {[1, 2, 3].map(nivo => {
-              const count = numbered.filter(l => l.nivo === nivo).length;
+          <div className={`sticky top-0 z-10 grid ${includeQuranPages ? "grid-cols-4" : "grid-cols-3"} gap-1 border-b border-border bg-white p-2`} role="tablist" aria-label={t("Nivo")}>
+            {(includeQuranPages ? [1, 2, 3, 4] : [1, 2, 3]).map(nivo => {
+              const count = nivo === 4 ? QURAN_PAGES : numbered.filter(l => l.nivo === nivo).length;
               return (
                 <button
                   key={nivo}
@@ -125,14 +133,15 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
                   role="tab"
                   aria-selected={activeNivo === nivo}
                   onMouseDown={e => e.preventDefault()}
-                  onClick={() => setActiveNivo(nivo)}
-                  className={`rounded-lg px-2 py-2 text-xs font-extrabold transition-colors ${
+                    onClick={() => { setQuery(""); setOpen(true); setActiveNivo(nivo); }}
+                    data-testid={`tab-lekcija-${nivo === 4 ? "kuran" : nivo}`}
+                    className={`rounded-lg px-1 sm:px-2 py-2 text-[11px] sm:text-xs font-extrabold transition-colors ${
                     activeNivo === nivo
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
-                  {t("Nivo {nivo}", { nivo: String(nivo) })} <span className="opacity-70">({count})</span>
+                  {nivo === 4 ? t("Kur'an") : t("Nivo {nivo}", { nivo: String(nivo) })} <span className="opacity-70 hidden sm:inline">({count})</span>
                 </button>
               );
             })}
@@ -144,13 +153,14 @@ export function LekcijaPicker({ lekcije, value, onChange, onSelectLesson, placeh
               key={l.id}
               type="button"
               onMouseDown={e => { e.preventDefault(); pick(l); }}
+              data-testid={`option-lekcija-${l.nivo}-${l.broj}`}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2 ${l.naslov === value ? "bg-primary/10 font-semibold" : ""}`}
             >
               <span className="inline-flex items-center justify-center min-w-[2rem] h-6 px-2 rounded-full bg-primary/10 text-primary text-xs font-bold">
                 {l.broj}
               </span>
-              <span className="flex-1 truncate">{l.naslov}</span>
-              <span className="text-[10px] text-muted-foreground">{t("Nivo {nivo}", { nivo: String(l.nivo) })}</span>
+              <span className="flex-1 truncate">{l.nivo === 4 ? t("Stranica {br}", { br: String(l.broj) }) : l.naslov}</span>
+              <span className="text-[10px] text-muted-foreground">{l.nivo === 4 ? t("Kur'an") : t("Nivo {nivo}", { nivo: String(l.nivo) })}</span>
             </button>
           ))}
         </div>

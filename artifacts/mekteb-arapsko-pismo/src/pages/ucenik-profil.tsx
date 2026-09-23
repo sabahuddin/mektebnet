@@ -24,6 +24,7 @@ import {
 import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
 import { useLanguage } from "@/context/language";
+import { lessonHref } from "@/lib/quran-assignment";
 import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
 import { SubscriptionCard, type SubscriptionProfile } from "@/components/subscription-card";
 
@@ -1200,7 +1201,7 @@ export default function UcenikProfilPage() {
                                 {z.lekcijaNaslov && (() => {
                                   const matchSlug = z.lekcijaSlug || ilmihalLekcije.find(l => l.naslov === z.lekcijaNaslov)?.slug;
                                   return matchSlug ? (
-                                    <Link href={`/ilmihal/${matchSlug}`} data-testid={`zadaca-lekcija-${z.id}`} className="text-xs text-primary hover:underline mt-0.5 inline-flex items-start gap-1 max-w-full">
+                                    <Link href={lessonHref(matchSlug)} data-testid={`zadaca-lekcija-${z.id}`} className="text-xs text-primary hover:underline mt-0.5 inline-flex items-start gap-1 max-w-full">
                                       <BookOpen className="w-3 h-3" />{z.lekcijaNaslov}
                                     </Link>
                                   ) : (

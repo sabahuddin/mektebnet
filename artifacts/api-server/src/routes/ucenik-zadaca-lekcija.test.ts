@@ -47,6 +47,7 @@ let studentToken: string;
 let otherStudentToken: string;
 let teacherToken: string;
 let attachmentHomeworkId: number;
+let quranHomeworkId: number;
 let filePrilogId: number;
 let urlPrilogId: number;
 let attachmentStoredName: string;
@@ -89,22 +90,22 @@ function teacherPost(path: string, body: unknown) {
 }
 
 async function cleanup(): Promise<void> {
-  if (assignedHomeworkId || emptyHomeworkId || napametHomeworkId || attachmentHomeworkId) {
+  if (assignedHomeworkId || emptyHomeworkId || napametHomeworkId || attachmentHomeworkId || quranHomeworkId) {
     await db.execute(sql`
       DELETE FROM zadace_status
-       WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1}, ${attachmentHomeworkId || -1})
+       WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1}, ${attachmentHomeworkId || -1}, ${quranHomeworkId || -1})
     `);
     await db.execute(sql`
       DELETE FROM zadace_ucenici
-       WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1}, ${attachmentHomeworkId || -1})
+       WHERE zadaca_id IN (${assignedHomeworkId || -1}, ${emptyHomeworkId || -1}, ${napametHomeworkId || -1}, ${attachmentHomeworkId || -1}, ${quranHomeworkId || -1})
     `);
     await db.delete(ocjeneTable).where(inArray(
       ocjeneTable.zadacaId,
-      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId, attachmentHomeworkId].filter(Boolean),
+      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId, attachmentHomeworkId, quranHomeworkId].filter(Boolean),
     ));
     await db.delete(zadaceTable).where(inArray(
       zadaceTable.id,
-      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId, attachmentHomeworkId].filter(Boolean),
+      [assignedHomeworkId, emptyHomeworkId, napametHomeworkId, attachmentHomeworkId, quranHomeworkId].filter(Boolean),
     ));
   }
   if (filePrilogId || urlPrilogId) {
@@ -203,6 +204,9 @@ before(async () => {
     passwordHash: "x",
     role: "muallim",
     isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
+    administratorDeclarationAcceptedAt: new Date(),
   }).returning({ id: usersTable.id });
   teacherId = teacher.id;
 
@@ -220,6 +224,8 @@ before(async () => {
     passwordHash: "x",
     role: "ucenik",
     isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   studentId = student.id;
   await db.insert(ucenikProfiliTable).values({
@@ -233,6 +239,8 @@ before(async () => {
     passwordHash: "x",
     role: "ucenik",
     isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   otherStudentId = otherStudent.id;
   await db.insert(ucenikProfiliTable).values({
@@ -594,6 +602,33 @@ test("redovna opisna ocjena se čuva bez brojčane vrijednosti", async () => {
     lekcijaNaziv: `Zadata lekcija ${suffix}`,
     lekcijaSlug: assignedSlug,
     datum: "2026-08-22",
+  });
+  assert.equal(invalid.status, 400);
+});
+
+test("muallim može zadati i ocijeniti Kur'ansku stranicu bez ilmihal lekcije", async () => {
+  const title = "Kur'an - stranica 7";
+  const grade = await teacherPost("/api/muallim/ocjene", {
+    ucenikId: studentId, grupaId: groupId, ocjena: 5,
+    lekcijaNaziv: title, lekcijaSlug: "kuran-stranica-7",
+  });
+  const savedGrade = await grade.json() as { predmet: string; lekcijaNaziv: string };
+  assert.equal(grade.status, 201, JSON.stringify(savedGrade));
+  assert.equal(savedGrade.predmet, "Kur'an");
+  assert.equal(savedGrade.lekcijaNaziv, title);
+
+  const homework = await teacherPost("/api/muallim/zadace", {
+    grupaId: groupId, naslov: title, lekcijaNaslov: title,
+    lekcijaSlug: "kuran-stranica-7", lekcijaTip: "kuran", ucenikIds: [studentId],
+  });
+  const savedHomework = await homework.json() as { id: number; lekcijaSlug: string; lekcijaTip: string };
+  assert.equal(homework.status, 201, JSON.stringify(savedHomework));
+  quranHomeworkId = savedHomework.id;
+  assert.equal(savedHomework.lekcijaSlug, "kuran-stranica-7");
+  assert.equal(savedHomework.lekcijaTip, "kuran");
+
+  const invalid = await teacherPost("/api/muallim/zadace", {
+    grupaId: groupId, naslov: title, lekcijaNaslov: title, lekcijaSlug: "kuran-stranica-605",
   });
   assert.equal(invalid.status, 400);
 });
