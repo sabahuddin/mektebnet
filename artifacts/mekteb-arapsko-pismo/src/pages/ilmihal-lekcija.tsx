@@ -3251,6 +3251,7 @@ export default function IlmihalLekcijaPage() {
   const [lekcija, setLekcija] = useState<Lekcija | null>(null);
   const [parsed, setParsed] = useState<{ heroImage: string | null; sections: AccordionSection[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
   const [lekcijeStrip, setLekcijeStrip] = useState<LekcijaNav[]>([]);
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
@@ -3535,6 +3536,7 @@ export default function IlmihalLekcijaPage() {
     // lesson gate pogrešno vraća na /ilmihal uz poruku za registraciju.
     if (!slug || authLoading) return;
     setIsLoading(true);
+    setLoadError(null);
     // Reset gate state pri prelasku na novu lekciju (npr. preko strip-a) —
     // inače bi vrijeme/skrol/sekcije iz prethodne lekcije ostali kao "ljepak".
     setTimeSpent(0);
@@ -3627,7 +3629,11 @@ export default function IlmihalLekcijaPage() {
         // ponovo rješavati pri svakom posjetu.
         if (data.userProgress?.quizPassedAt) setQuizPassed(true);
       })
-      .catch(() => {})
+      .catch((error: Error & { status?: number }) => {
+        if (error.status !== 404) {
+          setLoadError(error.message || "Greška pri učitavanju lekcije");
+        }
+      })
       .finally(() => setIsLoading(false));
   }, [slug, token, lang, authLoading, user?.role]);
 
@@ -3954,6 +3960,19 @@ export default function IlmihalLekcijaPage() {
   }
 
   if (!lekcija || !parsed) {
+    if (loadError) {
+      return (
+        <Layout>
+          <div role="alert" className="mx-auto max-w-md px-4 py-20 text-center">
+            <p className="font-medium text-red-700">{t("Lekciju trenutno nije moguće učitati.")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{loadError}</p>
+            <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+              {t("Pokušaj ponovo")}
+            </Button>
+          </div>
+        </Layout>
+      );
+    }
     // Specijalni slučaj: medaljon-prazna lekcija. Slug forma:
     // `medaljon-nivo{N}-{NN}` (npr. medaljon-nivo1-10). Admin dobije dugme
     // koje jednim klikom kreira praznu lekciju sa tim slugom.

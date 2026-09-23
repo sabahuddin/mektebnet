@@ -38,11 +38,11 @@ export default function IlmihalSvePage() {
   const { toast } = useToast();
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [loading, setLoading] = useState(true);
-  // Prvi nivo je otvoren po dolasku, ostali su sklopljeni radi kraćeg skrolanja.
+  // Svi nivoi prikazuju lekcije odmah; korisnik ih po želji može sklopiti.
   const [openNivoi, setOpenNivoi] = useState<Record<number, boolean>>({
     1: true,
-    2: false,
-    3: false,
+    2: true,
+    3: true,
   });
   const [openDodaci, setOpenDodaci] = useState<Record<number, boolean>>({
     1: false,

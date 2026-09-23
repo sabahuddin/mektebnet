@@ -19,6 +19,19 @@ lako zaboravi i obori feature s 500 ("column does not exist").
 **How to apply:** dodaj ALTER prije završne `logger.info(...ready)` linije i
 dopuni tekst log poruke; nikad se ne oslanjaj na `drizzle-kit push` za prod.
 
+## List endpoint može raditi dok su svi detalji pokvareni
+Kad javni katalog vrati lekcije, to ne dokazuje da se ijedna lekcija može
+otvoriti. Stara self-hosted produkcijska šema može imati sve kolone koje
+lista projicira, a nemati novu kolonu koju detalj čita kroz sva polja.
+
+**Why:** produkcija je imala stotine lekcija na listi, ali svaki detalj je
+vraćao 500 zbog nedostajuće kolone; frontend je 500 pogrešno prikazivao kao
+„Lekcija nije pronađena”.
+
+**How to apply:** kod prijave praznih/nedostupnih lekcija provjeri status i
+liste i konkretnog detail URL-a, zatim uporedi šemu produkcije sa čitanim
+kolonama. Razdvoji poruku za 404 od 500 i loguj serversku grešku.
+
 ## api-server dev NE reloada pouzdano
 Nakon izmjena backend koda (rute, schema), dev server često i dalje vrti stari
 build (npr. nove rute vraćaju 404, `/muallim/info` ne vraća nova polja).

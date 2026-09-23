@@ -695,6 +695,7 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
     result.contentHtml = regeneratePripremaInHtml(String(result.contentHtml || ""));
     res.json(result);
   } catch (err) {
+    req.log.error({ err, slug: req.params.slug }, "GET /content/ilmihal/:slug failed");
     res.status(500).json({ error: "Greška servera" });
   }
   return;
