@@ -42,6 +42,7 @@ const FONT_LEVELS = ["font-size-1", "font-size-2", "font-size-3"];
 // bs/sq/de/en. (visibleLangs se gradi filtriranjem ovog niza, pa ar/tr nestaju
 // i za anonimne i za prijavljene korisnike bez obzira na muallim-dozvole.)
 const LANG_ORDER: Lang[] = ["bs", "sq", "de", "en"];
+const GUEST_UNLOCKED_LANGS: Lang[] = ["bs", "de", "en"];
 
 function LanguageSwitcher() {
   const { lang, setLang, t } = useLanguage();
@@ -50,8 +51,8 @@ function LanguageSwitcher() {
   const [open, setOpen] = useState(false);
 
   // Prijavljeni korisnici vide samo jezike koje je admin dozvolio njihovom
-  // muallimu (učenici prate muallima; admin/roditelj imaju sve). Gosti vide sve
-  // dugmiće, ali samo bosanski radi — ostali traže prijavu.
+  // muallimu (učenici prate muallima; admin/roditelj imaju sve). Gosti mogu
+  // koristiti bosanski, njemački i engleski; albanski i dalje traži prijavu.
   const { data: dozvoljeni } = useQuery<Lang[]>({
     queryKey: ["dozvoljeni-jezici", user?.id ?? "guest"],
     queryFn: async () => {
@@ -85,7 +86,7 @@ function LanguageSwitcher() {
 
   const handlePick = (l: Lang) => {
     setOpen(false);
-    if (!user && l !== "bs") {
+    if (!user && !GUEST_UNLOCKED_LANGS.includes(l)) {
       toast({
         title: t("Jezik dostupan prijavljenim korisnicima"),
         description: t("Prijavite se da biste koristili ovaj jezik."),
@@ -116,7 +117,7 @@ function LanguageSwitcher() {
               className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-border/50 py-1 min-w-[100px]"
             >
               {visibleLangs.map(l => {
-                const locked = !user && l !== "bs";
+                const locked = !user && !GUEST_UNLOCKED_LANGS.includes(l);
                 return (
                   <button
                     key={l}

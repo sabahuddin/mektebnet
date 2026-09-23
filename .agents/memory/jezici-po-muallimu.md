@@ -8,7 +8,7 @@ description: Kako je riješeno admin-kontrolisano ograničavanje jezika po muall
 Admin po muallimu uključuje/isključuje jezike (`muallim_profili.dozvoljeni_jezici` jsonb,
 default svi). Učenici prate svog muallima (JOIN `ucenik_profili.muallim_id`); admin i
 roditelj imaju sve. Bosanski je UVIJEK uključen (forsira se i na backendu i u UI). Gost
-vidi sve dugmiće ali samo `bs` radi — ostali daju toast "prijavite se".
+vidi bs/sq/de/en; bs, de i en rade bez prijave, dok sq i dalje traži prijavu.
 
 - Endpoint za rezoluciju: `GET /api/content/dozvoljeni-jezici` (requireAuth), `req.user.userId`/`role`.
 - Postavljanje: `PUT /api/admin/muallim/:id/jezici` (validira subset SVI_JEZICI, forsira bs).
