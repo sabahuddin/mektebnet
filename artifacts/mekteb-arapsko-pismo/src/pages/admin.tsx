@@ -2861,7 +2861,7 @@ export default function AdminPage() {
                       <table className="w-full text-sm">
                         <thead className="bg-muted/40">
                           <tr>
-                            {[t("Muallim"), t("Status"), t("Iskorištene licence"), t("Ukupno licenci")].map((h) => (
+                            {[t("Muallim"), t("Status"), t("Iskorištene licence"), t("Ukupno licenci"), t("Glavni muallim")].map((h) => (
                               <th key={h} className="px-4 py-2 text-left text-xs font-bold text-muted-foreground">{h}</th>
                             ))}
                           </tr>
@@ -2877,6 +2877,22 @@ export default function AdminPage() {
                               </td>
                               <td className="px-4 py-2.5 font-bold">{m.licencesUsed}</td>
                               <td className="px-4 py-2.5 font-bold">{m.licenceCount}</td>
+                              <td className="px-4 py-2.5">
+                                {!m.isGlavni && (
+                                  <Button type="button" size="sm" variant="outline"
+                                    data-testid={`button-postavi-glavnog-${d.id}-${m.id}`}
+                                    disabled={muallimAkcija !== null}
+                                    onClick={() => {
+                                      if (window.confirm(t(
+                                        "Postaviti {ime} za glavnog muallima džemata {dzemat}? Dosadašnjem glavnom muallimu bit će skinut status.",
+                                        { ime: m.displayName, dzemat: d.naziv },
+                                      ))) void postaviGlavni(m.id, true);
+                                    }}>
+                                    {muallimAkcija === m.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+                                    {t("Postavi glavnim")}
+                                  </Button>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
