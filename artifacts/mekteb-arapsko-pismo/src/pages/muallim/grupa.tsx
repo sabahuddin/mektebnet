@@ -573,35 +573,44 @@ export default function GrupaPage() {
   }
 
   async function saveZadaca() {
-    if (!token || !newZadaca.lekcijaNaslov.trim()) {
-      toast({ title: t("Odaberi lekciju"), variant: "destructive" });
+    const opis = newZadaca.opis.trim();
+    const imaLekciju = Boolean(newZadaca.lekcijaSlug && newZadaca.lekcijaNaslov.trim());
+    if (!token || (!imaLekciju && !opis)) {
+      toast({ title: t("Odaberi lekciju ili upiši naziv i opis zadaće"), variant: "destructive" });
       return;
     }
     setSavingZadaca(true);
     try {
       await apiRequest("POST", "/muallim/zadace", {
         grupaId,
-        naslov: newZadaca.lekcijaNaslov.trim(),
-        opis: newZadaca.opis.trim() || null,
+        naslov: imaLekciju ? newZadaca.lekcijaNaslov.trim() : opis.split(/\r?\n/)[0].slice(0, 80).trim(),
+        opis: opis || null,
         rokDo: null,
-        lekcijaNaslov: newZadaca.lekcijaNaslov || null,
-        lekcijaSlug: newZadaca.lekcijaSlug || null,
-        lekcijaTip: newZadaca.lekcijaSlug ? "ilmihal" : null,
+        lekcijaNaslov: imaLekciju ? newZadaca.lekcijaNaslov.trim() : null,
+        lekcijaSlug: imaLekciju ? newZadaca.lekcijaSlug : null,
+        lekcijaTip: imaLekciju ? "ilmihal" : null,
         priloziIds: zadacaTarget ? [] : Array.from(zadPriloziIds),
         ucenikIds: zadacaTarget ? [zadacaTarget.id] : [],
       }, token);
-      toast({
-        title: t("Zadaća dodana!"),
-        description: zadacaTarget ? t("Pojedinačna za {ime}", { ime: zadacaTarget.displayName }) : t("Za cijelu grupu ({n} učenika)", { n: String(studentiGrupe.length) }),
-      });
+      setNewZadaca({ opis: "", lekcijaNaslov: "", lekcijaSlug: "" });
       if (zadacaTarget) {
-        const data = await apiRequest<UcenikZadaca[]>("GET", `/muallim/ucenik/${zadacaTarget.id}/zadace`, undefined, token);
-        setZadaceTargeta(data);
-        setZadacaModalTab("pregled");
+        try {
+          const data = await apiRequest<UcenikZadaca[]>("GET", `/muallim/ucenik/${zadacaTarget.id}/zadace`, undefined, token);
+          setZadaceTargeta(data);
+          setZadacaModalTab("pregled");
+        } catch {
+          setShowZadacaModal(false);
+          toast({ title: t("Zadaća je dodana"), description: t("Pregled se nije osvježio. Otvori ga ponovo.") });
+          return;
+        }
       } else {
         setShowZadacaModal(false);
         setZadacaTarget(null);
       }
+      toast({
+        title: t("Zadaća dodana!"),
+        description: zadacaTarget ? t("Pojedinačna za {ime}", { ime: zadacaTarget.displayName }) : t("Za cijelu grupu ({n} učenika)", { n: String(studentiGrupe.length) }),
+      });
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće dodati zadaću"), variant: "destructive" });
     } finally {
@@ -1416,14 +1425,14 @@ export default function GrupaPage() {
               ) : (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Opis")}</label>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Naziv i opis zadaće")}</label>
                   <textarea value={newZadaca.opis} rows={3}
                     onChange={e => setNewZadaca(z => ({ ...z, opis: e.target.value }))}
-                    placeholder={t("Detalji zadaće (opciono)")}
+                    placeholder={t("Upiši naziv i opis zadaće ako nije vezana za lekciju")}
                     className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                 </div>
                 <div>
-                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
+                    <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija (opcionalno)")}</label>
                     <LekcijaPicker
                       lekcije={ilmihalLekcije}
                       value={newZadaca.lekcijaNaslov}
@@ -1461,7 +1470,7 @@ export default function GrupaPage() {
                 <Button variant="outline" onClick={() => void closeZadacaModal()} disabled={savingZadaca} className="flex-1 rounded-xl">
                   {savingZadaca && zadacaTarget && zadacaModalTab === "pregled" ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Zatvori")}
                 </Button>
-                {(!zadacaTarget || zadacaModalTab === "nova") && <Button onClick={saveZadaca} disabled={savingZadaca || !newZadaca.lekcijaNaslov.trim()} className="flex-1 rounded-xl font-bold"
+                {(!zadacaTarget || zadacaModalTab === "nova") && <Button onClick={saveZadaca} disabled={savingZadaca || (!newZadaca.lekcijaSlug && !newZadaca.opis.trim())} className="flex-1 rounded-xl font-bold"
                   data-testid="btn-save-zadaca"
                 >
                   {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : t("Dodaj zadaću")}
