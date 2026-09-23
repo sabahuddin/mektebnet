@@ -639,10 +639,15 @@ router.get("/subscription", requireAuth, async (req, res) => {
     let canRenew = false;
     let storedBillingRegion: "bih" | "dijaspora" | null = null;
     let mektebMuallimCount: number | null = null;
+    const [ownSubscription] = ["roditelj", "ucenik"].includes(role)
+      ? await db.select().from(pretplateTable)
+          .where(eq(pretplateTable.userId, userId))
+          .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
+          .limit(1)
+      : [];
 
     if (role === "roditelj") {
-      const isSelfRegistered = Boolean(account.email?.trim());
-      if (isSelfRegistered) {
+      if (ownSubscription?.planType === "family") {
         coverage = "self";
         planType = "family";
         subscriptionOwnerId = userId;
@@ -747,7 +752,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
         planType = "family";
         subscriptionOwnerId = familyLink.roditeljId;
       }
-      else {
+      else if (ownSubscription?.planType === "individual") {
         coverage = "self";
         planType = "individual";
         subscriptionOwnerId = userId;

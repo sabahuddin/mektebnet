@@ -1762,9 +1762,9 @@ router.get("/korisnici", async (req, res) => {
     res.json(korisnici.map((k) => {
       let billingPlan: "individual" | "family" | null = null;
       let billingCoverage: "self" | "family" | "mekteb" | null = null;
+      const ownPlan = latestByUser.get(k.id)?.planType;
       if (k.role === "roditelj") {
-        const isSelfRegistered = Boolean(k.email?.trim());
-        if (isSelfRegistered) {
+        if (ownPlan === "family") {
           billingPlan = "family";
           billingCoverage = "self";
         } else if (mektebParents.has(k.id)) {
@@ -1778,7 +1778,7 @@ router.get("/korisnici", async (req, res) => {
         );
         if (coveredByMekteb) billingCoverage = "mekteb";
         else if (familyChildren.has(k.id)) billingCoverage = "family";
-        else {
+        else if (ownPlan === "individual") {
           billingPlan = "individual";
           billingCoverage = "self";
         }
@@ -1800,6 +1800,7 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
   try {
     const userId = Number(req.params.id);
     const paid = req.body.paid === true;
+    const metadataOnly = req.body.metadataOnly === true;
     const iznos = Number(req.body.iznos);
     const valuta = String(req.body.valuta ?? "").toUpperCase();
     if (!Number.isInteger(userId) || userId < 1) {
@@ -1820,8 +1821,13 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
       res.status(404).json({ error: "Pretplatnički račun nije pronađen" });
       return;
     }
-    if (account.role === "roditelj" && !account.email?.trim()) {
-      res.status(409).json({ error: "Ovaj roditelj je kreiran uz učenika i nema samostalnu porodičnu pretplatu" });
+    const [latest] = await db.select().from(pretplateTable)
+      .where(eq(pretplateTable.userId, userId))
+      .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
+      .limit(1);
+    const expectedPlan = account.role === "roditelj" ? "family" : "individual";
+    if (latest?.planType !== expectedPlan) {
+      res.status(409).json({ error: "Ovaj korisnik nema samostalnu pretplatu" });
       return;
     }
 
@@ -1862,31 +1868,73 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
       licencesPurchased = 1;
     }
 
-    const [latest] = await db.select().from(pretplateTable)
-      .where(eq(pretplateTable.userId, userId))
-      .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
-      .limit(1);
+    const parseDate = (value: unknown): Date | null | undefined => {
+      if (value === undefined) return undefined;
+      if (value === null || value === "") return null;
+      if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("INVALID_DATE");
+      const date = new Date(`${value}T12:00:00.000Z`);
+      if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) throw new Error("INVALID_DATE");
+      return date;
+    };
+    let requestedStart: Date | null | undefined;
+    let requestedEnd: Date | null | undefined;
+    let requestedPaidAt: Date | null | undefined;
+    try {
+      requestedStart = parseDate(req.body.licenceStart);
+      requestedEnd = parseDate(req.body.licenceEnd);
+      requestedPaidAt = parseDate(req.body.paidAt);
+    } catch {
+      res.status(400).json({ error: "Unesite ispravan datum licence ili uplate" });
+      return;
+    }
+    if (requestedStart && requestedEnd && requestedEnd <= requestedStart) {
+      res.status(400).json({ error: "Kraj licence mora biti nakon početka" });
+      return;
+    }
+    if (metadataOnly && latest?.status === "active") {
+      const start = requestedStart === undefined ? latest.activatedAt : requestedStart;
+      const end = requestedEnd === undefined ? latest.expiresAt : requestedEnd;
+      if (!start || !end || end <= start || requestedPaidAt === null) {
+        res.status(400).json({ error: "Aktivna pretplata mora imati datum uplate i ispravan period licence" });
+        return;
+      }
+    }
+    if (metadataOnly && !latest) {
+      res.status(409).json({ error: "Pretplata nije pronađena" });
+      return;
+    }
     const now = new Date();
     const saved = await db.transaction(async (tx) => {
       let subscription;
-      if (paid) {
+      if (metadataOnly) {
+        [subscription] = await tx.update(pretplateTable).set({
+          iznos, valuta,
+          ...(latest?.status === "active" ? {
+            ...(requestedStart !== undefined ? { activatedAt: requestedStart } : {}),
+            ...(requestedEnd !== undefined ? { expiresAt: requestedEnd } : {}),
+            ...(requestedPaidAt !== undefined ? { paidAt: requestedPaidAt } : {}),
+          } : {}),
+        }).where(eq(pretplateTable.id, latest!.id)).returning();
+      } else if (paid) {
         const currentExpiry = latest?.status === "active" && latest.expiresAt
           ? new Date(latest.expiresAt)
           : null;
         const baseCandidates = [now, account.trialUntil, currentExpiry]
           .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()));
         const base = new Date(Math.max(...baseCandidates.map((d) => d.getTime())));
-        const expiresAt = new Date(base);
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        const expiresAt = requestedEnd ?? new Date(base);
+        if (!requestedEnd) expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        const activatedAt = requestedStart ?? now;
+        if (expiresAt <= activatedAt) throw new Error("INVALID_DATE_RANGE");
         if (latest?.status === "pending") {
           [subscription] = await tx.update(pretplateTable).set({
             planType, iznos, valuta, status: "active", licencesPurchased,
-            paidAt: now, activatedAt: now, expiresAt,
+            paidAt: requestedPaidAt ?? now, activatedAt, expiresAt,
           }).where(eq(pretplateTable.id, latest.id)).returning();
         } else {
           [subscription] = await tx.insert(pretplateTable).values({
             userId, planType, iznos, valuta, status: "active", licencesPurchased,
-            paidAt: now, activatedAt: now, expiresAt,
+            paidAt: requestedPaidAt ?? now, activatedAt, expiresAt,
           }).returning();
         }
         await tx.update(usersTable).set({ isActive: true })
@@ -1930,6 +1978,10 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
     for (const id of coveredUserIds) invalidateUserStatusCache(id);
     res.json(saved);
   } catch (err) {
+    if (err instanceof Error && err.message === "INVALID_DATE_RANGE") {
+      res.status(400).json({ error: "Kraj licence mora biti nakon početka" });
+      return;
+    }
     console.error("Korisnička pretplata error:", err);
     res.status(500).json({ error: "Nije moguće sačuvati pretplatu" });
   }

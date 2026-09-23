@@ -70,3 +70,4 @@
 - [pnpm verzija na Replitu](pnpm-package-manager-version-replit.md) — isključi pnpm samoprebacivanje verzije; inače packageManager noviji od Nix pnpm-a izaziva rekurzivnu instalaciju.
 - [PWA ažuriranje bez prekida rada](pwa-update-bez-reloada.md) — novi service worker čeka zatvaranje svih tabova; ne aktivirati ga usred korisničke sesije.
 - [Odobravanje izmjena lekcija](odobravanje-izmjena-lekcija.md) — muallimove izmjene čekaju admina i moraju ostati vezane za jezik koji je uređivan.
+- [Samostalni pretplatnici](samostalni-pretplatnici.md) — plaćajućeg nosioca razlikuj po vlastitoj porodičnoj/individualnoj pretplati, ne po emailu ili ulozi.

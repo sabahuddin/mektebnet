@@ -22,6 +22,8 @@ let adminId: number;
 let ucenikId: number;
 let mektebParentId: number;
 let selfParentId: number;
+let selfStudentId: number;
+let familyChildId: number;
 let mektebId: number;
 let adminToken: string;
 let mektebParentToken: string;
@@ -66,12 +68,14 @@ function request(path: string, token: string, init?: RequestInit) {
 before(async () => {
   adminId = await createUser("admin", "admin");
   ucenikId = await createUser("ucenik", "ucenik");
-  mektebParentId = await createUser("roditelj", "roditelj-mekteb");
+  mektebParentId = await createUser("roditelj", "roditelj-mekteb", `mekteb-${SUFFIX}@example.test`);
   selfParentId = await createUser(
     "roditelj",
     "roditelj-self",
     `${SUFFIX}@example.test`,
   );
+  selfStudentId = await createUser("ucenik", "ucenik-self");
+  familyChildId = await createUser("ucenik", "ucenik-family");
 
   const [mekteb] = await db.insert(mektebiTable).values({
     naziv: `Test mekteb ${SUFFIX}`,
@@ -80,7 +84,11 @@ before(async () => {
   }).returning({ id: mektebiTable.id });
   mektebId = mekteb.id;
 
-  await db.insert(ucenikProfiliTable).values({ userId: ucenikId, mektebId });
+  await db.insert(ucenikProfiliTable).values([
+    { userId: ucenikId, mektebId },
+    { userId: selfStudentId },
+    { userId: familyChildId },
+  ]);
   await db.insert(roditeljProfiliTable).values([
     { userId: mektebParentId },
     { userId: selfParentId },
@@ -91,6 +99,16 @@ before(async () => {
     status: "approved",
     approvedAt: new Date(),
   });
+  await db.insert(roditeljUcenikTable).values({
+    roditeljId: selfParentId,
+    ucenikId: familyChildId,
+    status: "approved",
+    approvedAt: new Date(),
+  });
+  await db.insert(pretplateTable).values([
+    { userId: selfParentId, planType: "family", status: "pending", licencesPurchased: 4, iznos: 30, valuta: "EUR" },
+    { userId: selfStudentId, planType: "individual", status: "pending", licencesPurchased: 1, iznos: 20, valuta: "EUR" },
+  ]);
 
   adminToken = tokenFor(adminId, "admin", "admin");
   mektebParentToken = tokenFor(mektebParentId, "roditelj", "roditelj-mekteb");
@@ -109,7 +127,7 @@ before(async () => {
 after(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
 
-  const userIds = [adminId, ucenikId, mektebParentId, selfParentId].filter(Boolean);
+  const userIds = [adminId, ucenikId, mektebParentId, selfParentId, selfStudentId, familyChildId].filter(Boolean);
   if (userIds.length) {
     await db.delete(pretplateTable).where(inArray(pretplateTable.userId, userIds));
     await db.delete(roditeljUcenikTable)
@@ -163,13 +181,18 @@ test("admin popis vraća istu klasifikaciju roditelja kao roditeljski profil", a
 
   const mektebParent = users.find((user) => user.id === mektebParentId);
   const selfParent = users.find((user) => user.id === selfParentId);
+  const selfStudent = users.find((user) => user.id === selfStudentId);
+  const familyChild = users.find((user) => user.id === familyChildId);
   assert.equal(mektebParent?.billingCoverage, "mekteb");
   assert.equal(mektebParent?.billingPlan, null);
   assert.equal(selfParent?.billingCoverage, "self");
   assert.equal(selfParent?.billingPlan, "family");
+  assert.equal(selfStudent?.billingCoverage, "self");
+  assert.equal(selfStudent?.billingPlan, "individual");
+  assert.equal(familyChild?.billingCoverage, "family");
 });
 
-test("admin ne može evidentirati samostalnu uplatu roditelju bez emaila", async () => {
+test("admin ne može evidentirati samostalnu uplatu roditelju džematskog učenika čak ni s emailom", async () => {
   const response = await request(
     `/api/admin/korisnik/${mektebParentId}/pretplata`,
     adminToken,
@@ -184,4 +207,33 @@ test("admin ne može evidentirati samostalnu uplatu roditelju bez emaila", async
     .from(pretplateTable)
     .where(eq(pretplateTable.userId, mektebParentId));
   assert.equal(subscriptions.length, 0);
+});
+
+test("admin evidentira uplatu i zasebno koriguje datum bez ponovne naplate", async () => {
+  const pay = await request(`/api/admin/korisnik/${selfStudentId}/pretplata`, adminToken, {
+    method: "PUT",
+    body: JSON.stringify({ paid: true, iznos: 20, valuta: "EUR" }),
+  });
+  assert.equal(pay.status, 200);
+  const paid = await pay.json() as { status: string; expiresAt: string };
+  assert.equal(paid.status, "active");
+  assert.ok(paid.expiresAt);
+
+  const edit = await request(`/api/admin/korisnik/${selfStudentId}/pretplata`, adminToken, {
+    method: "PUT",
+    body: JSON.stringify({
+      paid: false, metadataOnly: true, iznos: 20, valuta: "EUR",
+      licenceStart: "2030-01-01", licenceEnd: "2031-04-01", paidAt: "2030-01-01",
+    }),
+  });
+  assert.equal(edit.status, 200);
+  const updated = await edit.json() as { status: string; expiresAt: string };
+  assert.equal(updated.status, "active");
+  assert.equal(updated.expiresAt.slice(0, 10), "2031-04-01");
+
+  const records = await db.select().from(pretplateTable).where(eq(pretplateTable.userId, selfStudentId));
+  assert.equal(records.length, 1);
+  const listed = await request("/api/admin/korisnici", adminToken);
+  const users = await listed.json() as Array<{ id: number; pretplata?: { expiresAt: string } }>;
+  assert.equal(users.find(u => u.id === selfStudentId)?.pretplata?.expiresAt.slice(0, 10), "2031-04-01");
 });

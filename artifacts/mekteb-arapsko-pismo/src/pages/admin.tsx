@@ -95,6 +95,19 @@ interface Korisnik {
   } | null;
 }
 
+function preostaloLicence(k: Korisnik): string {
+  const kraj = k.pretplata?.status === "active" ? k.pretplata.expiresAt : k.trialUntil;
+  if (!kraj) return "—";
+  const dana = Math.ceil((new Date(kraj).getTime() - Date.now()) / 86400000);
+  if (!Number.isFinite(dana)) return "—";
+  if (dana <= 0) return k.pretplata?.status === "active" ? "Istekla" : "Trial istekao";
+  return `${dana} ${dana === 1 ? "dan" : "dana"}`;
+}
+
+function datumZaUnos(value: string | null | undefined): string {
+  return value ? new Date(value).toISOString().slice(0, 10) : "";
+}
+
 type SortField = "displayName" | "createdAt" | "lastLoginAt" | "totalScreentimeSec";
 type SortDir = "asc" | "desc";
 
@@ -1784,10 +1797,10 @@ export default function AdminPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState<"muallimi" | "korisnici" | "analitika" | "rezultati" | "statistika">(() => {
+  const [activeTab, setActiveTab] = useState<"muallimi" | "pretplatnici" | "korisnici" | "analitika" | "rezultati" | "statistika">(() => {
     if (typeof window === "undefined") return "muallimi";
     const saved = window.sessionStorage.getItem("admin-active-tab");
-    return saved === "korisnici" || saved === "analitika" || saved === "rezultati" || saved === "statistika" ? saved : "muallimi";
+    return saved === "pretplatnici" || saved === "korisnici" || saved === "analitika" || saved === "rezultati" || saved === "statistika" ? saved : "muallimi";
   });
   const [statSadrzaja, setStatSadrzaja] = useState<{ lekcije: any[]; prilozi: any[]; kvizovi: any[] }>({ lekcije: [], prilozi: [], kvizovi: [] });
   const [statLoading, setStatLoading] = useState(false);
@@ -1918,6 +1931,7 @@ export default function AdminPage() {
   const [grupeAll, setGrupeAll] = useState<GrupaAll[]>([]);
   const [deleteKorisnik, setDeleteKorisnik] = useState<Korisnik | null>(null);
   const [pretplataKorisnik, setPretplataKorisnik] = useState<Korisnik | null>(null);
+  const [pretplatniciSearch, setPretplatniciSearch] = useState("");
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadData = async () => {
@@ -2217,22 +2231,34 @@ export default function AdminPage() {
     }
   };
 
-  const sacuvajKorisnikPretplatu = async (k: Korisnik, paid: boolean) => {
+  const sacuvajKorisnikPretplatu = async (k: Korisnik, paid: boolean, metadataOnly = false) => {
     if (!token) return;
     const iznosEl = document.getElementById(`korisnik-pretplata-iznos-${k.id}`) as HTMLInputElement | null;
     const valutaEl = document.getElementById(`korisnik-pretplata-valuta-${k.id}`) as HTMLSelectElement | null;
     const iznos = Number(iznosEl?.value);
     const valuta = valutaEl?.value || "EUR";
+    const startEl = document.getElementById(`korisnik-pretplata-start-${k.id}`) as HTMLInputElement | null;
+    const endEl = document.getElementById(`korisnik-pretplata-end-${k.id}`) as HTMLInputElement | null;
+    const paidAtEl = document.getElementById(`korisnik-pretplata-paid-${k.id}`) as HTMLInputElement | null;
     if (!Number.isInteger(iznos) || iznos < 0) {
       toast({ title: t("Greška"), description: t("Unesite ispravan iznos"), variant: "destructive" });
       return;
     }
     setTogglingId(k.id);
     try {
-      await apiRequest("PUT", `/admin/korisnik/${k.id}/pretplata`, { paid, iznos, valuta }, token);
+      await apiRequest("PUT", `/admin/korisnik/${k.id}/pretplata`, {
+        paid, metadataOnly, iznos, valuta,
+        // Obnova već aktivne pretplate produžava postojeći rok za godinu;
+        // datume postojeće licence mijenja samo "Sačuvaj podatke".
+        ...(metadataOnly || (paid && k.pretplata?.status !== "active") ? {
+          licenceStart: startEl?.value || undefined,
+          licenceEnd: endEl?.value || undefined,
+          paidAt: paidAtEl?.value || undefined,
+        } : {}),
+      }, token);
       toast({
         title: t("Sačuvano"),
-        description: paid
+        description: metadataOnly ? t("Podaci licence su ažurirani") : paid
           ? t("Pretplata je označena kao plaćena i aktivirana")
           : t("Pretplata je označena kao neplaćena"),
       });
@@ -2246,6 +2272,7 @@ export default function AdminPage() {
   };
 
   const filtrirani = korisnici
+    .filter(k => k.billingCoverage !== "self")
     .filter(k => filterRole === "all" || k.role === filterRole)
     .filter(k =>
       !searchQuery ||
@@ -2267,6 +2294,12 @@ export default function AdminPage() {
       const tb = dateB ? new Date(dateB).getTime() : 0;
       return (ta - tb) * dir;
     });
+  const pretplatnici = korisnici
+    .filter(k => k.billingCoverage === "self")
+    .filter(k => !pretplatniciSearch ||
+      `${k.displayName} ${k.username} ${k.email || ""}`.toLocaleLowerCase("bs")
+        .includes(pretplatniciSearch.toLocaleLowerCase("bs")))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <Layout>
@@ -2322,6 +2355,7 @@ export default function AdminPage() {
           <div className="flex gap-1 bg-muted/30 p-1 rounded-xl mb-5 overflow-x-auto">
             {[
               { key: "muallimi" as const, label: t("Džemati"), icon: <Building2 className="w-4 h-4" /> },
+              { key: "pretplatnici" as const, label: t("Pretplatnici"), icon: <CreditCard className="w-4 h-4" /> },
               { key: "korisnici" as const, label: t("Korisnici"), icon: <Users className="w-4 h-4" /> },
               { key: "analitika" as const, label: t("Analitika"), icon: <BarChart3 className="w-4 h-4" /> },
               { key: "rezultati" as const, label: t("Kviz rezultati"), icon: <ClipboardList className="w-4 h-4" /> },
@@ -2336,6 +2370,67 @@ export default function AdminPage() {
         )}
 
         {activeMainTab === "korisnici" && (<>
+        {activeTab === "pretplatnici" && (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-extrabold text-foreground">{t("Samostalne pretplate")}</h2>
+                <p className="text-sm text-muted-foreground">{t("Pojedinci i porodice koji su se sami registrovali. Uplate i datume licence evidentirate ručno.")}</p>
+              </div>
+              <input type="search" value={pretplatniciSearch} onChange={e => setPretplatniciSearch(e.target.value)}
+                placeholder={t("Pretraži ime, email ili korisničko ime")}
+                aria-label={t("Pretraži pretplatnike")}
+                className="w-full sm:w-72 rounded-xl border border-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            </div>
+            {(["family", "individual"] as const).map(plan => {
+              const lista = pretplatnici.filter(k => k.billingPlan === plan);
+              return (
+                <section key={plan} className="overflow-hidden rounded-2xl border border-border/60 bg-white">
+                  <div className="flex items-center justify-between border-b border-border/50 bg-muted/20 px-5 py-4">
+                    <h3 className="font-extrabold text-foreground">{plan === "family" ? t("Porodice") : t("Pojedinci")}</h3>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">{lista.length}</span>
+                  </div>
+                  {isLoading ? <div className="p-5"><Skeleton className="h-24 w-full" /></div> : lista.length === 0 ? (
+                    <p className="p-5 text-sm text-muted-foreground">{t("Nema pretplatnika u ovom pregledu.")}</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[850px] text-left text-sm">
+                        <thead className="bg-muted/20 text-xs text-muted-foreground">
+                          <tr>{[t("Pretplatnik"), t("Registrovan"), t("Uplata"), t("Trial do"), t("Licenca do"), t("Preostalo"), t("Iznos"), t("Akcija")].map(h =>
+                            <th key={h} className="whitespace-nowrap px-4 py-2.5 font-bold">{h}</th>)}</tr>
+                        </thead>
+                        <tbody>
+                          {lista.map(k => (
+                            <tr key={k.id} className="border-t border-border/30">
+                              <td className="px-4 py-3">
+                                <span className="block font-bold text-foreground">{k.displayName}</span>
+                                <span className="block text-xs text-muted-foreground">{k.email || k.username}</span>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3">{new Date(k.createdAt).toLocaleDateString("bs-BA")}</td>
+                              <td className="px-4 py-3">
+                                <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold ${k.pretplata?.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
+                                  {k.pretplata?.status === "active" ? t("Plaćeno") : t("Nije plaćeno")}
+                                </span>
+                                {k.pretplata?.paidAt && <span className="mt-1 block text-xs text-muted-foreground">{new Date(k.pretplata.paidAt).toLocaleDateString("bs-BA")}</span>}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3">{k.trialUntil ? new Date(k.trialUntil).toLocaleDateString("bs-BA") : "—"}</td>
+                              <td className="whitespace-nowrap px-4 py-3">{k.pretplata?.expiresAt ? new Date(k.pretplata.expiresAt).toLocaleDateString("bs-BA") : "—"}</td>
+                              <td className="whitespace-nowrap px-4 py-3 font-bold">{preostaloLicence(k)}</td>
+                              <td className="whitespace-nowrap px-4 py-3">{k.pretplata?.iznos ?? "—"} {k.pretplata?.valuta ?? ""}</td>
+                              <td className="px-4 py-3">
+                                <Button type="button" size="sm" variant="outline" onClick={() => setPretplataKorisnik(k)}>{t("Uredi pretplatu")}</Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        )}
         {/* ── TAB: DŽEMATI ── */}
         {activeTab === "muallimi" && (
           <div className="space-y-4">
@@ -3125,7 +3220,10 @@ export default function AdminPage() {
         <>
         <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-            <h2 className="font-extrabold text-foreground">{t("Korisnici")}</h2>
+            <div>
+              <h2 className="font-extrabold text-foreground">{t("Korisnici")}</h2>
+              <p className="text-xs text-muted-foreground">{t("Džematski i povezani porodični nalozi. Samostalni nosioci pretplate su u tabu Pretplatnici.")}</p>
+            </div>
             <div className="flex flex-wrap gap-2 items-center">
               <input
                 type="text"
@@ -3421,9 +3519,10 @@ export default function AdminPage() {
       {pretplataKorisnik && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPretplataKorisnik(null)}>
           <motion.div
+            key={pretplataKorisnik.id}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
@@ -3434,11 +3533,36 @@ export default function AdminPage() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {pretplataKorisnik.displayName} · {pretplataKorisnik.billingPlan === "family" ? t("Porodična") : t("Pojedinačna")}
                 </p>
+                <p className="text-xs text-muted-foreground">{t("Registrovan")}: {new Date(pretplataKorisnik.createdAt).toLocaleDateString("bs-BA")}</p>
               </div>
               <button type="button" onClick={() => setPretplataKorisnik(null)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
                 <X className="h-5 w-5" />
               </button>
             </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div>
+                <label htmlFor={`korisnik-pretplata-paid-${pretplataKorisnik.id}`} className="mb-1 block text-xs font-bold text-muted-foreground">{t("Datum uplate")}</label>
+                <input id={`korisnik-pretplata-paid-${pretplataKorisnik.id}`} type="date"
+                  defaultValue={datumZaUnos(pretplataKorisnik.pretplata?.paidAt)}
+                  disabled={pretplataKorisnik.pretplata?.status !== "active"}
+                  className="w-full rounded-xl border border-border px-2 py-2 text-sm disabled:bg-muted/30" />
+              </div>
+              <div>
+                <label htmlFor={`korisnik-pretplata-start-${pretplataKorisnik.id}`} className="mb-1 block text-xs font-bold text-muted-foreground">{t("Početak licence")}</label>
+                <input id={`korisnik-pretplata-start-${pretplataKorisnik.id}`} type="date"
+                  defaultValue={datumZaUnos(pretplataKorisnik.pretplata?.activatedAt)}
+                  disabled={pretplataKorisnik.pretplata?.status !== "active"}
+                  className="w-full rounded-xl border border-border px-2 py-2 text-sm disabled:bg-muted/30" />
+              </div>
+              <div>
+                <label htmlFor={`korisnik-pretplata-end-${pretplataKorisnik.id}`} className="mb-1 block text-xs font-bold text-muted-foreground">{t("Kraj licence")}</label>
+                <input id={`korisnik-pretplata-end-${pretplataKorisnik.id}`} type="date"
+                  defaultValue={datumZaUnos(pretplataKorisnik.pretplata?.expiresAt)}
+                  disabled={pretplataKorisnik.pretplata?.status !== "active"}
+                  className="w-full rounded-xl border border-border px-2 py-2 text-sm disabled:bg-muted/30" />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">{t("Pri prvoj uplati licenca se automatski računa na 12 mjeseci nakon triala. Nakon aktivacije datume možete korigovati ovdje.")}</p>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div>
@@ -3482,15 +3606,23 @@ export default function AdminPage() {
                 <dt className="text-xs font-bold text-muted-foreground">{t("Vrijedi do")}</dt>
                 <dd className="font-extrabold">{pretplataKorisnik.pretplata?.expiresAt ? new Date(pretplataKorisnik.pretplata.expiresAt).toLocaleDateString("bs-BA") : "—"}</dd>
               </div>
+              <div>
+                <dt className="text-xs font-bold text-muted-foreground">{t("Preostalo")}</dt>
+                <dd className="font-extrabold">{preostaloLicence(pretplataKorisnik)}</dd>
+              </div>
             </dl>
 
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Button variant="outline" onClick={() => sacuvajKorisnikPretplatu(pretplataKorisnik, false, true)}
+                disabled={togglingId === pretplataKorisnik.id} className="flex-1 rounded-xl">
+                {t("Sačuvaj podatke")}
+              </Button>
               <Button
                 onClick={() => sacuvajKorisnikPretplatu(pretplataKorisnik, true)}
                 disabled={togglingId === pretplataKorisnik.id}
                 className="flex-1 rounded-xl bg-emerald-700 hover:bg-emerald-800"
               >
-                {togglingId === pretplataKorisnik.id ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Označi plaćeno i aktiviraj")}
+                {togglingId === pretplataKorisnik.id ? <Loader2 className="h-4 w-4 animate-spin" /> : pretplataKorisnik.pretplata?.status === "active" ? t("Evidentiraj obnovu (+12 mjeseci)") : t("Označi plaćeno i aktiviraj")}
               </Button>
               {pretplataKorisnik.pretplata?.status === "active" && (
                 <Button
