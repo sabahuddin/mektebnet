@@ -825,12 +825,24 @@ router.get("/subscription", requireAuth, async (req, res) => {
       const [mekteb] = mektebId
         ? await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId)).limit(1)
         : [];
+      const [parentFamilySubscription] = familyLink
+        ? await db.select({ id: pretplateTable.id }).from(pretplateTable)
+            .where(and(
+              eq(pretplateTable.userId, familyLink.roditeljId),
+              eq(pretplateTable.planType, "family"),
+            ))
+            .limit(1)
+        : [];
 
       if (account.billingOverride === "self" && ownSubscription?.planType === "individual") {
         coverage = "self";
         planType = "individual";
         subscriptionOwnerId = userId;
         canRenew = true;
+      } else if (familyLink && parentFamilySubscription) {
+        coverage = "family";
+        planType = "family";
+        subscriptionOwnerId = familyLink.roditeljId;
       } else if (mekteb) {
         coverage = "mekteb";
         mektebMuallimCount = mekteb.dozvoljenoMuallima;
@@ -855,7 +867,10 @@ router.get("/subscription", requireAuth, async (req, res) => {
 
     const [subscription] = subscriptionOwnerId
       ? await db.select().from(pretplateTable)
-          .where(eq(pretplateTable.userId, subscriptionOwnerId))
+          .where(and(
+            eq(pretplateTable.userId, subscriptionOwnerId),
+            eq(pretplateTable.planType, planType!),
+          ))
           .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
           .limit(1)
       : [];

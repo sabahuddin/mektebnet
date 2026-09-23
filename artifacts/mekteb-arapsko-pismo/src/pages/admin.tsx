@@ -2512,9 +2512,7 @@ export default function AdminPage() {
                                 <td colSpan={7} className="px-4 py-2.5 text-xs text-muted-foreground">
                                   {t("Učenik roditelja")} {k.displayName} · {dijete.billingCoverage === "self"
                                     ? t("Ima vlastitu pretplatu")
-                                    : dijete.billingCoverage === "mekteb"
-                                      ? t("Pokriven mektebom")
-                                      : t("Pokriven porodičnom pretplatom")}
+                                    : t("Porodična pretplata")}
                                   {dijete.billingCoverage === "self" && ` · ${t("Vidi Pojedinci")}`}
                                 </td>
                               </tr>

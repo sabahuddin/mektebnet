@@ -48,7 +48,7 @@ async function createUser(
   return user.id;
 }
 
-function tokenFor(userId: number, role: "admin" | "roditelj", label: string) {
+function tokenFor(userId: number, role: "admin" | "roditelj" | "ucenik", label: string) {
   return signToken({
     userId,
     username: `${label}.${SUFFIX}`,
@@ -90,7 +90,7 @@ before(async () => {
   await db.insert(ucenikProfiliTable).values([
     { userId: ucenikId, mektebId },
     { userId: selfStudentId },
-    { userId: familyChildId },
+    { userId: familyChildId, mektebId },
   ]);
   await db.insert(roditeljProfiliTable).values([
     { userId: mektebParentId },
@@ -109,7 +109,8 @@ before(async () => {
     approvedAt: new Date(),
   });
   await db.insert(pretplateTable).values([
-    { userId: selfParentId, planType: "family", status: "pending", licencesPurchased: 4, iznos: 30, valuta: "EUR" },
+    { userId: selfParentId, planType: "family", status: "active", licencesPurchased: 4, iznos: 30, valuta: "EUR",
+      activatedAt: new Date("2026-06-01T00:00:00Z"), expiresAt: new Date("2027-06-01T00:00:00Z") },
     { userId: selfStudentId, planType: "individual", status: "pending", licencesPurchased: 1, iznos: 20, valuta: "EUR" },
   ]);
 
@@ -201,6 +202,21 @@ test("admin popis vraća istu klasifikaciju roditelja kao roditeljski profil", a
   assert.equal(selfStudent?.billingCoverage, "self");
   assert.equal(selfStudent?.billingPlan, "individual");
   assert.equal(familyChild?.billingCoverage, "family");
+  const childResponse = await request(
+    "/api/auth/subscription",
+    tokenFor(familyChildId, "ucenik", "ucenik-family"),
+  );
+  assert.equal(childResponse.status, 200);
+  const childSubscription = await childResponse.json() as {
+    coverage: string;
+    canRenew: boolean;
+    licenceEnd: string | null;
+    subscription: unknown;
+  };
+  assert.equal(childSubscription.coverage, "family");
+  assert.equal(childSubscription.canRenew, false);
+  assert.equal(childSubscription.licenceEnd?.slice(0, 10), "2027-06-01");
+  assert.equal(childSubscription.subscription, null);
 });
 
 test("admin ne može evidentirati samostalnu uplatu roditelju džematskog učenika čak ni s emailom", async () => {

@@ -20,3 +20,9 @@ U admin pregledu pretplatnika prikaži odobreno povezanu djecu uz nosioca porodi
 **Why:** Korisnik želi vidjeti učenike koje roditelj doda u svom profilu u okviru porodične pretplate, a istovremeno ne želi dvostruku naplatu.
 
 **How to apply:** Vezu prikazuj iz odobrenih roditelj–učenik veza; promjene moraju postati vidljive nakon osvježavanja admin liste, bez ručnog prebacivanja učenika u samostalne pretplatnike.
+
+Kada roditelj ima vlastitu porodičnu pretplatu i odobreno povezano dijete, prikaži porodičnu licencu tom djetetu čak i ako je dijete tehnički raspoređeno u mektebsku grupu. Izričita admin odluka da dijete plaća vlastitu pojedinačnu pretplatu ima prednost.
+
+**Why:** Djeca koja roditelj doda u svom profilu mogu dobiti muallima/grupu "Online Mekteb"; to ne znači da je njihovu porodičnu pretplatu zamijenila džematska. Korisnik je izričito tražio oznaku "Porodična pretplata" za takve redove.
+
+**How to apply:** U admin listi i korisničkom profilu uskladi isti redoslijed: izričita vlastita naplata → odobrena veza s roditeljem koji ima porodični plan → mekteb → ostale veze.

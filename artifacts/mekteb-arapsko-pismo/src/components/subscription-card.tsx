@@ -34,7 +34,9 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
   if (data.coverage === "none") return null;
 
   const paid = data.subscription?.status === "active";
-  const licenceActive = paid || data.isActive;
+  const licenceActive = data.licenceEnd && new Date(data.licenceEnd).getTime() <= Date.now()
+    ? false
+    : paid || data.isActive;
   const canSeeBillingDetails = data.coverage === "self" || data.canRenew;
   const days = trialDaysLeft(data.trialUntil);
   const paymentLink = data.billingRegion
@@ -60,8 +62,11 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
       <div className={`mb-6 rounded-2xl border p-5 ${licenceActive ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`} data-testid="subscription-profile-card">
         <h3 className={`flex items-center gap-2 font-extrabold ${licenceActive ? "text-emerald-950" : "text-amber-950"}`}>
           <ShieldCheck className="h-5 w-5" />
-          {t("Licenca")}
+          {data.coverage === "family" ? t("Porodična licenca") : t("Džematska licenca")}
         </h3>
+        {data.coverage === "family" && <p className="mt-1 text-xs text-muted-foreground">
+          {t("Učenik je pokriven pretplatom roditelja. Nije potrebna posebna uplata.")}
+        </p>}
         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
           <div>
             <dt className="text-xs font-bold text-muted-foreground">{t("Licenca")}</dt>
@@ -136,7 +141,7 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
           </div>
         )}
         <div>
-          <dt className="text-xs font-bold text-muted-foreground">{t("Cijena za 12 mjeseci")}</dt>
+          <dt className="text-xs font-bold text-muted-foreground">{data.planType?.startsWith("mekteb-") ? t("Cijena") : t("Cijena za 12 mjeseci")}</dt>
           <dd className="font-extrabold text-foreground">
             {data.expectedAmount !== null ? data.expectedAmount : "—"} {data.currency === "BAM" ? "KM" : data.currency ?? ""}
           </dd>
@@ -180,7 +185,9 @@ export function SubscriptionCard({ data }: { data: SubscriptionProfile }) {
           data-testid="subscription-payment-link"
         >
           <ExternalLink className="h-4 w-4" />
-          {paid ? t("Produži licencu") : t("Plati i aktiviraj licencu")}
+          {data.coverage === "self" && data.planType === "family"
+            ? t("Obnovi pretplatu")
+            : paid ? t("Produži licencu") : t("Plati i aktiviraj licencu")}
         </a>
       )}
     </div>
