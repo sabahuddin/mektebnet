@@ -72,7 +72,7 @@ type Tab = "ucenik" | "roditelj" | "mekteb";
 
 export default function RegisterRoditeljPage() {
   const [, setLocation] = useLocation();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { login } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("ucenik");
   const [isBiH, setIsBiH] = useState<boolean | null>(null);
@@ -207,15 +207,16 @@ export default function RegisterRoditeljPage() {
 
   if (success && credentials) {
     const trialDate = new Date(credentials.trialUntil);
-    const trialDateStr = trialDate.toLocaleDateString("bs-BA", { day: "numeric", month: "long", year: "numeric" });
+    const dateLocale = { bs: "bs-BA", en: "en-GB", de: "de-DE", sq: "sq-AL", tr: "tr-TR", ar: "ar" }[lang];
+    const trialDateStr = trialDate.toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" });
     const subscriptionUntil = new Date(trialDate);
     subscriptionUntil.setFullYear(subscriptionUntil.getFullYear() + 1);
-    const subscriptionUntilStr = subscriptionUntil.toLocaleDateString("bs-BA", {
+    const subscriptionUntilStr = subscriptionUntil.toLocaleDateString(dateLocale, {
       day: "numeric",
       month: "long",
       year: "numeric",
     });
-    const copyText = `Korisničko ime: ${credentials.username}\nLozinka: ${credentials.password}`;
+    const copyText = `${t("Korisničko ime:")} ${credentials.username}\n${t("Lozinka:")} ${credentials.password}`;
     const paymentLink = activeTab === "mekteb"
       ? mektebOfferLink(mektebForm.paket, mektebIsBiH, mektebForm.koliko_muallima)
       : bmacRegistrationProductLink(activeTab, isBiH === true);
@@ -306,16 +307,16 @@ export default function RegisterRoditeljPage() {
         className="w-full max-w-md">
         <div className="text-center mb-6">
           <img src="/logo-mekteb.png" alt="Mekteb" className="h-20 w-auto mx-auto mb-3" />
-          <h1 className="text-xl font-extrabold text-foreground">Otvorite svoj Mekteb račun</h1>
+          <h1 className="text-xl font-extrabold text-foreground">{t("Otvorite svoj Mekteb račun")}</h1>
           <p className="text-muted-foreground font-medium mt-1">
-            30 dana besplatno + 12 mjeseci pretplate za učenike, porodice i mektebe.
+            {t("30 dana besplatno + 12 mjeseci pretplate za učenike, porodice i mektebe.")}
           </p>
           <button
             type="button"
             onClick={() => setLocation("/login")}
             className="mt-3 text-sm text-primary hover:underline font-bold"
           >
-            Već imate račun? Prijava
+            {t("Već imate račun? Prijava")}
           </button>
         </div>
 
@@ -497,7 +498,7 @@ export default function RegisterRoditeljPage() {
                           className="w-full pl-10 h-11 rounded-xl border border-border/70 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 appearance-none">
                           <option value="">{t("Odaberite državu")}</option>
                           {DRZAVE.map(d => (
-                            <option key={d} value={d}>{d}</option>
+                             <option key={d} value={d}>{t(d)}</option>
                           ))}
                         </select>
                       </div>
@@ -537,7 +538,7 @@ export default function RegisterRoditeljPage() {
                                 {p.paket === "vise100" ? "Mekteb Pro" : "Mekteb Standard"}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {t("{m} muallima · do {u} učenika", { m: String(p.muallims), u: String(p.students) })}
+                                 {t(p.paket === "vise100" ? "do {m} muallima · do {u} učenika" : "{m} muallima · do {u} učenika", { m: String(p.muallims), u: String(p.students) })}
                               </div>
                             </div>
                             <span className="text-xs font-bold text-primary shrink-0 ml-2 text-right">

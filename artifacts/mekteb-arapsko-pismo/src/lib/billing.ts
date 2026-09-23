@@ -34,14 +34,14 @@ export const MEKTEB_OFFERS = {
     { paket: "do100", muallims: 2, students: 130, eur: 115, bam: 230, productId: 578827 },
     { paket: "do100", muallims: 3, students: 160, eur: 130, bam: 260, productId: 578828 },
     { paket: "do100", muallims: 4, students: 190, eur: 140, bam: 280, productId: 578830 },
-    { paket: "vise100", muallims: 5, students: 500, eur: 150, bam: 300, productId: 547351 },
+    { paket: "vise100", muallims: 10, students: 500, eur: 150, bam: 300, productId: 547351 },
   ],
   dijaspora: [
     { paket: "do100", muallims: 1, students: 100, eur: 200, productId: 547349 },
     { paket: "do100", muallims: 2, students: 130, eur: 230, productId: 578818 },
     { paket: "do100", muallims: 3, students: 160, eur: 260, productId: 578820 },
     { paket: "do100", muallims: 4, students: 190, eur: 280, productId: 578821 },
-    { paket: "vise100", muallims: 5, students: 500, eur: 300, productId: 547352 },
+    { paket: "vise100", muallims: 10, students: 500, eur: 300, productId: 547352 },
   ],
 } as const;
 

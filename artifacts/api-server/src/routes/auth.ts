@@ -943,7 +943,7 @@ router.post("/register-mekteb", async (req, res) => {
     const licenceCount = billingPaket === "vise100" ? 500 : 100 + (dozvoljenoMuallima - 1) * 30;
     if (!Number.isInteger(dozvoljenoMuallima) ||
         (billingPaket === "do100" && (dozvoljenoMuallima < 1 || dozvoljenoMuallima > 4)) ||
-        (billingPaket === "vise100" && dozvoljenoMuallima !== 5)) {
+        (billingPaket === "vise100" && dozvoljenoMuallima !== 10)) {
       res.status(400).json({ error: "Odaberite dostupnu kombinaciju paketa i broja muallima" });
       return;
     }

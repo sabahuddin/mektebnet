@@ -1142,6 +1142,10 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS dozvoljeno_muallima integer DEFAULT 1 NOT NULL;`);
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS billing_paket varchar(20);`);
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS billing_region varchar(20);`);
+    // Ranije Mekteb Pro registracije imale su podrazumijevani limit 5.
+    // Ne diraj eventualne ručno podešene vrijednosti na drugim paketima.
+    await db.execute(sql`UPDATE mektebi SET dozvoljeno_muallima = 10
+      WHERE billing_paket = 'vise100' AND dozvoljeno_muallima = 5;`);
     await db.execute(sql`ALTER TABLE pretplate ADD COLUMN IF NOT EXISTS paid_at timestamp;`);
     await db.execute(sql`ALTER TABLE pretplate ADD COLUMN IF NOT EXISTS activated_at timestamp;`);
     // Dozvoljeni jezici po muallimu (učenici prate svog muallima). Default su svi

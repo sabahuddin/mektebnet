@@ -76,7 +76,7 @@ export default function LoginPage() {
       await login(demoUser, "demo123");
       setLocation(destination);
     } catch (e: any) {
-      setError(e?.message || "Demo prijava nije uspjela");
+      setError(e?.message || t("Demo prijava nije uspjela"));
       setDemoBusy(null);
     }
   };
@@ -114,7 +114,7 @@ export default function LoginPage() {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
               }`}
             >
-              <LogIn className="w-4 h-4" /> Prijava
+              <LogIn className="w-4 h-4" /> {t("Prijava")}
             </button>
             <button
               type="button"
@@ -122,7 +122,7 @@ export default function LoginPage() {
               data-testid="auth-tab-register"
               className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-bold text-primary bg-primary/5 hover:bg-primary/10 transition-all"
             >
-              <User className="w-4 h-4" /> Registracija
+              <User className="w-4 h-4" /> {t("Registracija")}
             </button>
           </div>
 
@@ -179,7 +179,7 @@ export default function LoginPage() {
                         type="button"
                         onClick={() => setShowPassword(s => !s)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                        aria-label={showPassword ? "Sakrij lozinku" : "Pokaži lozinku"}
+                        aria-label={t(showPassword ? "Sakrij lozinku" : "Pokaži lozinku")}
                         data-testid="btn-toggle-password"
                         tabIndex={-1}
                       >
@@ -225,19 +225,19 @@ export default function LoginPage() {
                     onClick={() => setLocation("/zaboravljena-sifra")}
                     className="text-sm text-primary hover:underline font-medium"
                   >
-                    Zaboravili ste šifru?
+                     {t("Zaboravili ste šifru?")}
                   </button>
                 </div>
 
                 <div className="mt-2 pt-4 border-t border-border/50 space-y-3">
                   <p className="text-sm text-center text-muted-foreground">
-                    Još nemate račun?{" "}
+                     {t("Još nemate račun?")}{" "}
                     <button
                       type="button"
                       onClick={() => setLocation("/registracija")}
                       className="text-primary font-bold hover:underline"
                     >
-                      Registrujte se besplatno
+                       {t("Registrujte se besplatno")}
                     </button>
                   </p>
                   <button
@@ -247,7 +247,7 @@ export default function LoginPage() {
                     className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary font-bold transition-colors"
                   >
                     <KeyRound className="w-4 h-4" />
-                    Isprobajte demo bez registracije
+                     {t("Isprobajte demo bez registracije")}
                   </button>
                 </div>
               </div>
@@ -263,11 +263,11 @@ export default function LoginPage() {
                   }}
                   className="self-start text-sm text-primary hover:underline font-bold"
                 >
-                  ← Povratak na prijavu
+                   {t("← Povratak na prijavu")}
                 </button>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-2">
                   <p className="text-sm text-foreground">
-                    <strong>Demo prijava</strong> — isprobajte platformu bez registracije i pretplate. Odaberite ulogu:
+                     <strong>{t("Demo prijava")}</strong> — {t("Isprobajte platformu bez registracije i pretplate. Odaberite ulogu:")}
                   </p>
                 </div>
                 <Button
@@ -278,7 +278,7 @@ export default function LoginPage() {
                   className="w-full h-12 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
                 >
                   <GraduationCap className="w-4 h-4 text-amber-700" />
-                  {demoBusy === "demo.tarik.avdic" ? "Prijavljujem..." : "Demo učenik (Tarik Avdić)"}
+                   {demoBusy === "demo.tarik.avdic" ? t("Prijavljujem...") : t("Demo učenik (Tarik Avdić)")}
                 </Button>
                 <Button
                   type="button"
@@ -288,7 +288,7 @@ export default function LoginPage() {
                   className="w-full h-12 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
                 >
                   <Users className="w-4 h-4 text-amber-700" />
-                  {demoBusy === "demo.roditelj.amir" ? "Prijavljujem..." : "Demo roditelj (Amir)"}
+                   {demoBusy === "demo.roditelj.amir" ? t("Prijavljujem...") : t("Demo roditelj (Amir)")}
                 </Button>
                 <Button
                   type="button"
@@ -298,10 +298,10 @@ export default function LoginPage() {
                   className="w-full h-12 rounded-xl font-bold border-amber-300 hover:bg-amber-50 flex items-center justify-center gap-2"
                 >
                   <Building2 className="w-4 h-4 text-amber-700" />
-                  {demoBusy === "demo.muallim" ? "Prijavljujem..." : "Demo muallim"}
+                   {demoBusy === "demo.muallim" ? t("Prijavljujem...") : t("Demo muallim")}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center mt-1">
-                  Demo računi su zajednički — molimo ne mijenjajte lične podatke.
+                   {t("Demo računi su zajednički — molimo ne mijenjajte lične podatke.")}
                 </p>
               </div>
             )}

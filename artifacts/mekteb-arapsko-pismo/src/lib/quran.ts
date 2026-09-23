@@ -102,6 +102,7 @@ export const RECITERS: Reciter[] = [
   { id: "husary_muallim", label: "Husari — Mu'allim (prouči pa ponovi)", folder: "Husary_Muallim_128kbps" },
   { id: "husary", label: "Husari — Murettel", folder: "Husary_128kbps" },
   { id: "minshawy", label: "Menšavi — Murettel", folder: "Minshawy_Murattal_128kbps" },
+  { id: "aziz_alili", label: "Aziz Alili — Murettel", folder: "aziz_alili_128kbps" },
 ];
 
 export const DEFAULT_RECITER_ID = "husary_muallim";
