@@ -63,6 +63,7 @@ import {
   pushTokensTable,
   ocjeneSadrzajaTable,
   mektebDokumentiTable,
+  napametUcenikOverrideTable,
 } from "@workspace/db/schema";
 import { eq, ne, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
@@ -2842,7 +2843,7 @@ router.get("/ilmihal/lista", async (req, res) => {
 
 router.post("/ilmihal", async (req, res) => {
   try {
-    const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja, dostupnost } = req.body;
+    const { naslov, slug, nivo, redoslijed, contentHtml, kvizPitanja, dostupnost, podnesenoZaJavnuObjavu } = req.body;
     const isMuallim = req.user?.role === "muallim";
     if (!naslov || (!isMuallim && !slug)) return res.status(400).json({ error: "Naslov je obavezan" });
     // Sigurnost + validacija contentHtml (isti uvjeti kao PUT)
@@ -2874,6 +2875,7 @@ router.post("/ilmihal", async (req, res) => {
     const generatedSlug = isMuallim
       ? `muallim-${req.user!.userId}-${randomUUID()}`.slice(0, 100)
       : String(slug);
+    const wantsPublicReview = isMuallim && podnesenoZaJavnuObjavu === true;
     const [row] = await db.insert(ilmihalLekcijeTable).values({
       naslov: normalizeSurahNames(String(naslov)),
       slug: generatedSlug,
@@ -2886,6 +2888,7 @@ router.post("/ilmihal", async (req, res) => {
       autorMuallimId: isMuallim ? req.user!.userId : null,
       statusOdobrenja: "odobreno",
       isPublished: true,
+      podnesenoZaJavnuObjavu: wantsPublicReview,
     }).returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug });
     res.status(isMuallim ? 201 : 200).json({ success: true, id: row.id, slug: row.slug, privateLesson: isMuallim });
   } catch (err) {
@@ -2941,6 +2944,7 @@ router.get("/izmjene-lekcija", async (req, res) => {
       INNER JOIN users u ON u.id = l.autor_muallim_id
       WHERE l.status_odobrenja = 'odobreno'
         AND l.dostupnost = 'autorovi_ucenici'
+        AND l.podneseno_za_javnu_objavu = true
       ORDER BY l.created_at ASC
     `);
     res.json([...nove.rows, ...result.rows]);
@@ -2963,20 +2967,27 @@ router.put("/izmjene-lekcija/:id/odluka", async (req, res) => {
     if (id < 0) {
       const lessonId = -id;
       const visibility = String(req.body?.visibility || "");
-      if (visibility !== "javno") {
-        res.status(400).json({ error: "Privatnu lekciju možete objaviti svima" });
+      if (visibility !== "javno" && visibility !== "odbijeno") {
+        res.status(400).json({ error: "Neispravna odluka za javnu objavu" });
         return;
       }
-      const [row] = await db.update(ilmihalLekcijeTable).set({
+      const [row] = await db.update(ilmihalLekcijeTable).set(visibility === "javno" ? {
         statusOdobrenja: "odobreno",
         isPublished: true,
         dostupnost: "svi",
+        podnesenoZaJavnuObjavu: false,
         locked: true,
         lockedAt: new Date(),
         lockedNote: "Muallimska lekcija objavljena svima",
+      } : {
+        statusOdobrenja: "odobreno",
+        isPublished: true,
+        dostupnost: "autorovi_ucenici",
+        podnesenoZaJavnuObjavu: false,
       }).where(and(
         eq(ilmihalLekcijeTable.id, lessonId),
         eq(ilmihalLekcijeTable.dostupnost, "autorovi_ucenici"),
+        eq(ilmihalLekcijeTable.podnesenoZaJavnuObjavu, true),
       )).returning({ id: ilmihalLekcijeTable.id });
       if (!row) {
         res.status(404).json({ error: "Prijedlog nije pronađen ili je već obrađen" });
@@ -5062,6 +5073,7 @@ router.delete("/korisnik/:id", async (req, res) => {
       await tx.delete(certifikatiTable).where(eq(certifikatiTable.ucenikId, userId));
       await tx.delete(priustvoTable).where(eq(priustvoTable.ucenikId, userId));
       await tx.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, userId));
+      await tx.delete(napametUcenikOverrideTable).where(eq(napametUcenikOverrideTable.ucenikId, userId));
       await tx.delete(porukeTable).where(or(eq(porukeTable.posiljateljId, userId), eq(porukeTable.primateljId, userId)));
       await tx.delete(roditeljUcenikTable).where(or(eq(roditeljUcenikTable.roditeljId, userId), eq(roditeljUcenikTable.ucenikId, userId)));
       await tx.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));

@@ -275,6 +275,20 @@ export default function UcenikPage() {
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [token, id]);
 
+  async function toggleNapametVisibility(item: NapametStavka) {
+    if (!token || !id || !napamet) return;
+    const nextVisible = item.isVisible === false;
+    const previous = napamet;
+    setNapamet({ ...napamet, katalog: napamet.katalog.map((entry) => entry.id === item.id ? { ...entry, isVisible: nextVisible } : entry) });
+    try {
+      await apiRequest("PUT", `/muallim/napamet/${parseInt(id)}/${encodeURIComponent(item.id)}/visibility`, { isVisible: nextVisible }, token);
+      toast({ title: nextVisible ? t("Stavka je uključena") : t("Stavka je isključena") });
+    } catch (error) {
+      setNapamet(previous);
+      toast({ title: t("Promjena nije sačuvana"), description: error instanceof Error ? error.message : t("Pokušaj ponovo."), variant: "destructive" });
+    }
+  }
+
   async function odobriEtapaPokusaj(medaljonId: number) {
     if (!token || !id) return;
     setApprovingEtapaId(medaljonId);
@@ -1410,7 +1424,7 @@ export default function UcenikPage() {
                       <h2 className="font-extrabold text-foreground">{t("Napamet")}</h2>
                     </div>
                     <p className="text-sm text-muted-foreground mb-5">{t("Pregled stavki iz programa ove grupe i posljednjih ocjena učenika.")}</p>
-                    <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} />
+                    <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} canManageVisibility onToggleVisibility={toggleNapametVisibility} />
                   </div>
                 )}
 

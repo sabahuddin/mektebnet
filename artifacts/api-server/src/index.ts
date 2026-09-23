@@ -390,6 +390,15 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_muallim_program_stavka_unique_idx ON napamet_muallim_program (stavka_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_muallim_program_owner_order_idx ON napamet_muallim_program (muallim_id, mekteb_id, nivo, redoslijed);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_muallim_program_mekteb_order_idx ON napamet_muallim_program (mekteb_id, nivo, redoslijed);`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS napamet_ucenik_override (
+        id serial PRIMARY KEY, ucenik_id integer NOT NULL, stavka_id varchar(80) NOT NULL,
+        is_visible boolean NOT NULL DEFAULT false, created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_ucenik_override_student_item_unique_idx ON napamet_ucenik_override (ucenik_id, stavka_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_ucenik_override_student_idx ON napamet_ucenik_override (ucenik_id);`);
 
     // grupe.datum_pocetka / datum_kraja — datumi mektebske godine za grupu.
     // Definisani u Drizzle schema/mekteb.ts; idempotentno dodajemo na svaki

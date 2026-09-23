@@ -18,6 +18,7 @@ import {
   zadaceStatusTable,
   obavjestenjaTable,
   mektebDokumentiTable,
+  napametUcenikOverrideTable,
 } from "@workspace/db/schema";
 import { eq, and, or, inArray, asc, desc, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -51,7 +52,16 @@ async function computeChildDashboard(ucenikId: number): Promise<{
   bedzeviError: boolean;
 }> {
   const [posljednja] = await db.select().from(ocjeneTable)
-    .where(and(eq(ocjeneTable.ucenikId, ucenikId), ukupneOcjeneFilter))
+    .where(and(
+      eq(ocjeneTable.ucenikId, ucenikId),
+      ukupneOcjeneFilter,
+      sql`NOT EXISTS (
+        SELECT 1 FROM napamet_ucenik_override n
+        WHERE n.ucenik_id = ${ucenikId}
+          AND n.stavka_id = ${ocjeneTable.napametStavkaId}
+          AND n.is_visible = false
+      )`,
+    ))
     .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id))
     .limit(1);
 
@@ -363,6 +373,10 @@ router.get("/ocjene/:ucenikId", async (req, res) => {
       eq(ocjeneTable.ucenikId, ucenikId),
       ukupneOcjeneFilter,
     ));
+    const hiddenNapamet = await db.select({ stavkaId: napametUcenikOverrideTable.stavkaId })
+      .from(napametUcenikOverrideTable).where(and(eq(napametUcenikOverrideTable.ucenikId, ucenikId), eq(napametUcenikOverrideTable.isVisible, false)));
+    const hiddenNapametIds = new Set(hiddenNapamet.map((row) => row.stavkaId));
+    ocjene = ocjene.filter((o) => !o.napametStavkaId || !hiddenNapametIds.has(o.napametStavkaId));
 
     const godineInfo = await getStudentGodine(ucenikId);
     const odabir = razrijesiGodinu(godineInfo, req.query.mektebskaGodina as string | undefined);
@@ -388,6 +402,9 @@ router.get("/napamet/:ucenikId", async (req, res) => {
       eq(roditeljUcenikTable.status, "approved"),
     ));
     if (!veza) { res.status(403).json({ error: "Nemate pristup" }); return; }
+    const overrides = await db.select({ stavkaId: napametUcenikOverrideTable.stavkaId })
+      .from(napametUcenikOverrideTable).where(and(eq(napametUcenikOverrideTable.ucenikId, ucenikId), eq(napametUcenikOverrideTable.isVisible, false)));
+    const disabled = new Set(overrides.map((row) => row.stavkaId));
     const ocjene = await db.select().from(ocjeneTable)
       .where(and(eq(ocjeneTable.ucenikId, ucenikId), sql`${ocjeneTable.napametStavkaId} IS NOT NULL`))
       .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
@@ -405,9 +422,10 @@ router.get("/napamet/:ucenikId", async (req, res) => {
           .from(muallimProfiliTable)
           .where(eq(muallimProfiliTable.userId, profil.muallimId));
     const effectiveMektebId = profil?.mektebId ?? vlasnik?.mektebId ?? null;
+    const katalog = profil ? await getNapametKatalog({ mektebId: effectiveMektebId, grupaId: profil.grupaId }) : [];
     res.json({
-      katalog: profil ? await getNapametKatalog({ mektebId: effectiveMektebId, grupaId: profil.grupaId }) : [],
-      ocjene: [...latest.values()],
+      katalog: katalog.filter((item) => !disabled.has(item.id)),
+      ocjene: [...latest.values()].filter((item) => !item.napametStavkaId || !disabled.has(item.napametStavkaId)),
     });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });

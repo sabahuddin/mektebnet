@@ -92,6 +92,13 @@
       "when": 1788643200000,
       "tag": "0015_medaljoni_cijeli_kvizovi",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788900000000,
+      "tag": "0016_explicit_public_lesson_submission",
+      "breakpoints": true
     }
   ]
 }

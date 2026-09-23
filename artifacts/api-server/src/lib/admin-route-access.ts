@@ -34,11 +34,12 @@ export function canAccessAdminRoute({
     if (!body || typeof body !== "object" || Array.isArray(body)) return false;
     const record = body as Record<string, unknown>;
     const keys = Object.keys(record);
-    const allowedKeys = new Set(["naslov", "nivo", "predmet", "contentHtml"]);
+    const allowedKeys = new Set(["naslov", "nivo", "predmet", "contentHtml", "podnesenoZaJavnuObjavu"]);
     return keys.length >= 2
       && keys.every((key) => allowedKeys.has(key))
       && typeof record.naslov === "string"
-      && typeof record.contentHtml === "string";
+      && typeof record.contentHtml === "string"
+      && (record.podnesenoZaJavnuObjavu === undefined || typeof record.podnesenoZaJavnuObjavu === "boolean");
   }
 
   // Muallim može uređivati samo sadržaj postojeće Ilmihal lekcije. Namjerno

@@ -147,6 +147,9 @@ export const ilmihalLekcijeTable = pgTable("ilmihal_lekcije", {
   // Čuva urednički status; privatna muallimska lekcija je odmah odobrena,
   // a admin je po želji može prebaciti u javnu dostupnost.
   statusOdobrenja: varchar("status_odobrenja", { length: 20 }).notNull().default("odobreno"),
+  // Muallim je eksplicitno zatražio javnu objavu (privatne lekcije nikad nisu
+  // automatski prijedlozi za pregled).
+  podnesenoZaJavnuObjavu: boolean("podneseno_za_javnu_objavu").notNull().default(false),
   // Predmet (Akaid, Ahlak, Ibadat, ...) — koristi se za filter na "Sve lekcije".
   // Inicijalno backfill-ovano iz priprema HTML-a (regex extract iz meta bloka),
   // dalje admin može direktno mijenjati. NULL za lekcije bez priprema/predmeta.

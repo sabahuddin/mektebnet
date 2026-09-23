@@ -20,6 +20,7 @@ import {
   krunisanjaTable,
   mektebDokumentiTable,
   muallimProfiliTable,
+  napametUcenikOverrideTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -77,6 +78,10 @@ router.get("/profil", async (req, res) => {
         ukupneOcjeneFilter,
       ))
       .orderBy(desc(ocjeneTable.createdAt));
+    const hiddenNapamet = await db.select({ stavkaId: napametUcenikOverrideTable.stavkaId })
+      .from(napametUcenikOverrideTable).where(and(eq(napametUcenikOverrideTable.ucenikId, userId), eq(napametUcenikOverrideTable.isVisible, false)));
+    const hiddenNapametIds = new Set(hiddenNapamet.map((row) => row.stavkaId));
+    ocjene = ocjene.filter((o) => !o.napametStavkaId || !hiddenNapametIds.has(o.napametStavkaId));
 
     let prisustvo = await db.select().from(priustvoTable)
       .where(eq(priustvoTable.ucenikId, userId))
@@ -248,6 +253,9 @@ router.get("/godine", async (req, res) => {
 
 router.get("/napamet", async (req, res) => {
   try {
+    const overrides = await db.select({ stavkaId: napametUcenikOverrideTable.stavkaId })
+      .from(napametUcenikOverrideTable).where(and(eq(napametUcenikOverrideTable.ucenikId, req.user!.userId), eq(napametUcenikOverrideTable.isVisible, false)));
+    const disabled = new Set(overrides.map((row) => row.stavkaId));
     const ocjene = await db.select().from(ocjeneTable)
       .where(and(eq(ocjeneTable.ucenikId, req.user!.userId), sql`${ocjeneTable.napametStavkaId} IS NOT NULL`))
       .orderBy(desc(ocjeneTable.datum), desc(ocjeneTable.id));
@@ -265,9 +273,10 @@ router.get("/napamet", async (req, res) => {
           .from(muallimProfiliTable)
           .where(eq(muallimProfiliTable.userId, profil.muallimId));
     const effectiveMektebId = profil?.mektebId ?? vlasnik?.mektebId ?? null;
+    const katalog = profil ? await getNapametKatalog({ mektebId: effectiveMektebId, grupaId: profil.grupaId }) : [];
     res.json({
-      katalog: profil ? await getNapametKatalog({ mektebId: effectiveMektebId, grupaId: profil.grupaId }) : [],
-      ocjene: [...latest.values()],
+      katalog: katalog.filter((item) => !disabled.has(item.id)),
+      ocjene: [...latest.values()].filter((item) => !item.napametStavkaId || !disabled.has(item.napametStavkaId)),
     });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });

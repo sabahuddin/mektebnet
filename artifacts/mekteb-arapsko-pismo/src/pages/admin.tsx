@@ -598,12 +598,14 @@ function PendingLessonEdits({ token }: { token: string }) {
       toast({
         title: visibility === "javno"
           ? t("Lekcija je objavljena svima")
+          : visibility === "odbijeno"
+            ? t("Javna objava je odbijena")
           : visibility === "privatno"
             ? t("Lekcija je objavljena autoru i njegovim učenicima")
             : approve ? t("Izmjena odobrena") : t("Izmjena odbijena"),
-        description: approve
-          ? t("Novi sadržaj lekcije je sada objavljen.")
-          : t("Objavljena lekcija je ostala nepromijenjena."),
+        description: visibility === "odbijeno"
+          ? t("Lekcija ostaje dostupna muallimu i njegovim učenicima.")
+          : approve ? t("Novi sadržaj lekcije je sada objavljen.") : t("Objavljena lekcija je ostala nepromijenjena."),
       });
     } catch (err: any) {
       toast({ title: t("Greška"), description: err?.message || t("Pokušaj ponovo"), variant: "destructive" });
@@ -658,6 +660,9 @@ function PendingLessonEdits({ token }: { token: string }) {
                     {processingId === item.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
                     {t("Objavi svima")}
                   </Button>
+                   <Button size="sm" variant="outline" onClick={() => handle(item.id, false, "odbijeno")} disabled={processingId === item.id} className="border-red-200 text-red-700 hover:bg-red-50">
+                     <X className="mr-1 h-4 w-4" /> {t("Odbij")}
+                   </Button>
                 </> : <>
                 <Button size="sm" onClick={() => handle(item.id, true)} disabled={processingId === item.id} className="bg-emerald-600 hover:bg-emerald-700">
                   {processingId === item.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
@@ -1919,11 +1924,13 @@ export default function AdminPage() {
   const [muallimProfili, setMuallimProfili] = useState<MuallimProfil[]>([]);
   const [filterRole, setFilterRole] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [korisniciPage, setKorisniciPage] = useState(1);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const toggleSort = (field: SortField) => {
+    setKorisniciPage(1);
     if (sortField === field) {
       setSortDir(d => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -2370,6 +2377,14 @@ export default function AdminPage() {
       const tb = dateB ? new Date(dateB).getTime() : 0;
       return (ta - tb) * dir;
     });
+  const korisniciPageCount = Math.max(1, Math.ceil(filtrirani.length / 100));
+  const currentKorisniciPage = Math.min(korisniciPage, korisniciPageCount);
+  const pageStart = (currentKorisniciPage - 1) * 100;
+  const prikazaniKorisnici = filtrirani.slice(pageStart, pageStart + 100);
+  const changeKorisniciPage = (page: number) => {
+    setKorisniciPage(page);
+    requestAnimationFrame(() => document.getElementById("admin-korisnici")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
   const pretplatnici = korisnici
     .filter(k => k.billingCoverage === "self")
     .filter(k => !pretplatniciSearch ||
@@ -3391,7 +3406,7 @@ export default function AdminPage() {
         {/* ── TAB: KORISNICI ── */}
         {activeTab === "korisnici" && (
         <>
-        <div className="bg-white border border-border/50 rounded-2xl overflow-hidden">
+        <div id="admin-korisnici" className="bg-white border border-border/50 rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
             <div>
               <h2 className="font-extrabold text-foreground">{t("Korisnici")}</h2>
@@ -3402,10 +3417,10 @@ export default function AdminPage() {
                 type="text"
                 placeholder={t("Pretraga...")}
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={e => { setSearchQuery(e.target.value); setKorisniciPage(1); }}
                 className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 w-40"
               />
-              <select value={filterRole} onChange={e => setFilterRole(e.target.value)}
+              <select value={filterRole} onChange={e => { setFilterRole(e.target.value); setKorisniciPage(1); }}
                 className="border border-border rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
                 <option value="all">{t("Svi")}</option>
                 {["admin", "muallim", "roditelj", "ucenik"].map(r => (
@@ -3468,7 +3483,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtrirani.map(k => (
+                  {prikazaniKorisnici.map(k => (
                     <tr key={k.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3 font-bold text-foreground">{k.displayName}</td>
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{k.username}</td>
@@ -3598,6 +3613,27 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+          )}
+          {!isLoading && filtrirani.length > 0 && (
+            <nav aria-label={t("Stranice korisnika")} className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 px-4 py-3 text-sm">
+              <span className="text-muted-foreground">
+                {t("Prikazano")} {pageStart + 1}–{Math.min(pageStart + 100, filtrirani.length)} {t("od")} {filtrirani.length} {t("korisnika")}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" variant="outline" disabled={currentKorisniciPage === 1}
+                  onClick={() => changeKorisniciPage(currentKorisniciPage - 1)}>{t("Prethodna")}</Button>
+                <label className="sr-only" htmlFor="korisnici-stranica">{t("Stranica korisnika")}</label>
+                <select id="korisnici-stranica" value={currentKorisniciPage}
+                  onChange={e => changeKorisniciPage(Number(e.target.value))}
+                  className="rounded-lg border border-border bg-white px-2 py-1.5">
+                  {Array.from({ length: korisniciPageCount }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>{t("Stranica")} {i + 1} / {korisniciPageCount}</option>
+                  ))}
+                </select>
+                <Button type="button" size="sm" variant="outline" disabled={currentKorisniciPage === korisniciPageCount}
+                  onClick={() => changeKorisniciPage(currentKorisniciPage + 1)}>{t("Sljedeća")}</Button>
+              </div>
+            </nav>
           )}
         </div>
         </>

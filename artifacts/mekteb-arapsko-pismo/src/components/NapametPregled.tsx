@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BookOpen, Check, ChevronDown, Circle, Search, SlidersHorizontal } from "lucide-react";
+import { BookOpen, Check, ChevronDown, Circle, Search, SlidersHorizontal, Eye, EyeOff } from "lucide-react";
 import { useLanguage } from "@/context/language";
 
 export interface NapametStavka {
@@ -13,6 +13,7 @@ export interface NapametStavka {
   totalCount?: number;
   ukupnoUcenika?: number;
   ocijenjenoUcenika?: number;
+  isVisible?: boolean;
 }
 
 export interface NapametOcjena {
@@ -32,10 +33,12 @@ const NIVO_COLORS: Record<number, { icon: string; text: string }> = {
   4: { icon: "bg-violet-100 text-violet-700", text: "text-violet-800" },
 };
 
-export function NapametPregled({ katalog, ocjene, loading = false }: {
+export function NapametPregled({ katalog, ocjene, loading = false, canManageVisibility = false, onToggleVisibility }: {
   katalog: NapametStavka[];
   ocjene: NapametOcjena[];
   loading?: boolean;
+  canManageVisibility?: boolean;
+  onToggleVisibility?: (item: NapametStavka) => Promise<void> | void;
 }) {
   const { t } = useLanguage();
   const [openNivo, setOpenNivo] = useState<number | null>(1);
@@ -210,19 +213,25 @@ export function NapametPregled({ katalog, ocjene, loading = false }: {
                   {visibleStavke.map((stavka) => {
                     const ocjena = gradeByItem.get(stavka.id);
                     return (
-                      <div key={stavka.id} className={`flex items-center gap-3 px-4 py-3 ${ocjena ? "bg-white" : "bg-slate-50/70"}`}>
+                      <div key={stavka.id} className={`flex items-center gap-3 px-4 py-3 ${!stavka.isVisible ? "bg-slate-200/70 opacity-70" : ocjena ? "bg-white" : "bg-slate-50/70"}`}>
                         <span className={`grid h-7 w-7 place-items-center rounded-full shrink-0 ${ocjena ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
                           {ocjena ? <Check className="w-4 h-4" aria-hidden="true" /> : <Circle className="w-3 h-3" aria-hidden="true" />}
                         </span>
                         <span className="flex-1 min-w-0">
-                          <span className={`block text-sm font-bold ${ocjena ? "text-foreground" : "text-slate-400"}`}>{t(stavka.naziv)}</span>
+                           <span className={`block text-sm font-bold ${!stavka.isVisible ? "text-slate-500" : ocjena ? "text-foreground" : "text-slate-400"}`}>{t(stavka.naziv)}</span>
+                           {!stavka.isVisible && <span className="block text-[11px] text-slate-500 mt-0.5">{t("Isključeno za ovog učenika")}</span>}
                           {ocjena && (
                             <span className="block text-xs text-muted-foreground mt-0.5">
                               {ocjena.datum}{ocjena.napomena ? ` · ${ocjena.napomena}` : ""}
                             </span>
                           )}
                         </span>
-                        {ocjena ? (
+                        {canManageVisibility && onToggleVisibility ? (
+                          <button type="button" onClick={() => onToggleVisibility(stavka)} className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold text-slate-600 hover:border-emerald-300 hover:text-emerald-700" aria-label={stavka.isVisible ? t("Isključi stavku") : t("Uključi stavku")}>
+                            {stavka.isVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            {stavka.isVisible ? t("Isključi") : t("Uključi")}
+                          </button>
+                        ) : ocjena ? (
                           <span className={`font-extrabold rounded-full px-2.5 py-1 text-sm ${ocjena.ocjena != null ? (OCJENA_COLORS[ocjena.ocjena] || "bg-muted text-foreground") : "bg-emerald-100 text-emerald-700"}`} title={`${ocjena.datum}${ocjena.napomena ? ` · ${ocjena.napomena}` : ""}`}>
                             {ocjena.ocjenaOpisna === "uradjeno"
                               ? t("Urađeno")

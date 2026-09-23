@@ -213,6 +213,7 @@ router.get("/", async (req, res) => {
         dostupnost VARCHAR(20) NOT NULL DEFAULT 'svi',
         autor_muallim_id INTEGER,
         status_odobrenja VARCHAR(20) NOT NULL DEFAULT 'odobreno',
+        podneseno_za_javnu_objavu BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);

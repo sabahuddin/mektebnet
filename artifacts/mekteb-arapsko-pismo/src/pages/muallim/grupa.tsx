@@ -142,11 +142,12 @@ interface NapametDetalji {
   ocijenjeni: Array<{
     id: number;
     displayName: string;
+    isVisible: boolean;
     ocjena: number | null;
     ocjenaOpisna?: "uradjeno" | "neuradjeno" | null;
     datum: string;
   }>;
-  nisuOcijenjeni: Array<{ id: number; displayName: string }>;
+  nisuOcijenjeni: Array<{ id: number; displayName: string; isVisible: boolean }>;
 }
 
 type GrupaModul = "ucenici" | "napamet" | "greske" | "plan";
@@ -191,6 +192,7 @@ export default function GrupaPage() {
   const [napametDetalji, setNapametDetalji] = useState<NapametDetalji | null>(null);
   const [napametDetaljiLoading, setNapametDetaljiLoading] = useState(false);
   const [napametDetaljiError, setNapametDetaljiError] = useState<string | null>(null);
+  const [napametVisibilitySaving, setNapametVisibilitySaving] = useState<number | null>(null);
   const [brzaNapametOcjena, setBrzaNapametOcjena] = useState<{ stavka: NapametStavka } | null>(null);
   const [savingOcjena, setSavingOcjena] = useState(false);
 
@@ -345,6 +347,26 @@ export default function GrupaPage() {
       setNapametDetaljiError(error?.message || t("Nije moguće učitati ocjene"));
     } finally {
       setNapametDetaljiLoading(false);
+    }
+  }
+
+  async function toggleNapametForStudent(student: { id: number; isVisible: boolean }) {
+    if (!token || !napametOdabrana || napametVisibilitySaving !== null) return;
+    const nextVisible = !student.isVisible;
+    setNapametVisibilitySaving(student.id);
+    try {
+      await apiRequest("PUT", `/muallim/napamet/${student.id}/${encodeURIComponent(napametOdabrana.id)}/visibility`,
+        { isVisible: nextVisible }, token);
+      setNapametDetalji((previous) => previous ? {
+        ...previous,
+        ocijenjeni: previous.ocijenjeni.map((entry) => entry.id === student.id ? { ...entry, isVisible: nextVisible } : entry),
+        nisuOcijenjeni: previous.nisuOcijenjeni.map((entry) => entry.id === student.id ? { ...entry, isVisible: nextVisible } : entry),
+      } : previous);
+      toast({ title: nextVisible ? t("Stavka je uključena") : t("Stavka je isključena") });
+    } catch (error: any) {
+      toast({ title: t("Promjena nije sačuvana"), description: error?.message || t("Pokušaj ponovo."), variant: "destructive" });
+    } finally {
+      setNapametVisibilitySaving(null);
     }
   }
 
@@ -1610,28 +1632,44 @@ export default function GrupaPage() {
                   <div>
                     <h3 className="mb-2 flex items-center gap-2 font-extrabold text-emerald-800"><Check className="h-4 w-4" /> {t("Ocijenjeni")} <span className="text-xs font-bold text-muted-foreground">({napametDetalji.ocijenjeni.length})</span></h3>
                     {napametDetalji.ocijenjeni.length ? <div className="space-y-2">{napametDetalji.ocijenjeni.map((student) => (
-                       <button type="button" key={student.id}
+                       <div key={student.id} className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${student.isVisible ? "border-emerald-100 bg-emerald-50/50" : "border-slate-200 bg-slate-100"}`}>
+                       <button type="button"
                          onClick={() => openBrzaNapametOcjena(
                            napametOdabrana,
                            student,
                            student.ocjenaOpisna ?? student.ocjena,
                          )}
-                         className="flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2.5 text-left hover:border-emerald-300 hover:bg-emerald-100 transition-colors">
+                         className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left hover:text-emerald-700">
                         <span className="min-w-0 truncate text-sm font-bold">{student.displayName}</span>
                         <span className="shrink-0 text-right"><strong className="rounded-full bg-emerald-100 px-2 py-1 text-sm text-emerald-800">
                           {student.ocjenaOpisna === "uradjeno" ? t("Urađeno") : student.ocjenaOpisna === "neuradjeno" ? t("Neurađeno") : student.ocjena}
                         </strong><small className="ml-2 text-xs text-muted-foreground">{fmtDatum(student.datum) || student.datum}</small></span>
-                       </button>
+                        </button>
+                        <button type="button" disabled={napametVisibilitySaving !== null}
+                          onClick={() => toggleNapametForStudent(student)}
+                          className="shrink-0 rounded-lg border border-border bg-white px-2 py-1 text-xs font-bold text-emerald-700 disabled:opacity-50"
+                          aria-label={`${student.isVisible ? t("Isključi") : t("Uključi")} ${student.displayName}`}>
+                          {napametVisibilitySaving === student.id ? t("Čuvanje...") : student.isVisible ? t("Isključi") : t("Uključi")}
+                        </button>
+                       </div>
                     ))}</div> : <p className="rounded-xl bg-slate-50 p-4 text-sm text-muted-foreground">{t("Niko još nije ocijenjen.")}</p>}
                   </div>
                   <div>
                     <h3 className="mb-2 flex items-center gap-2 font-extrabold text-slate-600"><Users className="h-4 w-4" /> {t("Još nisu ocijenjeni")} <span className="text-xs font-bold text-muted-foreground">({napametDetalji.nisuOcijenjeni.length})</span></h3>
                     {napametDetalji.nisuOcijenjeni.length ? <div className="space-y-2">{napametDetalji.nisuOcijenjeni.map((student) => (
-                       <button type="button" key={student.id}
+                        <div key={student.id} className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${student.isVisible ? "border-slate-100 bg-slate-50" : "border-slate-200 bg-slate-100"}`}>
+                        <button type="button"
                          onClick={() => openBrzaNapametOcjena(napametOdabrana, student)}
-                         className="flex w-full items-center rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-left text-sm font-bold text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 transition-colors">
+                          className="min-w-0 flex-1 text-left text-sm font-bold text-slate-600 hover:text-emerald-800">
                          {student.displayName}
                        </button>
+                        <button type="button" disabled={napametVisibilitySaving !== null}
+                          onClick={() => toggleNapametForStudent(student)}
+                          className="shrink-0 rounded-lg border border-border bg-white px-2 py-1 text-xs font-bold text-emerald-700 disabled:opacity-50"
+                          aria-label={`${student.isVisible ? t("Isključi") : t("Uključi")} ${student.displayName}`}>
+                          {napametVisibilitySaving === student.id ? t("Čuvanje...") : student.isVisible ? t("Isključi") : t("Uključi")}
+                        </button>
+                        </div>
                      ))}</div> : <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">{t("Svi učenici su ocijenjeni.")}</p>}
                   </div>
                 </div>

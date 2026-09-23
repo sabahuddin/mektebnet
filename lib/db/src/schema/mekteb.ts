@@ -186,6 +186,20 @@ export const napametMuallimProgramTable = pgTable("napamet_muallim_program", {
   mektebOrderIdx: index("napamet_muallim_program_mekteb_order_idx").on(t.mektebId, t.nivo, t.redoslijed),
 }));
 
+// Per-student visibility override. Absence means visible; rows are retained so
+// historical grades can remain attached to the stable catalogue item id.
+export const napametUcenikOverrideTable = pgTable("napamet_ucenik_override", {
+  id: serial("id").primaryKey(),
+  ucenikId: integer("ucenik_id").notNull(),
+  stavkaId: varchar("stavka_id", { length: 80 }).notNull(),
+  isVisible: boolean("is_visible").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  studentItemIdx: uniqueIndex("napamet_ucenik_override_student_item_unique_idx").on(t.ucenikId, t.stavkaId),
+  studentIdx: index("napamet_ucenik_override_student_idx").on(t.ucenikId),
+}));
+
 // Mekteb-nivo dokumenti (PDF): pravila, kućni red i sl. Uploaduje ih glavni
 // muallim; vidljivi su svim učenicima i roditeljima tog mekteba.
 export const mektebDokumentiTable = pgTable("mekteb_dokumenti", {

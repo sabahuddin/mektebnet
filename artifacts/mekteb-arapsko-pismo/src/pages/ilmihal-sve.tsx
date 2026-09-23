@@ -59,6 +59,7 @@ export default function IlmihalSvePage() {
   const [showCreateLevel, setShowCreateLevel] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newSubject, setNewSubject] = useState("");
+  const [publicReview, setPublicReview] = useState(false);
   const [creating, setCreating] = useState(false);
 
   // Prijavljeni učenik može otvoriti bilo koju lekciju u sva tri nivoa.
@@ -176,11 +177,14 @@ export default function IlmihalSvePage() {
         naslov: newTitle.trim(),
         nivo,
         predmet: newSubject.trim(),
+        podnesenoZaJavnuObjavu: publicReview,
         contentHtml: `<h1>${newTitle.trim()}</h1><p>Unesite sadržaj nove lekcije.</p>`,
       }, token);
       toast({
         title: t("Lekcija je kreirana"),
-        description: t("Lekcija je odmah dostupna vama i vašim učenicima. Admin je naknadno može objaviti svima."),
+        description: publicReview
+          ? t("Lekcija je dostupna vama i vašim učenicima. Poslana je adminu na odobravanje za sve.")
+          : t("Lekcija je dostupna samo vama i vašim učenicima."),
       });
       setLocation(`/ilmihal/${result.slug}`);
     } catch (error: any) {
@@ -565,6 +569,7 @@ export default function IlmihalSvePage() {
                                 setShowCreateLevel((current) => current === nivo ? null : nivo);
                                 setNewTitle("");
                                 setNewSubject("");
+                                setPublicReview(false);
                               }}
                               className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-amber-400 px-3 py-3 text-sm font-bold text-amber-800 transition-colors hover:bg-amber-50 active:bg-amber-100"
                               data-testid={`button-add-dodatak-${nivo}`}
@@ -595,8 +600,34 @@ export default function IlmihalSvePage() {
                                   <Plus className="mr-1 h-4 w-4" />
                                   {creating ? t("Kreiranje…") : t("Kreiraj i otvori editor")}
                                 </Button>
+                                <label className="flex cursor-pointer items-start gap-2 text-xs text-amber-900 sm:col-span-2">
+                                  <input
+                                    type="radio"
+                                    name="lesson-visibility-choice"
+                                    checked={!publicReview}
+                                    onChange={() => setPublicReview(false)}
+                                    className="mt-0.5"
+                                  />
+                                  <span>
+                                    <strong>{t("Samo za mene")}</strong> — {t("dostupno meni i mojim učenicima, bez admin pregleda")}
+                                  </span>
+                                </label>
+                                <label className="flex cursor-pointer items-start gap-2 text-xs text-amber-900 sm:col-span-2">
+                                  <input
+                                    type="radio"
+                                    name="lesson-visibility-choice"
+                                    checked={publicReview}
+                                    onChange={() => setPublicReview(true)}
+                                    className="mt-0.5"
+                                  />
+                                  <span>
+                                    <strong>{t("Slažem se da bude podijeljeno s drugim")}</strong> — {t("odmah meni i mojim učenicima, nakon odobrenja svim muallimima i učenicima")}
+                                  </span>
+                                </label>
                                 <p className="text-xs text-amber-800 sm:col-span-2">
-                                  {t("Lekcija je odmah privatna za vas i vaše učenike. Admin je može objaviti svima.")}
+                                   {publicReview
+                                     ? t("Lekcija je odmah dostupna vama i vašim učenicima i čeka admin odobrenje za javnu objavu.")
+                                     : t("Lekcija je privatna za vas i vaše učenike i neće biti poslana na admin pregled.")}
                                 </p>
                               </div>
                             )}
