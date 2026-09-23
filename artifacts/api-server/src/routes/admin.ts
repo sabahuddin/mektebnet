@@ -1763,7 +1763,7 @@ router.get("/korisnici", async (req, res) => {
         .map((veza) => veza.roditeljId),
     );
 
-    res.json(korisnici.map((k) => {
+    const classified = korisnici.map((k) => {
       let billingPlan: "individual" | "family" | null = null;
       let billingCoverage: "self" | "family" | "mekteb" | null = null;
       const ownPlan = latestByUser.get(k.id)?.planType;
@@ -1796,7 +1796,32 @@ router.get("/korisnici", async (req, res) => {
         billingCoverage,
         pretplata: billingCoverage === "self" ? latestByUser.get(k.id) ?? null : null,
       };
-    }));
+    });
+    const byId = new Map(classified.map((k) => [k.id, k]));
+    const childrenByParent = new Map<number, {
+      id: number;
+      username: string;
+      displayName: string;
+      billingCoverage: "self" | "family" | "mekteb" | null;
+    }[]>();
+    for (const veza of veze) {
+      const child = byId.get(veza.ucenikId);
+      if (!child || child.role !== "ucenik") continue;
+      const children = childrenByParent.get(veza.roditeljId) ?? [];
+      children.push({
+        id: child.id,
+        username: child.username,
+        displayName: child.displayName,
+        billingCoverage: child.billingCoverage,
+      });
+      childrenByParent.set(veza.roditeljId, children);
+    }
+    res.json(classified.map((k) => ({
+      ...k,
+      porodicnaDjeca: k.role === "roditelj" && k.billingCoverage === "self" && k.billingPlan === "family"
+        ? (childrenByParent.get(k.id) ?? []).sort((a, b) => a.displayName.localeCompare(b.displayName, "bs"))
+        : [],
+    })));
   } catch (err) {
     res.status(500).json({ error: "Greška servera" });
   }

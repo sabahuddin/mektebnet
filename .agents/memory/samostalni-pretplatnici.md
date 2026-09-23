@@ -14,3 +14,9 @@ Administrator može izričito prebaciti roditelja ili učenika među samostalne 
 **Why:** Vlastita uplata se inače može sakriti iza izvedenog džematskog pokrića; automatsko proglašavanje svih takvih učenika samostalnim pretplatnicima neočekivano bi promijenilo postojeću naplatu.
 
 **How to apply:** Prilikom novih billing tokova održavaj dosljednost između admin liste, korisničkog profila pretplate i urednika pretplate. Za roditelja gledaj vlastiti porodični plan, za učenika vlastiti pojedinačni plan, ne samo najnoviji plan bilo kojeg tipa.
+
+U admin pregledu pretplatnika prikaži odobreno povezanu djecu uz nosioca porodične pretplate, ali ih ne tretiraj kao zasebne dužnike ili zasebne pretplate. Ako dijete ima vlastitu ili mektebsku naplatu, prikaži i tu razliku.
+
+**Why:** Korisnik želi vidjeti učenike koje roditelj doda u svom profilu u okviru porodične pretplate, a istovremeno ne želi dvostruku naplatu.
+
+**How to apply:** Vezu prikazuj iz odobrenih roditelj–učenik veza; promjene moraju postati vidljive nakon osvježavanja admin liste, bez ručnog prebacivanja učenika u samostalne pretplatnike.

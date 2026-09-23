@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { Fragment, useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
@@ -84,6 +84,12 @@ interface Korisnik {
   trialUntil?: string | null;
   billingPlan?: "individual" | "family" | null;
   billingCoverage?: "self" | "family" | "mekteb" | null;
+  porodicnaDjeca?: {
+    id: number;
+    username: string;
+    displayName: string;
+    billingCoverage: "self" | "family" | "mekteb" | null;
+  }[];
   pretplata?: {
     status: string;
     planType: string;
@@ -2368,7 +2374,10 @@ export default function AdminPage() {
     .filter(k => k.billingCoverage === "self")
     .filter(k => !pretplatniciSearch ||
       `${k.displayName} ${k.username} ${k.email || ""}`.toLocaleLowerCase("bs")
-        .includes(pretplatniciSearch.toLocaleLowerCase("bs")))
+        .includes(pretplatniciSearch.trim().toLocaleLowerCase("bs")) ||
+      k.porodicnaDjeca?.some(dijete =>
+        `${dijete.displayName} ${dijete.username}`.toLocaleLowerCase("bs")
+          .includes(pretplatniciSearch.trim().toLocaleLowerCase("bs"))))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
@@ -2445,7 +2454,7 @@ export default function AdminPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-extrabold text-foreground">{t("Samostalne pretplate")}</h2>
-                <p className="text-sm text-muted-foreground">{t("Pojedinci i porodice koji su se sami registrovali. Uplate i datume licence evidentirate ručno.")}</p>
+                <p className="text-sm text-muted-foreground">{t("Porodične i pojedinačne pretplate. Djeca povezana s roditeljem prikazana su uz njega, bez zasebne naplate.")}</p>
               </div>
               <input type="search" value={pretplatniciSearch} onChange={e => setPretplatniciSearch(e.target.value)}
                 placeholder={t("Pretraži ime, email ili korisničko ime")}
@@ -2470,11 +2479,14 @@ export default function AdminPage() {
                             <th key={h} className="whitespace-nowrap px-4 py-2.5 font-bold">{h}</th>)}</tr>
                         </thead>
                         <tbody>
-                          {lista.map(k => (
-                            <tr key={k.id} className="border-t border-border/30">
+                          {lista.map(k => (<Fragment key={k.id}>
+                            <tr className="border-t border-border/30">
                               <td className="px-4 py-3">
                                 <span className="block font-bold text-foreground">{k.displayName}</span>
                                 <span className="block text-xs text-muted-foreground">{k.email || k.username}</span>
+                                {plan === "family" && <span className="mt-1 block text-xs font-semibold text-primary">
+                                  {t("Porodična pretplata")} · {k.porodicnaDjeca?.length ?? 0}/4 {t("učenika")}
+                                </span>}
                               </td>
                               <td className="whitespace-nowrap px-4 py-3">{new Date(k.createdAt).toLocaleDateString("bs-BA")}</td>
                               <td className="px-4 py-3">
@@ -2491,7 +2503,23 @@ export default function AdminPage() {
                                 <Button type="button" size="sm" variant="outline" onClick={() => setPretplataKorisnik(k)}>{t("Uredi pretplatu")}</Button>
                               </td>
                             </tr>
-                          ))}
+                            {plan === "family" && k.porodicnaDjeca?.map(dijete => (
+                              <tr key={`child-${dijete.id}`} className="border-t border-border/20 bg-primary/[0.03]">
+                                <td className="py-2.5 pl-8 pr-4">
+                                  <span className="block text-sm font-semibold text-foreground">↳ {dijete.displayName}</span>
+                                  <span className="block text-xs text-muted-foreground">{dijete.username}</span>
+                                </td>
+                                <td colSpan={7} className="px-4 py-2.5 text-xs text-muted-foreground">
+                                  {t("Učenik roditelja")} {k.displayName} · {dijete.billingCoverage === "self"
+                                    ? t("Ima vlastitu pretplatu")
+                                    : dijete.billingCoverage === "mekteb"
+                                      ? t("Pokriven mektebom")
+                                      : t("Pokriven porodičnom pretplatom")}
+                                  {dijete.billingCoverage === "self" && ` · ${t("Vidi Pojedinci")}`}
+                                </td>
+                              </tr>
+                            ))}
+                          </Fragment>))}
                         </tbody>
                       </table>
                     </div>

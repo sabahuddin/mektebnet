@@ -41,6 +41,9 @@ async function createUser(
     role,
     email,
     isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
+    ...(role === "roditelj" ? { parentAcknowledgedAt: new Date() } : {}),
   }).returning({ id: usersTable.id });
   return user.id;
 }
@@ -177,6 +180,7 @@ test("admin popis vraća istu klasifikaciju roditelja kao roditeljski profil", a
     id: number;
     billingCoverage: string | null;
     billingPlan: string | null;
+    porodicnaDjeca: Array<{ id: number; billingCoverage: string | null }>;
   }>;
 
   const mektebParent = users.find((user) => user.id === mektebParentId);
@@ -187,6 +191,13 @@ test("admin popis vraća istu klasifikaciju roditelja kao roditeljski profil", a
   assert.equal(mektebParent?.billingPlan, null);
   assert.equal(selfParent?.billingCoverage, "self");
   assert.equal(selfParent?.billingPlan, "family");
+  assert.deepEqual(selfParent?.porodicnaDjeca, [{
+    id: familyChildId,
+    username: `ucenik-family.${SUFFIX}`,
+    displayName: `ucenik-family ${SUFFIX}`,
+    billingCoverage: "family",
+  }]);
+  assert.deepEqual(mektebParent?.porodicnaDjeca, []);
   assert.equal(selfStudent?.billingCoverage, "self");
   assert.equal(selfStudent?.billingPlan, "individual");
   assert.equal(familyChild?.billingCoverage, "family");
