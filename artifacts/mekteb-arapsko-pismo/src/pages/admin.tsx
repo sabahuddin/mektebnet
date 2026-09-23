@@ -2279,7 +2279,7 @@ export default function AdminPage() {
     setDeletingId(k.id);
     try {
       await apiRequest("DELETE", `/admin/korisnik/${k.id}`, undefined, token);
-      setKorisnici(prev => prev.filter(u => u.id !== k.id));
+      await loadData();
       setDeleteKorisnik(null);
       toast({ title: t('Korisnik "{ime}" je obrisan', { ime: k.displayName }) });
       if (k.role === "muallim") loadMuallimPregled();
@@ -2500,7 +2500,14 @@ export default function AdminPage() {
                               <td className="whitespace-nowrap px-4 py-3 font-bold">{preostaloLicence(k)}</td>
                               <td className="whitespace-nowrap px-4 py-3">{k.pretplata?.iznos ?? "—"} {k.pretplata?.valuta ?? ""}</td>
                               <td className="px-4 py-3">
-                                <Button type="button" size="sm" variant="outline" onClick={() => setPretplataKorisnik(k)}>{t("Uredi pretplatu")}</Button>
+                                <div className="flex items-center gap-2">
+                                  <Button type="button" size="sm" variant="outline" onClick={() => setPretplataKorisnik(k)}>{t("Uredi pretplatu")}</Button>
+                                  {k.role === "ucenik" && (
+                                    <Button type="button" size="sm" variant="outline" className="text-red-700 hover:text-red-800" onClick={() => setDeleteKorisnik(k)}>
+                                      <Trash2 className="mr-1 h-4 w-4" /> {t("Obriši račun")}
+                                    </Button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                             {plan === "family" && k.porodicnaDjeca?.map(dijete => (
@@ -2514,6 +2521,12 @@ export default function AdminPage() {
                                     ? t("Ima vlastitu pretplatu")
                                     : t("Porodična pretplata")}
                                   {dijete.billingCoverage === "self" && ` · ${t("Vidi Pojedinci")}`}
+                                  {korisnici.find(u => u.id === dijete.id) && (
+                                    <button type="button" onClick={() => setDeleteKorisnik(korisnici.find(u => u.id === dijete.id)!)}
+                                      className="ml-3 font-bold text-red-700 hover:underline">
+                                      {t("Obriši račun")}
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             ))}

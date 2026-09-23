@@ -48,6 +48,21 @@ import {
   studentKrunisanjaTable,
   napametGlobalProgramTable,
   staticVjezbeIzvoriTable,
+  h5pPokusajiTable,
+  zadaceStatusTable,
+  zadaceUceniciTable,
+  pogresniOdgovoriTable,
+  interaktivniBlokPokusajiTable,
+  lessonPauseAnswersTable,
+  misijaProgressTable,
+  medenaVidjenaPitanjaTable,
+  embedCompletionsTable,
+  staticVjezbaPokusajiTable,
+  etapaPokusajOdobrenjaTable,
+  studentMedaljoniTable,
+  pushTokensTable,
+  ocjeneSadrzajaTable,
+  mektebDokumentiTable,
 } from "@workspace/db/schema";
 import { eq, ne, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
@@ -5010,11 +5025,34 @@ router.delete("/korisnik/:id", async (req, res) => {
     await db.transaction(async (tx) => {
       if (user.role === "ucenik") {
         const [profil] = await tx.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
-        if (profil?.muallimId) {
+        if (profil?.muallimId && !profil.isArchived) {
           await tx.update(muallimProfiliTable)
             .set({ licencesUsed: sql`GREATEST(${muallimProfiliTable.licencesUsed} - 1, 0)` })
             .where(eq(muallimProfiliTable.userId, profil.muallimId));
         }
+        await tx.delete(h5pPokusajiTable).where(eq(h5pPokusajiTable.userId, userId));
+        await tx.delete(zadaceStatusTable).where(eq(zadaceStatusTable.ucenikId, userId));
+        await tx.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.ucenikId, userId));
+        await tx.delete(pogresniOdgovoriTable).where(eq(pogresniOdgovoriTable.userId, userId));
+        await tx.delete(interaktivniBlokPokusajiTable).where(eq(interaktivniBlokPokusajiTable.userId, userId));
+        await tx.delete(lessonPauseAnswersTable).where(eq(lessonPauseAnswersTable.userId, userId));
+        await tx.delete(misijaProgressTable).where(eq(misijaProgressTable.userId, userId));
+        await tx.delete(medenaVidjenaPitanjaTable).where(eq(medenaVidjenaPitanjaTable.userId, userId));
+        await tx.delete(embedCompletionsTable).where(eq(embedCompletionsTable.studentId, String(userId)));
+        await tx.delete(staticVjezbaPokusajiTable).where(eq(staticVjezbaPokusajiTable.userId, userId));
+        await tx.delete(etapaPokusajOdobrenjaTable).where(eq(etapaPokusajOdobrenjaTable.studentId, String(userId)));
+        await tx.delete(etapaPolaganjaTable).where(eq(etapaPolaganjaTable.studentId, String(userId)));
+        await tx.delete(studentKrunisanjaTable).where(eq(studentKrunisanjaTable.studentId, String(userId)));
+        await tx.delete(studentMedaljoniTable).where(eq(studentMedaljoniTable.studentId, String(userId)));
+        await tx.delete(pushTokensTable).where(eq(pushTokensTable.userId, userId));
+        await tx.delete(ocjeneSadrzajaTable).where(eq(ocjeneSadrzajaTable.userId, userId));
+        await tx.execute(sql`DELETE FROM game_sessions WHERE user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM grupe_arhiva_clanovi WHERE ucenik_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM zvjezdice_log WHERE ucenik_id = ${userId}`);
+        // Shared learning material remains available, but no longer identifies this account.
+        await tx.update(prilozi).set({ uploadedByUserId: null }).where(eq(prilozi.uploadedByUserId, userId));
+        await tx.update(mektebDokumentiTable).set({ uploadedByUserId: null })
+          .where(eq(mektebDokumentiTable.uploadedByUserId, userId));
       }
 
       await tx.delete(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, userId));
@@ -5055,11 +5093,11 @@ router.delete("/korisnik/:id", async (req, res) => {
       await tx.delete(usersTable).where(eq(usersTable.id, userId));
     });
 
+    invalidateUserStatusCache(userId);
     res.json({ ok: true });
   } catch (err) {
-    console.error("Delete user error:", err);
-    const detail = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: "Greška pri brisanju korisnika", detail });
+    req.log.error({ err }, "Delete user error");
+    res.status(500).json({ error: "Greška pri brisanju korisnika" });
   }
 });
 

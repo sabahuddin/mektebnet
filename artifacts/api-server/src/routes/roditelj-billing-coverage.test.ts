@@ -6,6 +6,8 @@ import { db } from "@workspace/db";
 import {
   mektebiTable,
   pretplateTable,
+  h5pPokusajiTable,
+  pushTokensTable,
   roditeljProfiliTable,
   roditeljUcenikTable,
   ucenikProfiliTable,
@@ -263,4 +265,45 @@ test("admin evidentira uplatu i zasebno koriguje datum bez ponovne naplate", asy
   const listed = await request("/api/admin/korisnici", adminToken);
   const users = await listed.json() as Array<{ id: number; pretplata?: { expiresAt: string } }>;
   assert.equal(users.find(u => u.id === selfStudentId)?.pretplata?.expiresAt.slice(0, 10), "2031-04-01");
+});
+
+test("admin briše učenika iz pretplatnika zajedno s vezom, uplatom i pokušajima, ali čuva roditelja", async () => {
+  const moved = await request(`/api/admin/korisnik/${familyChildId}/billing-override`, adminToken, {
+    method: "POST",
+    body: JSON.stringify({ mode: "self" }),
+  });
+  assert.equal(moved.status, 200);
+
+  await db.insert(h5pPokusajiTable).values({
+    userId: familyChildId, priloziId: 987654, attemptNo: 1,
+  });
+  await db.insert(pushTokensTable).values({
+    userId: familyChildId,
+    playerId: `test-${SUFFIX}`,
+    platform: "web",
+  });
+
+  const denied = await request(
+    `/api/admin/korisnik/${familyChildId}`,
+    selfParentToken,
+    { method: "DELETE" },
+  );
+  assert.equal(denied.status, 403);
+  assert.equal((await db.select().from(usersTable).where(eq(usersTable.id, familyChildId))).length, 1);
+
+  const deleted = await request(
+    `/api/admin/korisnik/${familyChildId}`,
+    adminToken,
+    { method: "DELETE" },
+  );
+  assert.equal(deleted.status, 200);
+  assert.equal((await db.select().from(usersTable).where(eq(usersTable.id, familyChildId))).length, 0);
+  assert.equal((await db.select().from(pretplateTable).where(eq(pretplateTable.userId, familyChildId))).length, 0);
+  assert.equal((await db.select().from(roditeljUcenikTable).where(eq(roditeljUcenikTable.ucenikId, familyChildId))).length, 0);
+  assert.equal((await db.select().from(h5pPokusajiTable).where(eq(h5pPokusajiTable.userId, familyChildId))).length, 0);
+  assert.equal((await db.select().from(pushTokensTable).where(eq(pushTokensTable.userId, familyChildId))).length, 0);
+  assert.equal((await db.select().from(usersTable).where(eq(usersTable.id, selfParentId))).length, 1);
+  const listed = await request("/api/admin/korisnici", adminToken);
+  const users = await listed.json() as Array<{ id: number; porodicnaDjeca: Array<{ id: number }> }>;
+  assert.deepEqual(users.find(u => u.id === selfParentId)?.porodicnaDjeca, []);
 });
