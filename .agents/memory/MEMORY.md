@@ -71,3 +71,4 @@
 - [PWA ažuriranje bez prekida rada](pwa-update-bez-reloada.md) — novi service worker čeka zatvaranje svih tabova; ne aktivirati ga usred korisničke sesije.
 - [Odobravanje izmjena lekcija](odobravanje-izmjena-lekcija.md) — muallimove izmjene čekaju admina i moraju ostati vezane za jezik koji je uređivan.
 - [Samostalni pretplatnici](samostalni-pretplatnici.md) — plaćajućeg nosioca razlikuj po vlastitoj porodičnoj/individualnoj pretplati, ne po emailu ili ulozi.
+- [Historijska država džemata](historijska-drzava-dzemata.md) — starije registracije čuvale su samo regiju naplate; tačna država je bila u email obavijesti.

@@ -2571,11 +2571,14 @@ export default function AdminPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h4 className="text-lg font-extrabold text-foreground">{d.naziv}</h4>
-                        {(d.grad || d.drzava) && <span className="text-sm text-muted-foreground">· {[d.grad, d.drzava].filter(Boolean).join(", ")}</span>}
+                        {d.grad && <span className="text-sm text-muted-foreground">· {d.grad}</span>}
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${d.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
                           {d.isActive ? t("Aktivan") : t("Neaktivan")}
                         </span>
                       </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t("Država")}: <span className="font-semibold text-foreground">{d.drzava || t("Nije sačuvana")}</span>
+                      </p>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {t("Glavni muallim:")} <span className="font-bold text-foreground">{d.glavniMuallim?.displayName ?? t("Nije postavljen")}</span>
                         {d.glavniMuallim && (
