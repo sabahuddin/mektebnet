@@ -18,6 +18,7 @@ export const mektebiTable = pgTable("mektebi", {
   // i nakon ponovne prijave vodi na tačan Standard/Pro i BiH/dijaspora proizvod.
   billingPaket: varchar("billing_paket", { length: 20 }),
   billingRegion: varchar("billing_region", { length: 20 }),
+  drzava: varchar("drzava", { length: 100 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

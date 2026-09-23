@@ -151,6 +151,7 @@ interface DzematPregled {
   id: number;
   naziv: string;
   grad: string | null;
+  drzava: string | null;
   isActive: boolean;
   glavniMuallim: {
     id: number;
@@ -1929,6 +1930,22 @@ export default function AdminPage() {
   const [muallimLoading, setMuallimLoading] = useState(false);
   const [dzematiPregled, setDzematiPregled] = useState<DzematPregled[]>([]);
   const [dzematiLoading, setDzematiLoading] = useState(false);
+  const [dzematSearch, setDzematSearch] = useState("");
+  const [dzematPlacanje, setDzematPlacanje] = useState<"svi" | "placeno" | "neplaceno">("svi");
+  const [dzematDrzava, setDzematDrzava] = useState("sve");
+  const [dzematSort, setDzematSort] = useState<"az" | "za">("az");
+  const drzaveDzemata = Array.from(new Set(dzematiPregled.map(d => d.drzava).filter((d): d is string => !!d)))
+    .sort((a, b) => a.localeCompare(b, "bs"));
+  const dzematiPrikaz = dzematiPregled
+    .filter(d => {
+      const placeno = d.pretplata?.status === "active";
+      if (dzematPlacanje !== "svi" && placeno !== (dzematPlacanje === "placeno")) return false;
+      if (dzematDrzava === "__nepoznato" ? !!d.drzava : dzematDrzava !== "sve" && d.drzava !== dzematDrzava) return false;
+      const query = dzematSearch.trim().toLocaleLowerCase("bs");
+      return !query || [d.naziv, d.grad, d.drzava, d.glavniMuallim?.displayName]
+        .some(value => value?.toLocaleLowerCase("bs").includes(query));
+    })
+    .sort((a, b) => (dzematSort === "az" ? 1 : -1) * a.naziv.localeCompare(b.naziv, "bs", { sensitivity: "base" }));
   const [expandedMuallim, setExpandedMuallim] = useState<number | null>(null);
   const [muallimSearch, setMuallimSearch] = useState("");
   const [muallimSort, setMuallimSort] = useState<"prezime" | "datum">("prezime");
@@ -1944,6 +1961,7 @@ export default function AdminPage() {
   const [deleteKorisnik, setDeleteKorisnik] = useState<Korisnik | null>(null);
   const [pretplataKorisnik, setPretplataKorisnik] = useState<Korisnik | null>(null);
   const [pretplatniciSearch, setPretplatniciSearch] = useState("");
+  const [billingMoveId, setBillingMoveId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const loadData = async () => {
@@ -1961,6 +1979,26 @@ export default function AdminPage() {
       toast({ title: t("Greška"), description: t("Nije moguće učitati podatke"), variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const prebaciUPretplatnike = async (k: Korisnik) => {
+    if (!token || (k.role !== "ucenik" && k.role !== "roditelj")) return;
+    if (!window.confirm(
+      `${t("Prebaciti u samostalne pretplatnike")} „${k.displayName}” (${k.username})?\n\n` +
+      t("Veza s mektebom ili porodicom ostaje sačuvana. Postojeća vlastita pretplata ostaje; ako je nema, kreirat će se neplaćena pretplata koju možete urediti.")
+    )) return;
+    setBillingMoveId(k.id);
+    try {
+      await apiRequest("POST", `/admin/korisnik/${k.id}/billing-override`, { mode: "self" }, token);
+      await loadData();
+      setPretplatniciSearch(k.username);
+      setActiveTab("pretplatnici");
+      toast({ title: t("Sačuvano"), description: t("Korisnik je prebačen u samostalne pretplatnike.") });
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće prebaciti korisnika"), variant: "destructive" });
+    } finally {
+      setBillingMoveId(null);
     }
   };
 
@@ -2124,6 +2162,26 @@ export default function AdminPage() {
       await Promise.all([loadDzematiPregled(), loadData()]);
     } catch (e: any) {
       toast({ title: t("Greška"), description: e?.message || t("Nije moguće sačuvati pretplatu"), variant: "destructive" });
+    } finally {
+      setMuallimAkcija(null);
+    }
+  };
+
+  const sacuvajDrzavuDzemata = async (d: DzematPregled) => {
+    if (!token) return;
+    const input = document.getElementById(`dzemat-drzava-${d.id}`) as HTMLInputElement | null;
+    const drzava = input?.value.trim() ?? "";
+    if (drzava.length > 100) {
+      toast({ title: t("Greška"), description: t("Naziv države je predugačak"), variant: "destructive" });
+      return;
+    }
+    setMuallimAkcija(d.id);
+    try {
+      await apiRequest("PUT", `/admin/mekteb/${d.id}/drzava`, { drzava: drzava || null }, token);
+      await loadDzematiPregled();
+      toast({ title: t("Sačuvano"), description: t("Država džemata je ažurirana") });
+    } catch (e: any) {
+      toast({ title: t("Greška"), description: e?.message || t("Nije moguće sačuvati državu"), variant: "destructive" });
     } finally {
       setMuallimAkcija(null);
     }
@@ -2458,11 +2516,51 @@ export default function AdminPage() {
               </Button>
             </div>
 
+            <div className="grid gap-3 rounded-2xl border border-border/50 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="text-xs font-bold text-muted-foreground">
+                {t("Pretraga")}
+                <input type="search" value={dzematSearch} onChange={e => setDzematSearch(e.target.value)}
+                  placeholder={t("Džemat, grad, država ili muallim")}
+                  className="mt-1.5 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-foreground" />
+              </label>
+              <label className="text-xs font-bold text-muted-foreground">
+                {t("Plaćanje")}
+                <select value={dzematPlacanje} onChange={e => setDzematPlacanje(e.target.value as typeof dzematPlacanje)}
+                  className="mt-1.5 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-foreground">
+                  <option value="svi">{t("Svi")}</option>
+                  <option value="placeno">{t("Plaćeno")}</option>
+                  <option value="neplaceno">{t("Nije plaćeno")}</option>
+                </select>
+              </label>
+              <label className="text-xs font-bold text-muted-foreground">
+                {t("Država")}
+                <select value={dzematDrzava} onChange={e => setDzematDrzava(e.target.value)}
+                  className="mt-1.5 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-foreground">
+                  <option value="sve">{t("Sve države")}</option>
+                  {drzaveDzemata.map(drzava => <option key={drzava} value={drzava}>{drzava}</option>)}
+                  {dzematiPregled.some(d => !d.drzava) && <option value="__nepoznato">{t("Nepoznata država")}</option>}
+                </select>
+              </label>
+              <label className="text-xs font-bold text-muted-foreground">
+                {t("Redoslijed")}
+                <select value={dzematSort} onChange={e => setDzematSort(e.target.value as typeof dzematSort)}
+                  className="mt-1.5 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-foreground">
+                  <option value="az">{t("Abecedno A–Ž")}</option>
+                  <option value="za">{t("Abecedno Ž–A")}</option>
+                </select>
+              </label>
+              {!dzematiLoading && <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-4">
+                {t("Prikazano")}: {dzematiPrikaz.length} / {dzematiPregled.length}
+              </p>}
+            </div>
+
             {dzematiLoading ? (
               <div className="flex flex-col gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div>
             ) : dzematiPregled.length === 0 ? (
               <div className="rounded-2xl border border-border/50 bg-white p-10 text-center text-sm text-muted-foreground">{t("Nema džemata")}</div>
-            ) : dzematiPregled.map((d) => (
+            ) : dzematiPrikaz.length === 0 ? (
+              <div className="rounded-2xl border border-border/50 bg-white p-10 text-center text-sm text-muted-foreground">{t("Nema džemata za odabrane filtere")}</div>
+            ) : dzematiPrikaz.map((d) => (
               <div key={d.id} className="overflow-hidden rounded-2xl border border-border/50 bg-white">
                 <button
                   type="button"
@@ -2473,7 +2571,7 @@ export default function AdminPage() {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h4 className="text-lg font-extrabold text-foreground">{d.naziv}</h4>
-                        {d.grad && <span className="text-sm text-muted-foreground">· {d.grad}</span>}
+                        {(d.grad || d.drzava) && <span className="text-sm text-muted-foreground">· {[d.grad, d.drzava].filter(Boolean).join(", ")}</span>}
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${d.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
                           {d.isActive ? t("Aktivan") : t("Neaktivan")}
                         </span>
@@ -2517,6 +2615,20 @@ export default function AdminPage() {
 
                 {expandedMuallim === d.id && (
                   <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="border-t border-border/40 px-5 py-4">
+                    <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-border/50 bg-muted/20 p-4">
+                      <label htmlFor={`dzemat-drzava-${d.id}`} className="text-xs font-bold text-foreground">
+                        {t("Država džemata")}
+                        <input key={d.drzava ?? ""} id={`dzemat-drzava-${d.id}`} type="text" list="dzemati-drzave"
+                          defaultValue={d.drzava ?? ""} maxLength={100} placeholder={t("Unesite državu")}
+                          className="mt-1.5 block w-64 max-w-full rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium" />
+                      </label>
+                      <datalist id="dzemati-drzave">{drzaveDzemata.map(drzava => <option key={drzava} value={drzava} />)}</datalist>
+                      <Button size="sm" variant="outline" disabled={muallimAkcija === d.id} onClick={() => sacuvajDrzavuDzemata(d)}>
+                        {muallimAkcija === d.id && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                        {t("Sačuvaj državu")}
+                      </Button>
+                      {!d.drzava && <p className="w-full text-xs text-muted-foreground">{t("Država nije sačuvana za ovaj ranije otvoreni džemat.")}</p>}
+                    </div>
                     <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -3340,10 +3452,19 @@ export default function AdminPage() {
                               {k.billingPlan === "family" ? t("Porodična") : t("Pojedinačna")}
                             </span>
                           </button>
-                        ) : k.billingCoverage === "family" ? (
-                          <span className="text-xs font-bold text-blue-700">{t("Pokriven porodicom")}</span>
-                        ) : k.billingCoverage === "mekteb" ? (
-                          <span className="text-xs font-bold text-violet-700">{t("Pokriven mektebom")}</span>
+                        ) : k.role === "ucenik" || k.role === "roditelj" ? (
+                          <div className="flex flex-col items-start gap-1">
+                            {k.billingCoverage === "family" ? (
+                              <span className="text-xs font-bold text-blue-700">{t("Pokriven porodicom")}</span>
+                            ) : k.billingCoverage === "mekteb" ? (
+                              <span className="text-xs font-bold text-violet-700">{t("Pokriven mektebom")}</span>
+                            ) : <span className="text-xs text-muted-foreground">—</span>}
+                            <button type="button" disabled={billingMoveId === k.id}
+                              onClick={() => prebaciUPretplatnike(k)}
+                              className="text-xs font-bold text-primary hover:underline disabled:opacity-50">
+                              {billingMoveId === k.id ? t("Premještanje...") : t("Prebaci u pretplatnike")}
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}

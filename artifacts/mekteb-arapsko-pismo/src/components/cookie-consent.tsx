@@ -4,7 +4,7 @@ import { Cookie, X } from "lucide-react";
 import { useLanguage } from "@/context/language";
 
 const CONSENT_KEY = "mekteb-cookie-consent";
-const CONSENT_VERSION = "v1";
+const CONSENT_VERSION = "v2";
 
 function hasConsent(): boolean {
   try {
@@ -24,10 +24,8 @@ function saveConsent(): void {
 
 /**
  * Informativni banner o kolačićima koji se pojavljuje pri prvom posjetu.
- * Platforma koristi samo neophodne (token prijave) i funkcionalne kolačiće
- * (jezik, veličina fonta, zvuk) — bez oglašavanja ni praćenja — pa je
- * dovoljan informativni pristanak s linkom na politiku kolačića.
- * Izbor se pamti u localStorage (versioniran ključ) i banner se ne ponavlja.
+ * Ovo je obavijest o neophodnoj i funkcionalnoj pohrani, ne pristanak na
+ * opcionalno praćenje. Zatvaranje se pamti u localStorage (versioniran ključ).
  */
 export function CookieConsent() {
   const { t } = useLanguage();
@@ -87,7 +85,7 @@ export function CookieConsent() {
                 className="inline-flex items-center justify-center bg-primary hover:bg-primary/90 text-white text-sm font-bold rounded-xl px-5 py-2.5 transition-colors"
                 data-testid="btn-cookie-accept"
               >
-                {t("Prihvatam")}
+                {t("U redu")}
               </button>
               <Link
                 href="/kolacici"

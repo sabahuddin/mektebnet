@@ -1719,6 +1719,7 @@ router.get("/korisnici", async (req, res) => {
         lastSeenAt: usersTable.lastSeenAt,
         totalScreentimeSec: usersTable.totalScreentimeSec,
         trialUntil: usersTable.trialUntil,
+        billingOverride: usersTable.billingOverride,
       }).from(usersTable),
       db.select().from(pretplateTable)
         .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id)),
@@ -1738,9 +1739,12 @@ router.get("/korisnici", async (req, res) => {
         mektebId: muallimProfiliTable.mektebId,
       }).from(muallimProfiliTable),
     ]);
+    const roleByUser = new Map(korisnici.map((user) => [user.id, user.role]));
     const latestByUser = new Map<number, typeof pretplate[number]>();
     for (const p of pretplate) {
-      if (!latestByUser.has(p.userId)) latestByUser.set(p.userId, p);
+      const role = roleByUser.get(p.userId);
+      const expectedPlan = role === "roditelj" ? "family" : role === "ucenik" ? "individual" : null;
+      if (expectedPlan === p.planType && !latestByUser.has(p.userId)) latestByUser.set(p.userId, p);
     }
     const familyChildren = new Set(veze.map((v) => v.ucenikId));
     const studentProfiles = new Map(ucenikProfili.map((p) => [p.userId, p]));
@@ -1776,7 +1780,10 @@ router.get("/korisnici", async (req, res) => {
           profile?.mektebId ||
           (profile?.muallimId && muallimMektebi.get(profile.muallimId)),
         );
-        if (coveredByMekteb) billingCoverage = "mekteb";
+        if (k.billingOverride === "self" && ownPlan === "individual") {
+          billingPlan = "individual";
+          billingCoverage = "self";
+        } else if (coveredByMekteb) billingCoverage = "mekteb";
         else if (familyChildren.has(k.id)) billingCoverage = "family";
         else if (ownPlan === "individual") {
           billingPlan = "individual";
@@ -1794,6 +1801,63 @@ router.get("/korisnici", async (req, res) => {
     res.status(500).json({ error: "Greška servera" });
   }
 });
+
+// POST /api/admin/korisnik/:id/billing-override — administrator explicitly
+// moves a school/family-covered account into self billing. Links and all
+// existing subscriptions are deliberately retained.
+const billingOverrideHandler = async (req: any, res: any) => {
+  try {
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId) || userId < 1) {
+      res.status(400).json({ error: "Nevažeći korisnik" });
+      return;
+    }
+    const mode = req.body?.mode;
+    if (mode !== "self" && mode !== null) {
+      res.status(400).json({ error: "Način naplate mora biti self ili null" });
+      return;
+    }
+    const [account] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    if (!account || !["roditelj", "ucenik"].includes(account.role)) {
+      res.status(404).json({ error: "Korisnik nije pronađen" });
+      return;
+    }
+    const expectedPlan = account.role === "roditelj" ? "family" : "individual";
+    const saved = await db.transaction(async (tx) => {
+      const [lockedAccount] = await tx.select().from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .for("update");
+      if (!lockedAccount) throw new Error("USER_NOT_FOUND");
+      const lockedExpectedPlan = lockedAccount.role === "roditelj" ? "family" : "individual";
+      let [own] = await tx.select().from(pretplateTable)
+        .where(and(eq(pretplateTable.userId, userId), eq(pretplateTable.planType, lockedExpectedPlan)))
+        .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
+        .limit(1);
+      if (mode === "self" && !own) {
+        [own] = await tx.insert(pretplateTable).values({
+          userId,
+          planType: expectedPlan,
+          status: "pending",
+          licencesPurchased: account.role === "roditelj" ? 4 : 1,
+          iznos: account.role === "roditelj" ? 30 : 20,
+          valuta: "EUR",
+        }).returning();
+      }
+      const [updated] = await tx.update(usersTable)
+        .set({ billingOverride: mode === "self" ? "self" : null })
+        .where(eq(usersTable.id, userId))
+        .returning();
+      return { user: updated, pretplata: own ?? null };
+    });
+    invalidateUserStatusCache(userId);
+    res.json(saved);
+  } catch (err) {
+    console.error("Billing override error:", err);
+    res.status(500).json({ error: "Nije moguće promijeniti način naplate" });
+  }
+};
+router.post("/korisnik/:id/billing-override", billingOverrideHandler);
+router.put("/korisnik/:id/billing-override", billingOverrideHandler);
 
 // PUT /api/admin/korisnik/:id/pretplata — pojedinačna ili porodična pretplata.
 router.put("/korisnik/:id/pretplata", async (req, res) => {
@@ -1821,11 +1885,14 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
       res.status(404).json({ error: "Pretplatnički račun nije pronađen" });
       return;
     }
+    const expectedPlan = account.role === "roditelj" ? "family" : "individual";
     const [latest] = await db.select().from(pretplateTable)
-      .where(eq(pretplateTable.userId, userId))
+      .where(and(
+        eq(pretplateTable.userId, userId),
+        eq(pretplateTable.planType, expectedPlan),
+      ))
       .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
       .limit(1);
-    const expectedPlan = account.role === "roditelj" ? "family" : "individual";
     if (latest?.planType !== expectedPlan) {
       res.status(409).json({ error: "Ovaj korisnik nema samostalnu pretplatu" });
       return;
@@ -1860,7 +1927,7 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
             .where(eq(muallimProfiliTable.userId, profile.muallimId))
             .limit(1)
         : [];
-      if (familyLink || profile?.mektebId || teacherProfile?.mektebId) {
+      if ((familyLink || profile?.mektebId || teacherProfile?.mektebId) && account.billingOverride !== "self") {
         res.status(409).json({ error: "Ovaj učenik je već pokriven porodičnom ili mektebskom pretplatom" });
         return;
       }
@@ -2315,6 +2382,44 @@ router.put("/mekteb/:id/dozvoljeno-muallima", async (req, res) => {
     await db.update(mektebiTable).set({ dozvoljenoMuallima: dozvoljeno }).where(eq(mektebiTable.id, mektebId));
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// PUT /api/admin/mekteb/:id/drzava — admin može ispraviti ili obrisati državu.
+router.put("/mekteb/:id/drzava", async (req, res) => {
+  try {
+    const mektebId = Number(req.params.id);
+    if (!Number.isInteger(mektebId) || mektebId < 1) {
+      res.status(400).json({ error: "Nevažeći ID džemata" });
+      return;
+    }
+    const value = req.body?.drzava;
+    if (value !== null && typeof value !== "string") {
+      res.status(400).json({ error: "Država mora biti tekst ili null" });
+      return;
+    }
+    const drzava = value === null ? null : value.trim();
+    if (drzava !== null && (drzava.length < 1 || drzava.length > 100)) {
+      res.status(400).json({ error: "Država mora imati između 1 i 100 karaktera" });
+      return;
+    }
+    const [mekteb] = await db
+      .select({ id: mektebiTable.id })
+      .from(mektebiTable)
+      .where(eq(mektebiTable.id, mektebId));
+    if (!mekteb) {
+      res.status(404).json({ error: "Džemat nije pronađen" });
+      return;
+    }
+    const [updated] = await db
+      .update(mektebiTable)
+      .set({ drzava })
+      .where(eq(mektebiTable.id, mektebId))
+      .returning({ id: mektebiTable.id, drzava: mektebiTable.drzava });
+    res.json(updated);
+  } catch (err) {
+    console.error("Update džemat države error:", err);
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -4716,6 +4821,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
         id: mekteb.id,
         naziv: mekteb.naziv,
         grad: mekteb.grad,
+        drzava: mekteb.drzava,
         isActive: mekteb.isActive,
         glavniMuallim: glavni ? {
           id: glavni.userId,

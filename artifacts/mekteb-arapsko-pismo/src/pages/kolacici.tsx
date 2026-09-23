@@ -12,16 +12,16 @@ export default function KolaciciPage() {
             <Cookie className="w-7 h-7" />
           </div>
           <h1 className="text-3xl font-black text-foreground">{t("Politika kolačića")}</h1>
-          <p className="text-sm text-muted-foreground mt-2">{t("Posljednje ažuriranje")}: {t("juni 2026.")}</p>
+          <p className="text-sm text-muted-foreground mt-2">{t("Posljednje ažuriranje")}: septembar 2026.</p>
         </div>
 
         <div className="bg-white rounded-3xl border border-border/40 shadow-sm p-6 sm:p-10 space-y-8 text-[15px] leading-relaxed text-foreground/80">
           <section>
             <h2 className="text-lg font-bold text-foreground mb-2">1. {t("Što su kolačići?")}</h2>
             <p>
-              Kolačići (engl. „cookies") i slične tehnologije (lokalna pohrana) su male datoteke koje
-              se pohranjuju na vašem uređaju kada posjetite Platformu. Koriste se za održavanje
-              prijave, pamćenje vaših postavki i poboljšanje korisničkog iskustva.
+              Kolačići (engl. „cookies") i lokalna pohrana preglednika čuvaju podatke na vašem uređaju.
+              Koristimo ih za pristup prijavljenom nalogu i H5P vježbama te za pamćenje vaših postavki.
+              Datumi potvrđivanja Uvjeta, Pravila privatnosti i izjava čuvaju se na serveru, a ne u kolačiću.
             </p>
           </section>
 
@@ -40,9 +40,14 @@ export default function KolaciciPage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="p-2 border border-border/40">token prijave</td>
-                    <td className="p-2 border border-border/40">Održavanje prijave korisnika</td>
-                    <td className="p-2 border border-border/40">Do odjave</td>
+                    <td className="p-2 border border-border/40"><code>mekteb_token</code> i <code>mekteb_user</code> (lokalna pohrana)</td>
+                    <td className="p-2 border border-border/40">Prijava i osnovni podaci prijavljenog naloga</td>
+                    <td className="p-2 border border-border/40">Do odjave ili brisanja podataka preglednika; token vrijedi najduže 30 dana</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 border border-border/40"><code>mekteb_h5p_session</code> (kolačić)</td>
+                    <td className="p-2 border border-border/40">Omogućava pristup zaštićenim H5P vježbama prijavljenom korisniku; nije dostupan JavaScriptu (HttpOnly)</td>
+                    <td className="p-2 border border-border/40">Najduže 30 dana; briše se pri odjavi</td>
                   </tr>
                 </tbody>
               </table>
@@ -60,19 +65,24 @@ export default function KolaciciPage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td className="p-2 border border-border/40">mekteb-lang</td>
+                    <td className="p-2 border border-border/40"><code>mekteb-lang</code> (lokalna pohrana)</td>
                     <td className="p-2 border border-border/40">Pamti odabrani jezik sučelja</td>
                     <td className="p-2 border border-border/40">Trajno (do brisanja)</td>
                   </tr>
                   <tr>
-                    <td className="p-2 border border-border/40">mekteb-fontsize</td>
+                    <td className="p-2 border border-border/40"><code>mekteb-fontsize</code> (lokalna pohrana)</td>
                     <td className="p-2 border border-border/40">Pamti odabranu veličinu fonta</td>
                     <td className="p-2 border border-border/40">Trajno (do brisanja)</td>
                   </tr>
                   <tr>
-                    <td className="p-2 border border-border/40">mekteb-audio</td>
+                    <td className="p-2 border border-border/40"><code>mekteb-audio-muted</code> (lokalna pohrana)</td>
                     <td className="p-2 border border-border/40">Pamti uključenost/isključenost zvuka</td>
                     <td className="p-2 border border-border/40">Trajno (do brisanja)</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 border border-border/40"><code>mekteb-cookie-consent</code> (lokalna pohrana)</td>
+                    <td className="p-2 border border-border/40">Pamti da ste zatvorili informativnu obavijest o kolačićima</td>
+                    <td className="p-2 border border-border/40">Do brisanja podataka preglednika ili promjene verzije obavijesti</td>
                   </tr>
                 </tbody>
               </table>
@@ -90,6 +100,11 @@ export default function KolaciciPage() {
 
           <section>
             <h2 className="text-lg font-bold text-foreground mb-2">4. {t("Upravljanje kolačićima")}</h2>
+            <p className="mb-2">
+              Obavijest o kolačićima služi informisanju; dugme „U redu” ne uključuje opcionalno
+              praćenje niti zamjenjuje potvrde Uvjeta i Pravila privatnosti. Prijava zahtijeva
+              neophodnu pohranu, a promjene jezika, fonta i zvuka čuvaju se lokalno na vašem uređaju.
+            </p>
             <p className="mb-2">Kolačićima možete upravljati kroz postavke vašeg preglednika:</p>
             <ul className="list-disc pl-5 space-y-1.5">
               <li><strong>Chrome:</strong> Postavke &gt; Privatnost i sigurnost &gt; Kolačići</li>
@@ -98,8 +113,8 @@ export default function KolaciciPage() {
               <li><strong>Edge:</strong> Postavke &gt; Kolačići i dozvole stranica</li>
             </ul>
             <p className="mt-2">
-              Napomena: brisanje ili blokiranje neophodnih kolačića može onemogućiti prijavu i
-              korištenje nekih funkcionalnosti Platforme.
+              Napomena: brisanje pohranjenih podataka može vas odjaviti i vratiti postavke na početne
+              vrijednosti. Blokiranje neophodnog H5P kolačića može onemogućiti pristup H5P vježbama.
             </p>
           </section>
 

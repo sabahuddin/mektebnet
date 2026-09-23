@@ -26,6 +26,9 @@ export const usersTable = pgTable("users", {
   privacyAcknowledgedAt: timestamp("privacy_acknowledged_at"),
   administratorDeclarationAcceptedAt: timestamp("administrator_declaration_accepted_at"),
   parentAcknowledgedAt: timestamp("parent_acknowledged_at"),
+  // Admin can explicitly classify a school/family-covered account as self-billing.
+  // NULL means automatic coverage classification.
+  billingOverride: varchar("billing_override", { length: 20 }),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({ id: true, createdAt: true, lastLoginAt: true });

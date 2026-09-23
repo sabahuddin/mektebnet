@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { installAudioMute, isAudioMuted, setAudioMuted, subscribeAudioMuted } from "@/lib/audio-mute";
 import { useUnreadPoruke } from "@/hooks/use-unread-poruke";
 import { TrialBanner } from "@/components/trial-banner";
+import { ContactForm } from "@/components/contact-form";
 
 /** Inicijali iz displayName-a, max 2 slova (npr. "Tarik Avdić" → "TA"). */
 function getInitials(name?: string | null): string {
@@ -518,10 +519,19 @@ export function Layout({ children }: LayoutProps) {
                 <li><Link href="/uvjeti" className="text-muted-foreground hover:text-primary transition-colors">{t("Uvjeti korištenja")}</Link></li>
                 <li><Link href="/privatnost" className="text-muted-foreground hover:text-primary transition-colors">{t("Pravila privatnosti")}</Link></li>
                 <li><Link href="/kolacici" className="text-muted-foreground hover:text-primary transition-colors">{t("Kolačići")}</Link></li>
+                <li><Link href="/kontakt" className="text-muted-foreground hover:text-primary transition-colors">{t("Kontakt forma")}</Link></li>
               </ul>
             </div>
 
           </div>
+
+          {location !== "/kontakt" && (
+            <section aria-labelledby="footer-kontakt-naslov" className="mx-auto mt-8 w-full max-w-lg border-t border-border/40 pt-7">
+              <h3 id="footer-kontakt-naslov" className="mb-2 text-center text-lg font-bold text-foreground">{t("Kontakt forma")}</h3>
+              <p className="mb-5 text-center text-sm text-muted-foreground">{t("Imate pitanje ili prijedlog? Javite nam se!")}</p>
+              <ContactForm />
+            </section>
+          )}
 
           <div className="mt-5 md:mt-8 pt-4 md:pt-6 border-t border-border/30 flex flex-col items-center justify-center gap-2 md:gap-3 text-center text-[12px] md:text-sm text-muted-foreground">
             <div>© {new Date().getFullYear()} · mekteb.net</div>

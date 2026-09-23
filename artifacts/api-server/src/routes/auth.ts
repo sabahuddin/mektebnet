@@ -711,6 +711,7 @@ router.get("/subscription", requireAuth, async (req, res) => {
       isActive: usersTable.isActive,
       trialUntil: usersTable.trialUntil,
       email: usersTable.email,
+      billingOverride: usersTable.billingOverride,
     }).from(usersTable).where(eq(usersTable.id, userId));
     if (!account) {
       res.status(404).json({ error: "Korisnik nije pronađen" });
@@ -725,7 +726,10 @@ router.get("/subscription", requireAuth, async (req, res) => {
     let mektebMuallimCount: number | null = null;
     const [ownSubscription] = ["roditelj", "ucenik"].includes(role)
       ? await db.select().from(pretplateTable)
-          .where(eq(pretplateTable.userId, userId))
+          .where(and(
+            eq(pretplateTable.userId, userId),
+            eq(pretplateTable.planType, role === "roditelj" ? "family" : "individual"),
+          ))
           .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
           .limit(1)
       : [];
@@ -822,7 +826,12 @@ router.get("/subscription", requireAuth, async (req, res) => {
         ? await db.select().from(mektebiTable).where(eq(mektebiTable.id, mektebId)).limit(1)
         : [];
 
-      if (mekteb) {
+      if (account.billingOverride === "self" && ownSubscription?.planType === "individual") {
+        coverage = "self";
+        planType = "individual";
+        subscriptionOwnerId = userId;
+        canRenew = true;
+      } else if (mekteb) {
         coverage = "mekteb";
         mektebMuallimCount = mekteb.dozvoljenoMuallima;
         planType = mekteb.billingPaket === "vise100" ? "mekteb-pro" : "mekteb-standard";
@@ -891,8 +900,13 @@ router.post("/register-mekteb", async (req, res) => {
       res.status(400).json({ error: "Sva polja su obavezna" });
       return;
     }
-    if (!drzava?.trim()) {
+    if (typeof drzava !== "string" || !drzava.trim()) {
       res.status(400).json({ error: "Država je obavezna" });
+      return;
+    }
+    const drzavaTrimmed = drzava.trim();
+    if (drzavaTrimmed.length > 100) {
+      res.status(400).json({ error: "Država može imati najviše 100 karaktera" });
       return;
     }
     if (!hasRegistrationAcknowledgements(req.body, "muallim")) {
@@ -906,7 +920,7 @@ router.post("/register-mekteb", async (req, res) => {
     }
     const billingPaket: "do100" | "vise100" = paket;
     const billingRegion =
-      drzava.trim() === "Bosna i Hercegovina" ? "bih" : "dijaspora";
+      drzavaTrimmed === "Bosna i Hercegovina" ? "bih" : "dijaspora";
     const paketNaziv = billingPaket === "do100"
       ? "Mektebska pretplata (do 100 učenika)"
       : "Mektebska pretplata XL (više od 100 učenika)";
@@ -962,6 +976,7 @@ router.post("/register-mekteb", async (req, res) => {
         dozvoljenoMuallima,
         billingPaket,
         billingRegion,
+        drzava: drzavaTrimmed,
       }).returning();
       await tx.insert(muallimProfiliTable).values({
         userId: u.id,
