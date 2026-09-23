@@ -142,7 +142,8 @@ export default function IlmihalSvePage() {
   // po slug-u `dodatak-nivo%`), pa ne kvare brojanje medaljona. Imaju punu
   // strukturu (akordioni, vježbe) — admin ih popunjava u editoru lekcije.
   async function createDodatak(nivo: number) {
-    if (!token) return;
+    if (!token || creating) return;
+    setCreating(true);
     const existing = (groupedByNivo[nivo] || []).filter((l) => l.slug.startsWith(`dodatak-nivo${nivo}-`));
     const nums = existing
       .map((l) => parseInt(l.slug.split("-").pop() || "0", 10))
@@ -163,9 +164,12 @@ export default function IlmihalSvePage() {
         },
         token,
       );
+      toast({ title: t("Lekcija kreirana"), description: t("Sada možeš urediti naziv i sadržaj.") });
       setLocation(`/ilmihal/${slug}`);
-    } catch {
-      // admin može ponoviti pokušaj
+    } catch (err: any) {
+      toast({ title: t("Greška"), description: err?.message || t("Nije moguće kreirati lekciju"), variant: "destructive" });
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -310,7 +314,7 @@ export default function IlmihalSvePage() {
               const dodatakItems = filteredByNivo[nivo].filter(isDodatakLesson);
               if (allItems.length === 0 && dodatakAllItems.length === 0 && !isAdmin && !isMuallim) return null;
               // Pri aktivnoj pretrazi sakrij nivoe bez rezultata.
-              if (isSearching && items.length === 0 && dodatakItems.length === 0) return null;
+              if (isSearching && items.length === 0 && dodatakItems.length === 0 && !isAdmin) return null;
               const info = NIVO_INFO[nivo];
               const nivoDone = allItems.filter((l) => l.zavrseno).length;
               const dodatakDone = dodatakAllItems.filter((l) => l.zavrseno).length;
@@ -493,8 +497,21 @@ export default function IlmihalSvePage() {
                   </div>
                   )}
                 </section>}
-                {(!isSearching || dodatakItems.length > 0) && (
+                {(!isSearching || dodatakItems.length > 0 || isAdmin) && (
                   <section className="mt-3" data-testid={`section-dodatak-${nivo}`}>
+                    {isAdmin && (
+                      <div className="mb-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => void createDodatak(nivo)}
+                          disabled={creating}
+                          className="inline-flex items-center gap-2 rounded-xl border border-amber-400 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                          data-testid={`button-add-dodatak-${nivo}`}
+                        >
+                          <Plus className="h-4 w-4" /> {t("Dodaj novu lekciju")}
+                        </button>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => !isSearching && toggleDodatak(nivo)}
@@ -546,7 +563,10 @@ export default function IlmihalSvePage() {
                                     <div className="truncate text-sm font-bold text-amber-900 sm:text-base">{lesson.naslov}</div>
                                     {lesson.predmet && <div className="mt-0.5 text-xs text-amber-700/70">{t(lesson.predmet)}</div>}
                                   </div>
-                                  {lesson.zavrseno
+                                   {isAdmin && (
+                                     <span className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">{t("Uredi")}</span>
+                                   )}
+                                   {lesson.zavrseno
                                     ? <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" aria-label={t("Završeno")} />
                                     : <BookOpen className="h-5 w-5 shrink-0 text-amber-700/80" aria-hidden="true" />}
                                 </Link>
@@ -557,22 +577,19 @@ export default function IlmihalSvePage() {
                           <p className="px-3 py-4 text-center text-sm text-amber-800/65">{t("Još nema dodatnih lekcija.")}</p>
                         )}
 
-                        {(isMuallim || isAdmin) && (
+                        {isMuallim && (
                           <div className="mt-2 border-t border-amber-100 pt-3">
                             <button
                               type="button"
+                              disabled={creating}
                               onClick={() => {
-                                if (isAdmin) {
-                                  void createDodatak(nivo);
-                                  return;
-                                }
                                 setShowCreateLevel((current) => current === nivo ? null : nivo);
                                 setNewTitle("");
                                 setNewSubject("");
                                 setPublicReview(false);
                               }}
-                              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-amber-400 px-3 py-3 text-sm font-bold text-amber-800 transition-colors hover:bg-amber-50 active:bg-amber-100"
-                              data-testid={`button-add-dodatak-${nivo}`}
+                              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-amber-400 px-3 py-3 text-sm font-bold text-amber-800 transition-colors hover:bg-amber-50 active:bg-amber-100 disabled:opacity-50"
+                              data-testid={`button-add-muallim-lekcija-${nivo}`}
                             >
                               <Plus className="h-4 w-4" /> {t("Dodaj novu lekciju")}
                             </button>

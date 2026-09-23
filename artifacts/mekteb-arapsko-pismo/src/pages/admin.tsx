@@ -2861,7 +2861,7 @@ export default function AdminPage() {
                       <table className="w-full text-sm">
                         <thead className="bg-muted/40">
                           <tr>
-                            {[t("Muallim"), t("Status"), t("Iskorištene licence"), t("Ukupno licenci"), t("Glavni muallim")].map((h) => (
+                            {[t("Muallim"), t("Status"), t("Vezani učenici"), t("Glavni muallim")].map((h) => (
                               <th key={h} className="px-4 py-2 text-left text-xs font-bold text-muted-foreground">{h}</th>
                             ))}
                           </tr>
@@ -2876,7 +2876,6 @@ export default function AdminPage() {
                                 <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${m.isActive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{m.isActive ? t("Aktivan") : t("Neaktivan")}</span>
                               </td>
                               <td className="px-4 py-2.5 font-bold">{m.licencesUsed}</td>
-                              <td className="px-4 py-2.5 font-bold">{m.licenceCount}</td>
                               <td className="px-4 py-2.5">
                                 {!m.isGlavni && (
                                   <Button type="button" size="sm" variant="outline"

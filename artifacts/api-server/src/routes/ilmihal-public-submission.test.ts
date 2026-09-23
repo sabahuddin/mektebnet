@@ -97,6 +97,35 @@ test("private creation is visible to owner and assigned student, never enters ad
   assert.equal(rows.some((row) => row.lekcijaSlug === lesson.slug), false);
 });
 
+test("admin can create and edit a DODATAK lesson", async () => {
+  const slug = `dodatak-nivo1-${Date.now()}`;
+  let id: number | undefined;
+  try {
+    const created = await request("/api/admin/ilmihal", adminToken, "POST", {
+      naslov: "DODATAK", slug, nivo: 1, redoslijed: 9501,
+      contentHtml: "<h1>DODATAK</h1><p>Početni sadržaj</p>",
+    });
+    assert.equal(created.status, 200, await created.text());
+    const row = await db.select({ id: ilmihalLekcijeTable.id }).from(ilmihalLekcijeTable)
+      .where(eq(ilmihalLekcijeTable.slug, slug));
+    id = row[0]?.id;
+    assert.ok(id);
+    const list = await (await request("/api/content/ilmihal", adminToken)).json() as Array<{ slug: string }>;
+    assert.ok(list.some((item) => item.slug === slug));
+    const edited = await request(`/api/admin/ilmihal/${id}`, adminToken, "PUT", {
+      naslov: "DODATAK — Ažurirano", contentHtml: "<p>Novi sadržaj</p>",
+    });
+    assert.equal(edited.status, 200, await edited.text());
+    const detail = await request(`/api/content/ilmihal/${slug}`, adminToken);
+    assert.equal(detail.status, 200);
+    const data = await detail.json() as { naslov: string; contentHtml: string };
+    assert.equal(data.naslov, "DODATAK – Ažurirano");
+    assert.match(data.contentHtml, /Novi sadržaj/);
+  } finally {
+    if (id) await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
+  }
+});
+
 test("explicit submission enters queue and admin approval publishes to everyone", async () => {
   const created = await request("/api/admin/ilmihal", ownerToken, "POST", {
     naslov: `Approve ${suffix}`, nivo: 1, contentHtml: "<p>approve</p>",

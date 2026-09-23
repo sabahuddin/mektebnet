@@ -51,6 +51,7 @@ import { getGlobalNapametKatalog, getNapametKatalog } from "../data/napamet.js";
 import { getStaticVjezba } from "../lib/static-vjezbe.js";
 import { jeNasaVjezba } from "../lib/nase-vjezbe.js";
 import { getLang, overlayRows } from "../lib/content-translatable.js";
+import { assertStudentCapacity, LicenceLimitError } from "../lib/district-licences.js";
 
 const router = Router();
 const ukupneOcjeneFilter = or(
@@ -1765,13 +1766,6 @@ router.post("/ucenici", async (req, res) => {
       return;
     }
 
-    // Check licence limit (samo učenik se broji)
-    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, req.user!.userId));
-    if (profil && profil.licencesUsed >= profil.licenceCount) {
-      res.status(403).json({ error: "Dostigli ste maksimalan broj učenika (limit licenci)" });
-      return;
-    }
-
     const muallimId = req.user!.userId;
 
     // Učenik i roditelj iz istog para dijele isti 4-cifreni sufiks i lozinku
@@ -1796,9 +1790,10 @@ router.post("/ucenici", async (req, res) => {
 
       try {
         createdPair = await db.transaction(async (tx) => {
+          const mektebId = await assertStudentCapacity(tx, muallimId);
           const newUcenik = await tryInsertUser(tx, displayName, ucenikHash, displayName.trim(), "ucenik", pair.suffix);
           await tx.insert(ucenikProfiliTable).values({
-            userId: newUcenik.id, muallimId, grupaId: grupaId || null,
+            userId: newUcenik.id, muallimId, mektebId, grupaId: grupaId || null,
           });
 
           let newRoditelj: NewUserRow | null = null;
@@ -1814,11 +1809,9 @@ router.post("/ucenici", async (req, res) => {
             });
           }
 
-          if (profil) {
-            await tx.update(muallimProfiliTable)
-              .set({ licencesUsed: profil.licencesUsed + 1 })
-              .where(eq(muallimProfiliTable.userId, muallimId));
-          }
+          await tx.update(muallimProfiliTable)
+            .set({ licencesUsed: sql`${muallimProfiliTable.licencesUsed} + 1` })
+            .where(eq(muallimProfiliTable.userId, muallimId));
           return { newUcenik, newRoditelj };
         });
         chosenSuffix = pair.suffix;
@@ -1850,6 +1843,10 @@ router.post("/ucenici", async (req, res) => {
     });
   } catch (err: any) {
     console.error(err);
+    if (err instanceof LicenceLimitError) {
+      res.status(403).json({ error: err.message });
+      return;
+    }
     if (err?.message === "USERNAME_COLLISION") {
       res.status(409).json({ error: "Nije moguće generisati jedinstveno korisničko ime — pokušajte ponovo" });
       return;
@@ -2183,13 +2180,6 @@ router.post("/ucenici/bulk", async (req, res) => {
         roditelj: decisions.get(`${index}:roditelj`) === false ? null : entry.roditelj,
       }));
 
-    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
-    const remaining = profil ? profil.licenceCount - profil.licencesUsed : 999;
-    if (entriesToCreate.length > remaining) {
-      res.status(403).json({ error: `Možete dodati još ${remaining} učenika (limit licenci)` });
-      return;
-    }
-
     const grupaId = body.grupaId;
 
     const results: Array<{
@@ -2197,7 +2187,10 @@ router.post("/ucenici/bulk", async (req, res) => {
       roditelj: { id: number; displayName: string; username: string; generatedPassword: string } | null;
     }> = [];
 
-    let kreiranoUcenika = 0;
+    await db.transaction(async (bulkTx) => {
+      // One quota lock and one commit for the entire import: never create
+      // some students and then lose their generated passwords on a 403.
+      await assertStudentCapacity(bulkTx, muallimId, entriesToCreate.length);
     for (const e of entriesToCreate) {
       // Po jedan učenik (sa opcionim roditeljem) — retry petlja garantuje
       // da par dijeli sufiks i lozinku i kad postoji kolizija username-a.
@@ -2209,10 +2202,11 @@ router.post("/ucenici/bulk", async (req, res) => {
         const sharedHash = await bcrypt.hash(pair.password, 10);
 
         try {
-          const created = await db.transaction(async (tx) => {
+          const created = await bulkTx.transaction(async (tx) => {
+            const mektebId = await assertStudentCapacity(tx, muallimId);
             const newUcenik = await tryInsertUser(tx, e.ucenik, sharedHash, e.ucenik, "ucenik", pair.suffix);
             await tx.insert(ucenikProfiliTable).values({
-              userId: newUcenik.id, muallimId, grupaId: grupaId || null,
+              userId: newUcenik.id, muallimId, mektebId, grupaId: grupaId || null,
             });
 
             let newRoditelj: NewUserRow | null = null;
@@ -2227,6 +2221,9 @@ router.post("/ucenici/bulk", async (req, res) => {
                 approvedBy: muallimId,
               });
             }
+            await tx.update(muallimProfiliTable)
+              .set({ licencesUsed: sql`${muallimProfiliTable.licencesUsed} + 1` })
+              .where(eq(muallimProfiliTable.userId, muallimId));
             return { newUcenik, newRoditelj };
           });
 
@@ -2256,18 +2253,16 @@ router.post("/ucenici/bulk", async (req, res) => {
       }
 
       results.push(createdEntry);
-      kreiranoUcenika++;
     }
-
-    if (profil && kreiranoUcenika > 0) {
-      await db.update(muallimProfiliTable)
-        .set({ licencesUsed: profil.licencesUsed + kreiranoUcenika })
-        .where(eq(muallimProfiliTable.userId, muallimId));
-    }
+    });
 
     res.status(201).json(results);
   } catch (err: any) {
     console.error("[POST /muallim/ucenici/bulk]", err);
+    if (err instanceof LicenceLimitError) {
+      res.status(403).json({ error: err.message });
+      return;
+    }
     if (err?.message === "USERNAME_COLLISION") {
       res.status(409).json({ error: "Nije moguće generisati jedinstveno korisničko ime — pokušajte ponovo" });
       return;
@@ -2663,8 +2658,14 @@ router.put("/ucenici/:id/grupa", async (req, res) => {
 
     const transferVlasnistva = noviMuallimId !== profil.muallimId;
 
-    if (transferVlasnistva) {
+    if (profil.isArchived) {
+      res.status(400).json({ error: "Arhiviran učenik se ne može rasporediti" }); return;
+    }
+    if (transferVlasnistva && noviMuallimId !== null) {
       await db.transaction(async (tx) => {
+        if (noviMektebId !== (profil.mektebId ?? ctx?.mektebId ?? null)) {
+          await assertStudentCapacity(tx, noviMuallimId);
+        }
         // Ažuriraj profil učenika: grupaId + muallimId + mektebId
         await tx.update(ucenikProfiliTable)
           .set({ grupaId: grupaId || null, muallimId: noviMuallimId, mektebId: noviMektebId })
@@ -2693,6 +2694,9 @@ router.put("/ucenici/:id/grupa", async (req, res) => {
     }
   } catch (err) {
     console.error("[PUT /muallim/ucenici/:id/grupa]", err);
+    if (err instanceof LicenceLimitError) {
+      res.status(403).json({ error: err.message }); return;
+    }
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -2701,14 +2705,14 @@ router.put("/ucenici/:id/grupa", async (req, res) => {
 router.delete("/ucenici/:id", async (req, res) => {
   try {
     const ucenikId = parseInt(req.params.id);
-    await db.update(ucenikProfiliTable)
+    const [archived] = await db.update(ucenikProfiliTable)
       .set({ isArchived: true, archivedAt: new Date() })
-      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, req.user!.userId)));
+      .where(and(eq(ucenikProfiliTable.userId, ucenikId), eq(ucenikProfiliTable.muallimId, req.user!.userId), eq(ucenikProfiliTable.isArchived, false)))
+      .returning({ userId: ucenikProfiliTable.userId });
 
-    const [profil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, req.user!.userId));
-    if (profil && profil.licencesUsed > 0) {
+    if (archived) {
       await db.update(muallimProfiliTable)
-        .set({ licencesUsed: profil.licencesUsed - 1 })
+        .set({ licencesUsed: sql`GREATEST(${muallimProfiliTable.licencesUsed} - 1, 0)` })
         .where(eq(muallimProfiliTable.userId, req.user!.userId));
     }
 

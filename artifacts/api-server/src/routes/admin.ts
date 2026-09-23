@@ -69,6 +69,7 @@ import { eq, ne, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNu
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { CT_TABLES, getLang, overlayRows } from "../lib/content-translatable.js";
 import { canAccessAdminRoute } from "../lib/admin-route-access.js";
+import { assertStudentCapacity, LicenceLimitError } from "../lib/district-licences.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
 import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
 import { optimizePdfFile } from "../lib/dokumenti.js";
@@ -4897,7 +4898,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
           ? latestPretplata.licencesPurchased
           : dodijeljeneLicence,
         dodijeljeneLicence,
-        evidentiranoIskoristenihLicenci: mMuallimi.reduce((sum, m) => sum + m.licencesUsed, 0),
+        evidentiranoIskoristenihLicenci: mUcenici.length,
         brojUcenika: mUcenici.length,
         aktivnihUcenika: mUcenici.filter((u) => u.isActive).length,
         brojRoditelja: roditeljIds.size,
@@ -4932,7 +4933,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
             isActive: m.isActive,
             isGlavni: m.userId === glavni?.userId,
             licenceCount: m.licenceCount,
-            licencesUsed: m.licencesUsed,
+            licencesUsed: mUcenici.filter((u) => u.muallimId === m.userId).length,
           }))
           .sort((a, b) => Number(b.isGlavni) - Number(a.isGlavni) || a.displayName.localeCompare(b.displayName, "bs")),
       };
@@ -4974,33 +4975,45 @@ router.put("/ucenik/:id/rasporedi", async (req, res) => {
       return;
     }
 
+    if (profil.isArchived) {
+      res.status(400).json({ error: "Arhiviran učenik se ne može rasporediti" });
+      return;
+    }
     const stariMuallimId = profil.muallimId;
-    const muallimChanged = stariMuallimId !== null && stariMuallimId !== muallimId;
-
-    if (muallimChanged) {
-      const [noviMuallimProfil] = await db.select().from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
-      if (noviMuallimProfil && noviMuallimProfil.licencesUsed >= noviMuallimProfil.licenceCount) {
-        res.status(400).json({ error: "Novi muallim nema slobodnih licenci" });
-        return;
-      }
+    const [target] = await db.select({ mektebId: muallimProfiliTable.mektebId })
+      .from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, muallimId));
+    if (!target) {
+      res.status(404).json({ error: "Muallim nije pronađen" }); return;
     }
-
-    await db.update(ucenikProfiliTable).set({ muallimId, grupaId }).where(eq(ucenikProfiliTable.userId, ucenikId));
-
-    if (muallimChanged) {
-      if (stariMuallimId) {
-        await db.update(muallimProfiliTable)
-          .set({ licencesUsed: sql`GREATEST(${muallimProfiliTable.licencesUsed} - 1, 0)` })
-          .where(eq(muallimProfiliTable.userId, stariMuallimId));
+    const [owner] = stariMuallimId
+      ? await db.select({ mektebId: muallimProfiliTable.mektebId }).from(muallimProfiliTable)
+          .where(eq(muallimProfiliTable.userId, stariMuallimId))
+      : [];
+    const oldDistrict = profil.mektebId ?? owner?.mektebId ?? null;
+    await db.transaction(async (tx) => {
+      if (oldDistrict !== target.mektebId || (oldDistrict === null && stariMuallimId !== muallimId)) {
+        await assertStudentCapacity(tx, muallimId);
       }
-      await db.update(muallimProfiliTable)
-        .set({ licencesUsed: sql`${muallimProfiliTable.licencesUsed} + 1` })
-        .where(eq(muallimProfiliTable.userId, muallimId));
-    }
+      await tx.update(ucenikProfiliTable).set({ muallimId, grupaId, mektebId: target.mektebId })
+        .where(eq(ucenikProfiliTable.userId, ucenikId));
+      if (stariMuallimId !== muallimId) {
+        if (stariMuallimId) {
+          await tx.update(muallimProfiliTable)
+            .set({ licencesUsed: sql`GREATEST(${muallimProfiliTable.licencesUsed} - 1, 0)` })
+            .where(eq(muallimProfiliTable.userId, stariMuallimId));
+        }
+        await tx.update(muallimProfiliTable)
+          .set({ licencesUsed: sql`${muallimProfiliTable.licencesUsed} + 1` })
+          .where(eq(muallimProfiliTable.userId, muallimId));
+      }
+    });
 
     res.json({ success: true, message: `Učenik raspoređen u grupu "${grupa.naziv}"` });
   } catch (err) {
     console.error("Rasporedi error:", err);
+    if (err instanceof LicenceLimitError) {
+      res.status(403).json({ error: err.message }); return;
+    }
     res.status(500).json({ error: "Greška servera" });
   }
 });

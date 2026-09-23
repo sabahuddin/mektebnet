@@ -72,3 +72,4 @@
 - [Odobravanje izmjena lekcija](odobravanje-izmjena-lekcija.md) — muallimove izmjene čekaju admina i moraju ostati vezane za jezik koji je uređivan.
 - [Samostalni pretplatnici](samostalni-pretplatnici.md) — plaćajućeg nosioca razlikuj po vlastitoj porodičnoj/individualnoj pretplati, ne po emailu ili ulozi.
 - [Historijska država džemata](historijska-drzava-dzemata.md) — starije registracije čuvale su samo regiju naplate; tačna država je bila u email obavijesti.
+- [Zajedničke licence džemata](dzematske-licence-pool.md) — kapacitet je zajednički, a po muallimu se prikazuje stvarni broj nearhiviranih vezanih učenika.
