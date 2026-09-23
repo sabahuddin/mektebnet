@@ -192,6 +192,7 @@ interface PlanLekcija {
 interface IlmihalLekcija {
   id: number;
   naslov: string;
+  izvorniNaslov?: string;
   nivo: number;
   slug?: string;
   dostupnost?: "svi" | "muallimi";
@@ -1023,12 +1024,16 @@ export default function MuallimPanel() {
     }
     setSavingZadaca(true);
     try {
+      // Picker prikazuje prevedeni naslov, a API validira izvorni naslov uz slug.
+      const izvorniNaslov = zadLekcijaSlug
+        ? dostupneLekcije.find(l => l.slug === zadLekcijaSlug)?.izvorniNaslov ?? zadLekcija
+        : zadLekcija;
       const payload = {
         grupaId: zadGrupaId,
-        naslov: zadLekcija.trim() || zadOpis.trim().slice(0, 80),
+        naslov: izvorniNaslov.trim() || zadOpis.trim().slice(0, 80),
         opis: zadOpis.trim() || null,
         rokDo: null,
-        lekcijaNaslov: zadLekcija || null,
+        lekcijaNaslov: izvorniNaslov || null,
         lekcijaSlug: zadLekcijaSlug || null,
         lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
          tipDodjele: zadDodjela,
@@ -3866,7 +3871,9 @@ export default function MuallimPanel() {
                                       </span>
                                     )}
                                     {z.lekcijaNaslov && (() => {
-                                      const matchSlug = dostupneLekcije.find(dl => dl.naslov === z.lekcijaNaslov)?.slug;
+                                       const matchSlug = z.lekcijaSlug || dostupneLekcije.find(dl =>
+                                         dl.naslov === z.lekcijaNaslov || dl.izvorniNaslov === z.lekcijaNaslov
+                                       )?.slug;
                                       return matchSlug ? (
                                         <Link href={`/ilmihal/${matchSlug}`} className="text-xs text-primary hover:underline flex items-center gap-1">
                                           <BookOpen className="w-3 h-3" /> {z.lekcijaNaslov}

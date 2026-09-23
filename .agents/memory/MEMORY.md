@@ -66,6 +66,7 @@
 - [Opisne ocjene za mlađu djecu](opisne-ocjene.md) — Urađeno/Neurađeno su prave opisne ocjene; prikazuju se svima, završavaju pregledanu zadaću i ne ulaze u brojčani prosjek.
 - [Hero kopije moraju biti WebP](hero-kopije-webp.md) — galerijska hero kopija se ponovo obrađuje; DB reference se ažuriraju prije brisanja starog fajla.
 - [Zadaća — adresati i ispitivanje](zadaca-adresati-i-ispitivanje.md) — kartica je za jednog učenika; glavni modul za grupu ili 2+; Ispitano broji samo ocjene.
+- [Prevedeni naslovi za zadaće](prevedeni-naslovi-za-zadace.md) — picker prikazuje lokalizirani naslov, ali API uz slug traži izvorni naslov; pokrij sve obrasce.
 - [Bundler template script escape](bundler-template-script-escape.md) — nakon JSON reserializacije obavezno escapuj unutrašnje zatvarajuće script tagove ili browser prekida template JSON.
 - [pnpm verzija na Replitu](pnpm-package-manager-version-replit.md) — isključi pnpm samoprebacivanje verzije; inače packageManager noviji od Nix pnpm-a izaziva rekurzivnu instalaciju.
 - [PWA ažuriranje bez prekida rada](pwa-update-bez-reloada.md) — novi service worker čeka zatvaranje svih tabova; ne aktivirati ga usred korisničke sesije.

@@ -65,6 +65,7 @@ interface Ucenik {
 interface IlmihalLekcija {
   id: number;
   naslov: string;
+  izvorniNaslov?: string;
   nivo: number;
   slug?: string;
   predmet?: string | null;
@@ -600,12 +601,15 @@ export default function GrupaPage() {
     }
     setSavingZadaca(true);
     try {
+      const izvorniNaslov = imaLekciju
+        ? ilmihalLekcije.find(l => l.slug === newZadaca.lekcijaSlug)?.izvorniNaslov ?? newZadaca.lekcijaNaslov.trim()
+        : null;
       await apiRequest("POST", "/muallim/zadace", {
         grupaId,
-        naslov: imaLekciju ? newZadaca.lekcijaNaslov.trim() : opis.split(/\r?\n/)[0].slice(0, 80).trim(),
+        naslov: izvorniNaslov ?? opis.split(/\r?\n/)[0].slice(0, 80).trim(),
         opis: opis || null,
         rokDo: null,
-        lekcijaNaslov: imaLekciju ? newZadaca.lekcijaNaslov.trim() : null,
+        lekcijaNaslov: izvorniNaslov,
         lekcijaSlug: imaLekciju ? newZadaca.lekcijaSlug : null,
         lekcijaTip: imaLekciju ? "ilmihal" : null,
         priloziIds: zadacaTarget ? [] : Array.from(zadPriloziIds),
