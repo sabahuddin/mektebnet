@@ -14,6 +14,8 @@ export interface NapametStavka {
   ukupnoUcenika?: number;
   ocijenjenoUcenika?: number;
   isVisible?: boolean;
+  groupVisible?: boolean;
+  canToggleForGroup?: boolean;
 }
 
 export interface NapametOcjena {

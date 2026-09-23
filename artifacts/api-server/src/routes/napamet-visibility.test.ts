@@ -5,7 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   grupeTable, mektebiTable, muallimProfiliTable, napametGlobalProgramTable,
-  napametUcenikOverrideTable, ocjeneTable, roditeljProfiliTable, roditeljUcenikTable,
+  napametUcenikOverrideTable, napametGrupaOverrideTable, ocjeneTable, roditeljProfiliTable, roditeljUcenikTable,
   ucenikProfiliTable, usersTable,
 } from "@workspace/db/schema";
 import app from "../app.js";
@@ -54,6 +54,14 @@ async function request(path: string, auth: string, init?: RequestInit) {
 before(async () => {
   await bootstrapDrizzleMigrations();
   await runDrizzleMigrate();
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS napamet_grupa_override (
+      id serial PRIMARY KEY, grupa_id integer NOT NULL REFERENCES grupe(id) ON DELETE CASCADE,
+      stavka_id varchar(80) NOT NULL, is_visible boolean NOT NULL DEFAULT false,
+      updated_at timestamp DEFAULT now()
+    )
+  `);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_grupa_override_grupa_stavka_uidx ON napamet_grupa_override (grupa_id, stavka_id)`);
   const [mekteb] = await db.insert(mektebiTable).values({ naziv: `Visibility ${suffix}` }).returning({ id: mektebiTable.id });
   mektebId = mekteb.id;
   teacherId = await user("muallim", "teacher");
@@ -98,6 +106,7 @@ before(async () => {
 
 after(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
+  await db.delete(napametGrupaOverrideTable).where(eq(napametGrupaOverrideTable.stavkaId, itemId));
   await db.delete(napametUcenikOverrideTable).where(sql`stavka_id = ${itemId}`);
   await db.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, studentId));
   await db.delete(roditeljUcenikTable).where(eq(roditeljUcenikTable.ucenikId, studentId));
@@ -160,4 +169,58 @@ test("Napamet per-student visibility is authorized, hidden consistently, and rev
   const restored = await (await request("/api/ucenik/napamet", studentToken)).json() as typeof studentHidden;
   assert.ok(restored.katalog.some((item) => item.id === itemId));
   assert.ok(restored.ocjene.some((grade) => grade.napametStavkaId === itemId));
+});
+
+test("Napamet stavka se isključuje za cijelu grupu, ali ne za drugi odjel", async () => {
+  const path = `/api/muallim/napamet-program/${itemId}/grupa-visibility`;
+  const forbidden = await request(path, outsiderToken, {
+    method: "PUT", body: JSON.stringify({ grupaId, isVisible: false }),
+  });
+  assert.equal(forbidden.status, 403);
+
+  const hidden = await request(path, teacherToken, {
+    method: "PUT", body: JSON.stringify({ grupaId, isVisible: false }),
+  });
+  assert.equal(hidden.status, 200, await hidden.text());
+  const program = await (await request(`/api/muallim/napamet-program?grupaId=${grupaId}`, teacherToken)).json() as {
+    katalog: { id: string; groupVisible: boolean; ukupnoUcenika: number }[];
+  };
+  const item = program.katalog.find((entry) => entry.id === itemId);
+  assert.equal(item?.groupVisible, false);
+  assert.equal(item?.ukupnoUcenika, 0);
+  const detail = await (await request(`/api/muallim/napamet-program/${itemId}/detalji?grupaId=${grupaId}`, teacherToken)).json() as {
+    ocijenjeni: unknown[]; nisuOcijenjeni: unknown[];
+  };
+  assert.deepEqual(detail.ocijenjeni, []);
+  assert.deepEqual(detail.nisuOcijenjeni, []);
+
+  const studentHidden = await (await request("/api/ucenik/napamet", studentToken)).json() as { katalog: { id: string }[]; ocjene: { napametStavkaId: string | null }[] };
+  assert.ok(!studentHidden.katalog.some((entry) => entry.id === itemId));
+  assert.ok(!studentHidden.ocjene.some((entry) => entry.napametStavkaId === itemId));
+  const classmateHidden = await (await request("/api/ucenik/napamet", token(otherStudentId, "ucenik", "other"))).json() as typeof studentHidden;
+  assert.ok(!classmateHidden.katalog.some((entry) => entry.id === itemId));
+  const parentHidden = await (await request(`/api/roditelj/napamet/${studentId}`, parentToken)).json() as typeof studentHidden;
+  assert.ok(!parentHidden.katalog.some((entry) => entry.id === itemId));
+  assert.ok(!parentHidden.ocjene.some((entry) => entry.napametStavkaId === itemId));
+  const studentProfile = await (await request("/api/ucenik/profil", studentToken)).json() as { ocjene: { napametStavkaId: string | null }[] };
+  assert.ok(!studentProfile.ocjene.some((entry) => entry.napametStavkaId === itemId));
+  const parentGrades = await (await request(`/api/roditelj/ocjene/${studentId}`, parentToken)).json() as { napametStavkaId: string | null }[];
+  assert.ok(!parentGrades.some((entry) => entry.napametStavkaId === itemId));
+  const dashboard = await (await request(`/api/roditelj/dashboard/${studentId}`, parentToken)).json() as { posljednjaOcjena: unknown };
+  assert.equal(dashboard.posljednjaOcjena, null);
+
+  await db.update(ucenikProfiliTable).set({ grupaId: outsiderGrupaId }).where(eq(ucenikProfiliTable.userId, otherStudentId));
+  try {
+    const other = await (await request("/api/ucenik/napamet", token(otherStudentId, "ucenik", "other"))).json() as typeof studentHidden;
+    assert.ok(other.katalog.some((entry) => entry.id === itemId));
+  } finally {
+    await db.update(ucenikProfiliTable).set({ grupaId }).where(eq(ucenikProfiliTable.userId, otherStudentId));
+  }
+  const restored = await request(path, teacherToken, {
+    method: "PUT", body: JSON.stringify({ grupaId, isVisible: true }),
+  });
+  assert.equal(restored.status, 200);
+  const studentVisible = await (await request("/api/ucenik/napamet", studentToken)).json() as typeof studentHidden;
+  assert.ok(studentVisible.katalog.some((entry) => entry.id === itemId));
+  assert.ok(studentVisible.ocjene.some((entry) => entry.napametStavkaId === itemId));
 });

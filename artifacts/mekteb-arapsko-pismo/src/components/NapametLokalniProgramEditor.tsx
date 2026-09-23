@@ -155,14 +155,14 @@ export function NapametLokalniProgramEditor({
           <ChevronDown className={`h-5 w-5 text-emerald-700 transition-transform ${sectionOpen ? "rotate-180" : ""}`} />
         </button>
         {sectionOpen && <div className="grid grid-cols-1 gap-2 p-4 sm:grid-cols-2">
-          {section.map((item) => <button
+           {section.map((item) => <button
             type="button"
             key={item.id}
             onClick={() => onItemClick?.(item)}
-            className="min-w-0 rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-left text-sm font-semibold leading-snug text-emerald-950 transition-colors hover:border-emerald-300 hover:bg-emerald-100"
+             className={`min-w-0 rounded-xl border px-4 py-3 text-left text-sm font-semibold leading-snug transition-colors ${item.groupVisible === false ? "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200" : "border-emerald-100 bg-emerald-50/50 text-emerald-950 hover:border-emerald-300 hover:bg-emerald-100"}`}
           >
             <span className="block text-base">{t(item.naziv)}</span>
-            <NapametUceniciLinija item={item} />
+             {item.groupVisible === false ? <span className="text-xs">{t("Isključena za sve učenike ove grupe")}</span> : <NapametUceniciLinija item={item} />}
           </button>)}
         </div>}
       </div>;
@@ -194,7 +194,7 @@ export function NapametLokalniProgramEditor({
       </div>
       {open && <div className="space-y-4 border-t border-emerald-100 p-4">
         {!editing && [1, 2, 3, 4].map((sectionNivo) => {
-          const section = items.filter((item) => item.nivo === sectionNivo && item.isVisible !== false).sort((a, b) => a.redoslijed - b.redoslijed);
+           const section = items.filter((item) => item.nivo === sectionNivo && item.canToggleForGroup !== false).sort((a, b) => a.redoslijed - b.redoslijed);
           return section.length ? <div key={sectionNivo} className="space-y-2">
             <h3 className="text-sm font-black uppercase text-emerald-800">{sectionNivo === 4 ? `${t("Napamet")} – ${t("Dodatak")}` : `${t("Napamet")} – ${t("Nivo")} ${sectionNivo}`}</h3>
             <div className="grid grid-cols-1 gap-2">
@@ -202,10 +202,10 @@ export function NapametLokalniProgramEditor({
                 type="button"
                 key={item.id}
                 onClick={() => onItemClick?.(item)}
-                className="w-full rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-left text-sm font-semibold leading-snug text-emerald-950 transition-colors hover:border-emerald-300 hover:bg-emerald-100"
+                 className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-semibold leading-snug transition-colors ${item.groupVisible === false ? "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200" : "border-emerald-100 bg-emerald-50/50 text-emerald-950 hover:border-emerald-300 hover:bg-emerald-100"}`}
               >
                 <span className="block text-base">{t(item.naziv)}</span>
-                <NapametUceniciLinija item={item} />
+                 {item.groupVisible === false ? <span className="text-xs">{t("Isključena za sve učenike ove grupe")}</span> : <NapametUceniciLinija item={item} />}
               </button>)}
             </div>
           </div> : null;
@@ -222,7 +222,7 @@ export function NapametLokalniProgramEditor({
                 </div>
                 <input defaultValue={item.naziv} disabled={!item.canEdit} onBlur={(event) => { const value = event.target.value.trim(); if (item.canEdit && value && value !== item.naziv) void update(item, { naziv: value }); }} className="min-w-[12rem] flex-1 rounded-lg border border-border px-3 py-2 text-sm font-semibold disabled:bg-white" aria-label={t("Naziv mektebske stavke")} />
                 <select value={item.nivo} disabled={saving || !item.canEdit} onChange={(event) => void update(item, { nivo: Number(event.target.value) })} className="rounded-lg border border-border px-2 py-2 text-sm">{[1, 2, 3, 4].map((value) => <option key={value} value={value}>{value === 4 ? t("Dodatak") : value}</option>)}</select>
-                {item.canEdit && <button disabled={saving} onClick={() => void update(item, { isVisible: item.isVisible === false })} className="rounded-lg bg-white px-3 py-2 text-xs font-bold">{item.isVisible === false ? t("Prikaži") : t("Sakrij")}</button>}
+                 {item.canEdit && <button disabled={saving} onClick={() => void update(item, { isVisible: item.canToggleForGroup === false })} className="rounded-lg bg-white px-3 py-2 text-xs font-bold">{item.canToggleForGroup === false ? t("Prikaži") : t("Sakrij")}</button>}
                 {item.canDelete && <button disabled={saving} onClick={() => void remove(item)} className="rounded-lg bg-red-50 p-2 text-red-600 hover:bg-red-100" aria-label={t("Obriši stavku")} title={t("Obriši stavku")}><Trash2 className="h-4 w-4" /></button>}
               </div>)}
             </div>

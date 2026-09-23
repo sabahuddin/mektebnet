@@ -270,7 +270,7 @@ export default function GrupaPage() {
   useEffect(() => {
     if (!token || !grupaId) return;
     apiRequest<{ katalog: (NapametStavka & { isVisible?: boolean })[] }>("GET", `/muallim/napamet-program?grupaId=${grupaId}`, undefined, token)
-      .then(data => setNapametKatalog(data.katalog.filter(s => s.isVisible !== false)))
+      .then(data => setNapametKatalog(data.katalog.filter(s => s.canToggleForGroup !== false)))
       .catch(() => {});
     Promise.all([
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
@@ -328,7 +328,7 @@ export default function GrupaPage() {
     if (!token || !grupaId) return;
     apiRequest<{ katalog: NapametStavka[] }>("GET", `/muallim/napamet-program?grupaId=${grupaId}`, undefined, token)
       .then((data) => {
-        setNapametKatalog(data.katalog.filter((item: any) => item.isVisible !== false));
+        setNapametKatalog(data.katalog.filter((item) => item.canToggleForGroup !== false));
         setNapametRefreshKey((key) => key + 1);
       })
       .catch(() => {});
@@ -363,6 +363,25 @@ export default function GrupaPage() {
         nisuOcijenjeni: previous.nisuOcijenjeni.map((entry) => entry.id === student.id ? { ...entry, isVisible: nextVisible } : entry),
       } : previous);
       toast({ title: nextVisible ? t("Stavka je uključena") : t("Stavka je isključena") });
+    } catch (error: any) {
+      toast({ title: t("Promjena nije sačuvana"), description: error?.message || t("Pokušaj ponovo."), variant: "destructive" });
+    } finally {
+      setNapametVisibilitySaving(null);
+    }
+  }
+
+  async function toggleNapametForGroup() {
+    if (!token || !napametOdabrana || !grupaId || napametVisibilitySaving !== null) return;
+    const nextVisible = napametOdabrana.groupVisible === false;
+    if (!nextVisible && !window.confirm(t("Isključiti stavku {naziv} za sve učenike ove grupe? Pojedinačne ocjene ostaju sačuvane.", { naziv: napametOdabrana.naziv }))) return;
+    setNapametVisibilitySaving(-1);
+    try {
+      await apiRequest("PUT", `/muallim/napamet-program/${encodeURIComponent(napametOdabrana.id)}/grupa-visibility`,
+        { grupaId, isVisible: nextVisible }, token);
+      setNapametOdabrana(null);
+      setNapametDetalji(null);
+      refreshNapametKatalog();
+      toast({ title: nextVisible ? t("Stavka je ponovo uključena za grupu") : t("Stavka je isključena za grupu") });
     } catch (error: any) {
       toast({ title: t("Promjena nije sačuvana"), description: error?.message || t("Pokušaj ponovo."), variant: "destructive" });
     } finally {
@@ -1628,10 +1647,22 @@ export default function GrupaPage() {
                 <h2 id="napamet-detalji-title" className="mt-1 text-lg font-extrabold text-emerald-950">
                   {t(napametDetalji?.stavka.naziv || napametOdabrana.naziv)}
                 </h2>
+                {napametOdabrana.groupVisible === false && <p className="text-xs font-semibold text-slate-600">{t("Isključena za sve učenike ove grupe")}</p>}
               </div>
               <button type="button" aria-label={t("Zatvori")} onClick={() => { setNapametOdabrana(null); setNapametDetalji(null); }} className="rounded-lg p-1.5 text-emerald-700 hover:bg-emerald-100">
                 <X className="h-5 w-5" />
               </button>
+            </div>
+            <div className="border-b border-emerald-100 px-5 py-3">
+              <Button type="button" variant="outline" size="sm"
+                disabled={napametVisibilitySaving !== null}
+                onClick={() => void toggleNapametForGroup()}
+                data-testid="button-napamet-grupa-visibility">
+                {napametVisibilitySaving === -1 ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {napametOdabrana.groupVisible === false
+                  ? t("Uključi stavku za sve učenike grupe")
+                  : t("Isključi stavku za sve učenike grupe")}
+              </Button>
             </div>
             <div className="overflow-y-auto p-5">
               {napametDetaljiLoading && <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> {t("Učitavanje...")}</div>}

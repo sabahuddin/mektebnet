@@ -4,6 +4,7 @@ import {
   napametGlobalProgramTable,
   napametMuallimProgramTable,
   napametProgramTable,
+  napametGrupaOverrideTable,
 } from "@workspace/db/schema";
 import { and, asc, eq, isNull, or } from "drizzle-orm";
 
@@ -16,6 +17,8 @@ export interface NapametStavka {
   naziv: string;
   redoslijed: number;
   isVisible?: boolean;
+  groupVisible?: boolean;
+  canToggleForGroup?: boolean;
   scope?: NapametScope;
   sourceLessonSlug?: string | null;
 }
@@ -136,7 +139,7 @@ export async function getNapametKatalog({
   muallimId,
   includeHidden = false,
 }: NapametKatalogOptions = {}): Promise<NapametStavka[]> {
-  const [globalne, rezervisaniGlobalniRedovi, lokalne, legacy] = await Promise.all([
+  const [globalne, rezervisaniGlobalniRedovi, lokalne, legacy, grupaOverrides] = await Promise.all([
     getGlobalNapametKatalog(includeHidden),
     db.select({ id: napametGlobalProgramTable.stavkaId }).from(napametGlobalProgramTable),
     (mektebId || grupaId) ? db.select({
@@ -171,6 +174,11 @@ export async function getNapametKatalog({
         ? eq(napametProgramTable.mektebId, mektebId)
         : and(eq(napametProgramTable.mektebId, mektebId), eq(napametProgramTable.isVisible, true)),
     ).orderBy(asc(napametProgramTable.nivo), asc(napametProgramTable.redoslijed)) : [],
+    grupaId ? db.select({
+      stavkaId: napametGrupaOverrideTable.stavkaId,
+      isVisible: napametGrupaOverrideTable.isVisible,
+    }).from(napametGrupaOverrideTable).where(eq(napametGrupaOverrideTable.grupaId, grupaId))
+      : Promise.resolve([] as { stavkaId: string; isVisible: boolean }[]),
   ]);
 
   // I skriveni/obrisani globalni ID ostaje rezervisan. U suprotnom bi stari
@@ -190,7 +198,13 @@ export async function getNapametKatalog({
       merged.set(item.id, { ...item, nivo: asNivo(item.nivo), scope: "legacy" });
     }
   }
-  return [...merged.values()].sort((a, b) =>
+  const groupHidden = new Set(grupaOverrides.filter((row) => !row.isVisible).map((row) => row.stavkaId));
+  return [...merged.values()]
+    .filter((item) => includeHidden || !groupHidden.has(item.id))
+    .map((item) => includeHidden && grupaId
+      ? { ...item, groupVisible: !groupHidden.has(item.id), canToggleForGroup: item.isVisible !== false, isVisible: item.isVisible !== false && !groupHidden.has(item.id) }
+      : item)
+    .sort((a, b) =>
     a.nivo - b.nivo
     || (a.scope === "global" ? 0 : 1) - (b.scope === "global" ? 0 : 1)
     || a.redoslijed - b.redoslijed

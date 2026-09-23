@@ -200,6 +200,17 @@ export const napametUcenikOverrideTable = pgTable("napamet_ucenik_override", {
   studentIdx: index("napamet_ucenik_override_student_idx").on(t.ucenikId),
 }));
 
+// Sakrij jednu NAPAMET stavku za sve učenike konkretne grupe.
+export const napametGrupaOverrideTable = pgTable("napamet_grupa_override", {
+  id: serial("id").primaryKey(),
+  grupaId: integer("grupa_id").notNull().references(() => grupeTable.id, { onDelete: "cascade" }),
+  stavkaId: varchar("stavka_id", { length: 80 }).notNull(),
+  isVisible: boolean("is_visible").notNull().default(false),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  grupaStavkaIdx: uniqueIndex("napamet_grupa_override_grupa_stavka_uidx").on(t.grupaId, t.stavkaId),
+}));
+
 // Mekteb-nivo dokumenti (PDF): pravila, kućni red i sl. Uploaduje ih glavni
 // muallim; vidljivi su svim učenicima i roditeljima tog mekteba.
 export const mektebDokumentiTable = pgTable("mekteb_dokumenti", {

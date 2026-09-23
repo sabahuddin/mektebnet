@@ -399,6 +399,14 @@ async function runResidualSchema() {
     `);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_ucenik_override_student_item_unique_idx ON napamet_ucenik_override (ucenik_id, stavka_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS napamet_ucenik_override_student_idx ON napamet_ucenik_override (ucenik_id);`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS napamet_grupa_override (
+        id serial PRIMARY KEY, grupa_id integer NOT NULL REFERENCES grupe(id) ON DELETE CASCADE,
+        stavka_id varchar(80) NOT NULL, is_visible boolean NOT NULL DEFAULT false,
+        updated_at timestamp DEFAULT now()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS napamet_grupa_override_grupa_stavka_uidx ON napamet_grupa_override (grupa_id, stavka_id);`);
 
     // grupe.datum_pocetka / datum_kraja — datumi mektebske godine za grupu.
     // Definisani u Drizzle schema/mekteb.ts; idempotentno dodajemo na svaki

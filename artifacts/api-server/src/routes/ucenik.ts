@@ -21,6 +21,7 @@ import {
   mektebDokumentiTable,
   muallimProfiliTable,
   napametUcenikOverrideTable,
+  napametGrupaOverrideTable,
 } from "@workspace/db/schema";
 import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -81,6 +82,14 @@ router.get("/profil", async (req, res) => {
     const hiddenNapamet = await db.select({ stavkaId: napametUcenikOverrideTable.stavkaId })
       .from(napametUcenikOverrideTable).where(and(eq(napametUcenikOverrideTable.ucenikId, userId), eq(napametUcenikOverrideTable.isVisible, false)));
     const hiddenNapametIds = new Set(hiddenNapamet.map((row) => row.stavkaId));
+    if (profil?.grupaId) {
+      const hiddenForGroup = await db.select({ stavkaId: napametGrupaOverrideTable.stavkaId })
+        .from(napametGrupaOverrideTable).where(and(
+          eq(napametGrupaOverrideTable.grupaId, profil.grupaId),
+          eq(napametGrupaOverrideTable.isVisible, false),
+        ));
+      for (const row of hiddenForGroup) hiddenNapametIds.add(row.stavkaId);
+    }
     ocjene = ocjene.filter((o) => !o.napametStavkaId || !hiddenNapametIds.has(o.napametStavkaId));
 
     let prisustvo = await db.select().from(priustvoTable)
@@ -274,9 +283,10 @@ router.get("/napamet", async (req, res) => {
           .where(eq(muallimProfiliTable.userId, profil.muallimId));
     const effectiveMektebId = profil?.mektebId ?? vlasnik?.mektebId ?? null;
     const katalog = profil ? await getNapametKatalog({ mektebId: effectiveMektebId, grupaId: profil.grupaId }) : [];
+    const visibleIds = new Set(katalog.filter((item) => !disabled.has(item.id)).map((item) => item.id));
     res.json({
-      katalog: katalog.filter((item) => !disabled.has(item.id)),
-      ocjene: [...latest.values()].filter((item) => !item.napametStavkaId || !disabled.has(item.napametStavkaId)),
+      katalog: katalog.filter((item) => visibleIds.has(item.id)),
+      ocjene: [...latest.values()].filter((item) => item.napametStavkaId && visibleIds.has(item.napametStavkaId)),
     });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });

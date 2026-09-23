@@ -34,6 +34,7 @@ import {
   interaktivniBlokPokusajiTable,
   napametMuallimProgramTable,
   napametUcenikOverrideTable,
+  napametGrupaOverrideTable,
   medaljoniTable,
   etapaPolaganjaTable,
   etapaPokusajOdobrenjaTable,
@@ -2810,7 +2811,7 @@ router.post("/ocjene", async (req, res) => {
     // Kod ocjene vezane za lekciju Napamet veza dolazi isključivo iz sluga
     // lekcije. Ručni ID vrijedi samo za zasebni brzi Napamet unos.
     const povezanaNapametStavka = lekcijaSlug
-      ? program.find((item) => item.sourceLessonSlug === String(lekcijaSlug))
+      ? program.find((item) => item.sourceLessonSlug === String(lekcijaSlug) && item.isVisible !== false)
       : undefined;
     const effectiveNapametStavkaId = lekcijaSlug
       ? povezanaNapametStavka?.id
@@ -2941,6 +2942,14 @@ router.get("/napamet-program", async (req, res) => {
           eq(usersTable.isActive, true),
         ));
       const studentIds = [...new Set(activeProfiles.map((profile) => profile.userId))];
+      const hiddenForStudents = studentIds.length ? await db.select({
+        ucenikId: napametUcenikOverrideTable.ucenikId,
+        stavkaId: napametUcenikOverrideTable.stavkaId,
+      }).from(napametUcenikOverrideTable).where(and(
+        inArray(napametUcenikOverrideTable.ucenikId, studentIds),
+        eq(napametUcenikOverrideTable.isVisible, false),
+      )) : [];
+      const hiddenStudentItems = new Set(hiddenForStudents.map((row) => `${row.ucenikId}:${row.stavkaId}`));
       const grades = studentIds.length
         ? await db.select({
             ucenikId: ocjeneTable.ucenikId,
@@ -2959,6 +2968,7 @@ router.get("/napamet-program", async (req, res) => {
           || (grade.lekcijaNaziv ? stavkaPoNazivu.get(grade.lekcijaNaziv.trim().toLocaleLowerCase("bs")) : undefined);
         if (!stavkaId) continue;
         const key = `${grade.ucenikId}:${stavkaId}`;
+        if (hiddenStudentItems.has(key)) continue;
         if (latestByStudentAndItem.has(key)) continue;
         latestByStudentAndItem.add(key);
         assessedByItem.set(stavkaId, (assessedByItem.get(stavkaId) ?? 0) + 1);
@@ -2966,13 +2976,39 @@ router.get("/napamet-program", async (req, res) => {
       res.json({
         katalog: katalog.map((item) => ({
           ...item,
-          ukupnoUcenika: studentIds.length,
-          ocijenjenoUcenika: assessedByItem.get(item.id) ?? 0,
+          ukupnoUcenika: item.isVisible === false ? 0 : studentIds.filter((id) => !hiddenStudentItems.has(`${id}:${item.id}`)).length,
+          ocijenjenoUcenika: item.isVisible === false ? 0 : assessedByItem.get(item.id) ?? 0,
         })),
       });
       return;
     }
     res.json({ katalog });
+  } catch { res.status(500).json({ error: "Greška servera" }); }
+});
+
+// Sakrij/prikaži stavku samo u odabranoj grupi. Individualne postavke ostaju netaknute.
+router.put("/napamet-program/:stavkaId/grupa-visibility", async (req, res) => {
+  try {
+    const grupaId = Number(req.body?.grupaId);
+    const isVisible = req.body?.isVisible;
+    const stavkaId = String(req.params.stavkaId || "");
+    const ctx = await getMektebCtx(req.user!.userId);
+    if (!Number.isInteger(grupaId) || grupaId < 1 || !stavkaId || typeof isVisible !== "boolean") {
+      res.status(400).json({ error: "Neispravni podaci" }); return;
+    }
+    if (!ctx?.mektebId || !(await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role))) {
+      res.status(403).json({ error: "Nemate pristup ovoj grupi" }); return;
+    }
+    const katalog = await getNapametKatalog({ mektebId: ctx.mektebId, grupaId, includeHidden: true });
+    if (!katalog.some((item) => item.id === stavkaId && item.canToggleForGroup)) {
+      res.status(404).json({ error: "Stavka nije dostupna u programu ove grupe" }); return;
+    }
+    await db.insert(napametGrupaOverrideTable).values({ grupaId, stavkaId, isVisible })
+      .onConflictDoUpdate({
+        target: [napametGrupaOverrideTable.grupaId, napametGrupaOverrideTable.stavkaId],
+        set: { isVisible, updatedAt: new Date() },
+      });
+    res.json({ stavkaId, grupaId, isVisible });
   } catch { res.status(500).json({ error: "Greška servera" }); }
 });
 
@@ -2990,6 +3026,10 @@ router.get("/napamet-program/:stavkaId/detalji", async (req, res) => {
       includeHidden: true,
     })).find((candidate) => candidate.id === stavkaId);
     if (!item) { res.status(404).json({ error: "NAPAMET stavka nije pronađena" }); return; }
+    if (item.groupVisible === false) {
+      res.json({ stavka: { id: item.id, naziv: item.naziv, nivo: item.nivo, scope: item.scope }, ocijenjeni: [], nisuOcijenjeni: [] });
+      return;
+    }
 
     const students = await db.select({
       id: usersTable.id,
@@ -3084,7 +3124,8 @@ router.get("/napamet-lokalno", async (req, res) => {
       assessedByItem.set(grade.napametStavkaId, (assessedByItem.get(grade.napametStavkaId) ?? 0) + 1);
     }
     res.json({ canManage: ctx.isGlavni, katalog: katalog.filter((item) => item.scope === "lokalno").map((item) => ({
-      ...item, ukupnoUcenika: studentIds.length, ocijenjenoUcenika: assessedByItem.get(item.id) ?? 0,
+      ...item, ukupnoUcenika: item.isVisible === false ? 0 : studentIds.length,
+      ocijenjenoUcenika: item.isVisible === false ? 0 : assessedByItem.get(item.id) ?? 0,
       canEdit: ctx.isGlavni,
       canReorder: ctx.isGlavni,
       canDelete: ctx.isGlavni,
