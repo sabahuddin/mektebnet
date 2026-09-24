@@ -27,3 +27,12 @@ test("zahtjev zapisa skupi harfove i znakove na jedno mjesto", () => {
   assert.deepEqual(z.harfovi, ["ع", "ل", "م"]);
   assert.deepEqual(z.znakovi.sort(), ["kesra", "sukun", "tenvin"]);
 });
+
+test("dužina se broji i kad kratka hareka ispred nije napisana", () => {
+  // „ماء" i „مال" stoje bez fethe na mimu, a elif svejedno produžava.
+  assert.ok(znakoviZapisa("ماء").includes("medd"), "voda");
+  assert.ok(znakoviZapisa("مال").includes("medd"), "imetak");
+  assert.ok(znakoviZapisa("باب").includes("medd"), "vrata");
+  // Elif na početku riječi nije dužina.
+  assert.ok(!znakoviZapisa("أَمَل").includes("medd"), "nada");
+});

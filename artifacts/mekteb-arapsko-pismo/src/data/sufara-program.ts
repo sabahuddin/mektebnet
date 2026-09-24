@@ -47,3 +47,36 @@ export const PROGRAM_SUFARE: KorakPrograma[] = [
  * odluči gdje se uče, dodaje se korak ovdje i sve se samo presloži.
  */
 export const JOŠ_SE_NE_UČI: Znak[] = ["medd"];
+
+/**
+ * Prijedlog novog programa: opismenjavanje, ne tedžvid.
+ *
+ * Sadašnji redoslijed je abecedni, pa mim, lam, nun, vav i ja — slova kojima se
+ * riječi prave — dolaze u petnaestoj i šesnaestoj lekciji, a sa (ث), jedno od
+ * najrjeđih, u trećoj. Dijete zato do kraja programa ne može sastaviti riječ.
+ *
+ * Ovdje su harfovi poredani po tome koliko riječi otvaraju. Izmjereno na
+ * SAMER-ovom rječniku: poslije druge lekcije dijete čita devet pravih riječi,
+ * poslije četvrte šezdeset osam, među njima „otac", „vrata", „vatra", „mlijeko".
+ *
+ * Dugi vokali dolaze rano jer bez njih nema ni „voda" ni „vrata". Tenvin je
+ * ostavljen za kraj: u osnovnom čitanju otvara najmanje riječi.
+ */
+export const PROGRAM_OPISMENJAVANJA: KorakPrograma[] = [
+  { lekcija: 1,  naziv: "Elif, hemze i tri hareke", harfovi: HEMZA_I_ELIF, znakovi: ["fetha", "kesra", "damma"] },
+  { lekcija: 2,  naziv: "Mim, Ra i Lam",            harfovi: ["م", "ر", "ل"], znakovi: [] },
+  { lekcija: 3,  naziv: "Dugi vokali",              harfovi: [], znakovi: ["medd"] },
+  { lekcija: 4,  naziv: "Ba, Nun i Ja",             harfovi: ["ب", "ن", "ي"], znakovi: [] },
+  { lekcija: 5,  naziv: "Ponavljanje",              harfovi: [], znakovi: [], ponavljanje: true },
+  { lekcija: 6,  naziv: "Sukun",                    harfovi: [], znakovi: ["sukun"] },
+  { lekcija: 7,  naziv: "Sin, Ta i Dal",            harfovi: ["س", "ت", "د"], znakovi: [] },
+  { lekcija: 8,  naziv: "Tešdid",                   harfovi: [], znakovi: ["tesdid"] },
+  { lekcija: 9,  naziv: "Ajn, Ha i Kaf",            harfovi: ["ع", "ح", "ق"], znakovi: [] },
+  { lekcija: 10, naziv: "Vav, Fa i Kef",            harfovi: ["و", "ف", "ك"], znakovi: [] },
+  { lekcija: 11, naziv: "Džim, Ta-marbuta i Šin",   harfovi: ["ج", "ة", "ش"], znakovi: [] },
+  { lekcija: 12, naziv: "Tâ, Sad i Hâ",             harfovi: ["ط", "ص", "خ"], znakovi: [] },
+  { lekcija: 13, naziv: "Za, He i Dad",             harfovi: ["ز", "ه", "ض"], znakovi: [] },
+  { lekcija: 14, naziv: "Tenvin",                   harfovi: [], znakovi: ["tenvin"] },
+  { lekcija: 15, naziv: "Gajn, Elif-maksura, Zal, Sa i Zâ", harfovi: ["غ", "ى", "ذ", "ث", "ظ"], znakovi: [] },
+  { lekcija: 16, naziv: "Ponavljanje svega",        harfovi: [], znakovi: [], ponavljanje: true },
+];

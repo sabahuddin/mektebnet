@@ -51,6 +51,11 @@ export function duzinaZapisa(zapis: string): number {
 /**
  * Harf produženja nosi medd samo ako iza sebe nema nijednu oznaku: u „كِتَاب"
  * elif produžava, a u „وَلِيٌّ" ja nosi tešdid pa je suglasnik, ne dužina.
+ *
+ * Kratka hareka ispred dužine se u vokaliziranom pismu često i ne piše — „ماء"
+ * i „مال" stoje bez fethe na mimu. Zato se dužinom broji i goli harf
+ * produženja koji slijedi harf bez ikakve oznake. Bez toga bi „voda" i „vrata"
+ * ispali kao riječi koje dijete može pročitati prije nego je dužinu učilo.
  */
 function imaMedd(zapis: string): boolean {
   const z = Array.from(zapis);
@@ -60,6 +65,11 @@ function imaMedd(zapis: string): boolean {
     for (const [samoglasnik, produzenje] of par) {
       if (z[i] === samoglasnik && z[i + 1] === produzenje && !OZNAKA.test(z[i + 2] ?? "")) return true;
     }
+  }
+  for (let i = 1; i < z.length; i += 1) {
+    const jeProduzenje = z[i] === ELIF || z[i] === VAV || z[i] === JA;
+    const prethodniJeHarf = HARF.test(z[i - 1]);
+    if (jeProduzenje && prethodniJeHarf && !OZNAKA.test(z[i + 1] ?? "")) return true;
   }
   return false;
 }
