@@ -2170,7 +2170,7 @@ async function startup() {
   try {
     const { seedHalalHaramLesson } = await import("./routes/halal-haram-seed.js");
     await seedHalalHaramLesson();
-    logger.info("Lekcija 'Pojam i smisao halala i harama' postavljena na kraj nivoa 3");
+    logger.info("Lekcija 'Pojam i smisao halala i harama' usklađena s Nivoom 2");
   } catch (e) {
     logger.error({ err: e }, "Urednička migracija lekcije halal-haram nije uspjela");
   }
