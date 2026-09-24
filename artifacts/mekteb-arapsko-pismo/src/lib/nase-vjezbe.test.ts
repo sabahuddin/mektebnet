@@ -24,8 +24,8 @@ test("dvaput dopisan jezik ne pravi dva parametra", () => {
   assert.equal(vjezbaSaJezikom(jednom, "en"), jednom);
 });
 
-test("prepoznajemo svih šest vrsta naših vježbi", () => {
-  for (const tip of ["osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji", "upisi"]) {
+test("prepoznajemo svih sedam vrsta naših vježbi", () => {
+  for (const tip of ["osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji", "upisi", "napamet"]) {
     assert.equal(jeNasaVjezbaUrl(`/vjezbe/${tip}/${tip}.html`), true, tip);
   }
   assert.equal(jeNasaVjezbaUrl("/vjezbe/etapa-lekcije-1-10.html"), false);

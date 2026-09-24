@@ -69,11 +69,24 @@ export const TIPOVI_VJEZBI: Record<string, TipVjezbe> = {
     opis: "Dijete upisuje odgovor na pitanje.",
     html: "/vjezbe/upisi/upisi.html",
   },
+  napamet: {
+    tip: "napamet",
+    naziv: "Nauči napamet",
+    opis: "Dijete uči suru ajet po ajet, uz učača i transkripciju.",
+    html: "/vjezbe/napamet/napamet.html",
+  },
 };
 
 /** Prefiksi po kojima stranica lekcije prepoznaje našu vježbu. */
 export const NASE_VJEZBE_PREFIKSI = Object.values(TIPOVI_VJEZBI)
   .map(t => `/vjezbe/${t.tip}/`);
+
+/**
+ * Učači su isti kao u Kur'an modulu (`src/lib/quran.ts`), da dijete čuje isti
+ * glas gdje god uči. „Mu'allim" prouči pa ostavi pauzu za ponavljanje, pa je
+ * zadani izbor za učenje napamet.
+ */
+export const UCACI: readonly string[] = ["husary_muallim", "husary", "minshawy"];
 
 const MAX_JSON_BYTES = 512 * 1024;
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -343,6 +356,24 @@ function validirajOsnovu(tip: string, podaci: unknown): string | null {
     return null;
   }
 
+  if (tip === "napamet") {
+    // Arapski tekst NE stoji ovdje: vježba ga uzima sa istog izvora kao Kur'an
+    // modul, pa se mushafski zapis ne prepisuje rukom. Ovdje su samo broj
+    // sure i transkripcija, jedan red po ajetu.
+    const sura = Number(p.sura);
+    if (!Number.isInteger(sura) || sura < 1 || sura > 114) return "Broj sure mora biti između 1 i 114.";
+    const transkripcija = Array.isArray(p.transkripcija) ? p.transkripcija : null;
+    if (!transkripcija || transkripcija.length < 1) return "Upiši transkripciju, jedan red po ajetu.";
+    if (transkripcija.length > 286) return "Sura nema toliko ajeta.";
+    if (transkripcija.some(red => typeof red !== "string" || !red.trim())) {
+      return "Nijedan red transkripcije ne smije biti prazan.";
+    }
+    if (p.ucac !== undefined && !UCACI.includes(String(p.ucac))) {
+      return `Učač može biti: ${UCACI.join(", ")}.`;
+    }
+    return null;
+  }
+
   if (tip === "popuni") {
     const tekst = typeof p.tekst === "string" ? p.tekst : "";
     if (!tekst.trim()) return "Upiši priču.";
@@ -389,6 +420,9 @@ function sazetak(tip: string, id: string, podaci: Podaci, izvor: IzvorVjezbe, up
       return zbir + (Array.isArray(stavke) ? stavke.length : 0);
     }, 0);
     detalj = `${mnozina(kategorije.length, "kutija", "kutije", "kutija")} · ${mnozina(stavki, "stavka", "stavke", "stavki")}`;
+  } else if (tip === "napamet") {
+    const ajeta = Array.isArray(podaci.transkripcija) ? podaci.transkripcija.length : 0;
+    detalj = `sura ${podaci.sura} · ${mnozina(ajeta, "ajet", "ajeta", "ajeta")}`;
   } else {
     const praznina = brojPraznina(String(podaci.tekst ?? ""));
     const dodatne = Array.isArray(podaci.dodatne) ? podaci.dodatne.length : 0;

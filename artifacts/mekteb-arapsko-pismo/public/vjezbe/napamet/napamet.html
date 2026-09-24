@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="bs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nauči napamet · Mekteb.net</title>
+<!--
+  NAUČI NAPAMET – vježba za mekteb.net
+  Bez vanjskih skripti, fontova, kolačića i analitike. Font Nunito se učita
+  s ove iste domene (/fonts/nunito-*.woff2).
+
+  SADRŽAJ
+    Vježba čita podatke ovim redom:
+      1. window.NAPAMET_PODACI  (ako ga stranica postavi prije ove skripte)
+      2. ?podaci=/putanja/do/datoteke.json  (samo s iste domene)
+      3. ugrađeni primjer na dnu ovog fajla (script id="podaci")
+    Polja:
+      id            – oznaka vježbe, vraća se u događajima
+      sura          – broj sure (1–114)
+      naslov, uputa – tekst iznad vježbe
+      ucac          – husary_muallim (zadano), husary ili minshawy
+      transkripcija – jedan red po ajetu, istim redom kao ajeti u suri
+
+  ARAPSKI TEKST NIJE U PODACIMA. Uzima se sa istog izvora kao Kur'an modul
+  (api.alquran.cloud), pa se mushafski zapis nigdje ne prepisuje rukom. Ako
+  se ne učita, vježba i dalje radi — dijete uči po transkripciji i učaču.
+
+  RECITACIJA dolazi sa everyayah.com, jedna datoteka po ajetu — isto što
+  Kur'an modul već koristi. Zato ova vježba, za razliku od ostalih, treba
+  internet.
+
+  DOGAĐAJI (postMessage roditelju i CustomEvent "mekteb-igra")
+    visina – kad se promijeni visina sadržaja
+    ajet   – kad dijete označi da zna ajet
+    kraj   – kad su svi ajeti naučeni ili je cijela sura proučena
+-->
+<style>
+@font-face{
+  font-family:'Nunito';
+  src:url('/fonts/nunito-latin-ext.woff2') format('woff2');
+  font-weight:200 1000;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face{
+  font-family:'Nunito';
+  src:url('/fonts/nunito-latin.woff2') format('woff2');
+  font-weight:200 1000;
+  font-style:normal;
+  font-display:swap;
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+:root{
+  --tirkiz:#248F92;
+  --tirkiz-tamni:#176F72;
+  --tirkiz-blijedi:#E8F3F3;
+  --narandzasta:#F59E0B;
+  --narandzasta-blijedo:#FDF3E0;
+  --narandzasta-tamna:#8A5A00;
+  --zelena:#2F7D4F;
+  --zelena-blijeda:#E7F4EC;
+  --crvena:#C0462A;
+  --crvena-blijeda:#FBECE6;
+  --crvena-tamna:#7A2E15;
+  --mastilo:#1F2D38;
+  --mastilo-blijedo:#5F6F76;
+  --papir:#FFFFFF;
+  --linija:#E6E3DB;
+  --podloga:#FAF9F5;
+  --sjena:0 1px 2px rgba(31,45,56,.06), 0 4px 12px rgba(31,45,56,.05);
+  --r-kartica:16px;
+  --r-dugme:12px;
+  --font:'Nunito', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  padding:clamp(10px,2.5vw,20px);
+  background:var(--podloga);
+  color:var(--mastilo);
+  font-family:var(--font);
+  font-size:17px;
+  line-height:1.5;
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* okvir vježbe: kartica platforme */
+.igra{
+  max-width:940px;
+  margin:0 auto;
+  background:var(--papir);
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  box-shadow:var(--sjena);
+  padding:clamp(16px,3.2vw,28px);
+}
+
+.glava{margin-bottom:16px}
+.kicker{margin:0 0 4px;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tirkiz-tamni)}
+.glava h1{margin:0;font-size:clamp(22px,4vw,30px);line-height:1.15;font-weight:800;letter-spacing:-.01em;color:var(--mastilo)}
+.glava p.uputa{margin:6px 0 0;max-width:58ch;color:var(--mastilo-blijedo)}
+.stanje{display:flex;gap:10px;margin:0;flex-wrap:wrap}
+.stanje > div{
+  background:var(--papir);
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  padding:10px 16px;
+  min-width:124px;
+}
+.stanje dt{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mastilo-blijedo)}
+.stanje dd{margin:0;font-size:26px;font-weight:800;line-height:1.15;color:var(--tirkiz-tamni);font-variant-numeric:tabular-nums}
+.komande{
+  display:flex;flex-wrap:wrap;gap:14px 24px;align-items:flex-end;
+  margin-top:18px;padding-top:16px;border-top:1px solid var(--linija);
+}
+.dugmad{display:flex;flex-wrap:wrap;gap:10px;margin-left:auto}
+.dugme{
+  font:inherit;font-weight:800;font-size:15.5px;min-height:46px;padding:10px 18px;
+  border-radius:var(--r-dugme);border:1.5px solid var(--linija);
+  background:#fff;color:var(--tirkiz-tamni);cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.dugme:hover{background:var(--tirkiz-blijedi);border-color:var(--tirkiz)}
+.dugme.glavno{background:var(--narandzasta);border-color:var(--narandzasta);color:#2B1600}
+.dugme.glavno:hover{background:#e08f06;border-color:#e08f06}
+.dugme:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
+.dugme:disabled{opacity:.45;cursor:default}
+.dugme:disabled:hover{background:#fff;border-color:var(--linija)}
+
+/* ---- napamet: arapski red, spisak ajeta i mjerač ---- */
+.ploca{
+  background:var(--tirkiz-blijedi);
+  border:1px solid var(--linija);
+  border-radius:var(--r-kartica);
+  padding:clamp(16px,3vw,26px);
+  margin:14px 0;
+  text-align:center;
+}
+.arapski{
+  direction:rtl;
+  font-size:clamp(26px,5.4vw,40px);
+  line-height:2.05;
+  font-weight:700;
+  color:var(--mastilo);
+  margin:0 0 10px;
+  min-height:1.6em;
+}
+.arapski .ajet{padding:2px 6px;border-radius:8px;transition:background .18s}
+.arapski .ajet.sad{background:var(--narandzasta-blijedo);box-shadow:inset 0 -3px 0 var(--narandzasta)}
+.arapski .ajet.proslo{opacity:.45}
+.latinica{
+  font-size:clamp(16px,2.4vw,20px);
+  font-weight:800;
+  color:var(--tirkiz-tamni);
+  margin:0;
+  min-height:1.5em;
+}
+.uputica{margin:8px 0 0;font-size:14.5px;font-weight:700;color:var(--mastilo-blijedo)}
+
+.vrste{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px}
+.vrste button{
+  font:inherit;font-weight:800;font-size:14.5px;min-height:42px;padding:8px 14px;
+  border-radius:999px;border:1.5px solid var(--linija);background:#fff;
+  color:var(--tirkiz-tamni);cursor:pointer;
+}
+.vrste button[aria-pressed="true"]{background:var(--tirkiz);border-color:var(--tirkiz);color:#fff}
+.vrste button:focus-visible{outline:3px solid var(--narandzasta);outline-offset:2px}
+
+.mjerac{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0 0}
+.mjerac .polje{
+  width:22px;height:10px;border-radius:999px;background:var(--linija);
+}
+.mjerac .polje.krece{background:var(--narandzasta)}
+.mjerac .polje.zna{background:var(--zelena)}
+
+.ocjene{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:12px 0 0}
+.panel{
+  background:#fff;border:1px solid var(--linija);border-radius:var(--r-kartica);
+  padding:12px 14px;margin:12px 0 0;font-size:15.5px;
+}
+.panel .sitno{margin:4px 0 0;color:var(--mastilo-blijedo);font-size:14px;font-weight:700}
+.kraj{
+  margin:14px 0 0;padding:14px;border-radius:var(--r-kartica);
+  background:var(--zelena-blijeda);border:1px solid var(--zelena);
+  color:#1E5735;font-weight:800;text-align:center;
+}
+.greska{
+  margin:14px 0 0;padding:12px 14px;border-radius:var(--r-kartica);
+  background:var(--narandzasta-blijedo);border:1px solid var(--narandzasta);
+  color:var(--narandzasta-tamna);font-weight:700;
+}
+</style>
+</head>
+<body>
+<div class="igra">
+  <header class="glava">
+    <p class="kicker">Mekteb.net · vježba</p>
+    <h1 id="naslov">Nauči napamet</h1>
+    <p class="uputa" id="uputa" hidden></p>
+  </header>
+
+  <dl class="stanje">
+    <div><dt>Ajet</dt><dd id="brojac">0 od 0</dd></div>
+    <div><dt>Naučeno</dt><dd id="naucenoBroj">0 od 0</dd></div>
+  </dl>
+
+  <div class="vrste">
+    <button type="button" id="vPrati" aria-pressed="true">Prati</button>
+    <button type="button" id="vGradi" aria-pressed="false">Gradi suru</button>
+    <button type="button" id="vPonavljaj" aria-pressed="false">Ponavljaj</button>
+  </div>
+
+  <div class="ploca">
+    <p class="arapski" id="arapski"></p>
+    <p class="latinica" id="latinica"></p>
+    <p class="uputica" id="uputica"></p>
+  </div>
+
+  <div class="mjerac" id="mjerac" aria-hidden="true"></div>
+  <div class="panel" id="panel"></div>
+  <p class="greska" id="greska" hidden></p>
+  <p class="kraj" id="kraj" hidden></p>
+
+  <div class="komande">
+    <div class="dugmad">
+      <button type="button" class="dugme glavno" id="slusaj">Slušaj ajet</button>
+      <button type="button" class="dugme" id="ponovi3">Ponovi 3×</button>
+      <button type="button" class="dugme alt" id="prethodni">Prethodni</button>
+      <button type="button" class="dugme alt" id="sljedeci">Sljedeći</button>
+      <button type="button" class="dugme" id="cijela">Cijela sura</button>
+      <button type="button" class="dugme alt" id="ispocetka">Počni ispočetka</button>
+    </div>
+  </div>
+
+  <p class="sr" id="glas" aria-live="polite"></p>
+  <audio id="zvuk" preload="none"></audio>
+</div>
+
+<noscript>Za ovu vježbu treba uključiti JavaScript.</noscript>
+
+<!-- Ugrađeni primjer. Isti oblik ima i vanjska JSON datoteka. -->
+<script type="application/json" id="podaci">
+{
+  "id": "el-fatiha",
+  "sura": 1,
+  "naslov": "Nauči El-Fatihu napamet",
+  "uputa": "Slušaj ajet, pa ga prouči sam. Kad ti ide bez greške, dodaj sljedeći.",
+  "ucac": "husary_muallim",
+  "transkripcija": [
+    "Bismillahir-rahmanir-rahim",
+    "Elhamdu lillahi rabbil-alemin",
+    "Er-rahmanir-rahim",
+    "Maliki jevmid-din",
+    "Ijjake na'budu ve ijjake neste'in",
+    "Ihdines-siratal-mustekim",
+    "Siratallezine en'amte alejhim gajril-magdubi alejhim ve led-dallin"
+  ]
+}
+</script>
+
+<!-- Sučelje vježbe na jeziku djeteta (?lang=de). Vidi /vjezbe/jezik.js. -->
+<script src="/vjezbe/jezik.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var T = window.MektebJezik.t;
+  var $ = function (id) { return document.getElementById(id); };
+  var el = {
+    naslov: $('naslov'), uputa: $('uputa'), brojac: $('brojac'), nauceno: $('naucenoBroj'),
+    arapski: $('arapski'), latinica: $('latinica'), uputica: $('uputica'),
+    mjerac: $('mjerac'), panel: $('panel'), greska: $('greska'), kraj: $('kraj'), glas: $('glas'),
+    zvuk: $('zvuk'),
+    vPrati: $('vPrati'), vGradi: $('vGradi'), vPonavljaj: $('vPonavljaj'),
+    slusaj: $('slusaj'), ponovi3: $('ponovi3'), prethodni: $('prethodni'),
+    sljedeci: $('sljedeci'), cijela: $('cijela'), ispocetka: $('ispocetka')
+  };
+
+  /* Učači su isti kao u Kur'an modulu; „Mu'allim" prouči pa ostavi pauzu. */
+  var UCACI = {
+    husary_muallim: 'Husary_Muallim_128kbps',
+    husary: 'Husary_128kbps',
+    minshawy: 'Minshawy_Murattal_128kbps'
+  };
+  var IZVOR_TEKSTA = 'https://api.alquran.cloud/v1/surah/';
+  var IZVOR_ZVUKA = 'https://everyayah.com/data/';
+
+  var podaci = {}, transkripcija = [], arapski = [];
+  var vrsta = 'prati';      // prati | gradi | ponavljaj
+  var idx = 0;              // tekući ajet, 0-baziran
+  var gradiDo = 1;          // koliko ajeta „Gradi suru" pokazuje
+  var ponavljanja = 0;      // koliko puta još ponoviti tekući ajet
+  var lanac = null;         // niz ajeta koji se sviraju jedan za drugim
+  var ocjene = [];          // 0–5 po ajetu, čuva se u pregledniku
+  var javljenKraj = false;
+
+  function tri(n) { return ('00' + n).slice(-3); }
+  function kljucPamcenja() { return 'mekteb.napamet.' + (podaci.id || ('sura' + podaci.sura)); }
+
+  function ucitajOcjene(koliko) {
+    var spremljeno = null;
+    try { spremljeno = JSON.parse(window.localStorage.getItem(kljucPamcenja()) || 'null'); } catch (g) {}
+    ocjene = [];
+    for (var i = 0; i < koliko; i++) {
+      ocjene.push(Array.isArray(spremljeno) && typeof spremljeno[i] === 'number' ? spremljeno[i] : 0);
+    }
+  }
+  function spremiOcjene() {
+    try { window.localStorage.setItem(kljucPamcenja(), JSON.stringify(ocjene)); } catch (g) {}
+  }
+  function nauceno() {
+    return ocjene.filter(function (o) { return o >= 3; }).length;
+  }
+
+  function javi(dogadjaj, detalji) {
+    var poruka = Object.assign(
+      { izvor: 'mekteb-igra', igra: 'napamet', dogadjaj: dogadjaj, id: podaci && podaci.id },
+      detalji || {}
+    );
+    try { window.parent.postMessage(poruka, '*'); } catch (g) {}
+    try { window.dispatchEvent(new CustomEvent('mekteb-igra', { detail: poruka })); } catch (g) {}
+  }
+  function reci(tekst) { el.glas.textContent = tekst; }
+
+  /* ---------- podaci ---------- */
+  function ucitaj() {
+    if (window.NAPAMET_PODACI) return Promise.resolve(window.NAPAMET_PODACI);
+    var ugradjeni = function () { return JSON.parse($('podaci').textContent); };
+    var putanja = new URLSearchParams(location.search).get('podaci');
+    // Samo relativna putanja s naše domene — nikakav vanjski zahtjev.
+    if (!putanja || !/^\/[^/]/.test(putanja)) return Promise.resolve(ugradjeni());
+    return fetch(window.MektebJezik.saJezikom(putanja), { credentials: 'same-origin' })
+      .then(function (o) { if (!o.ok) throw new Error('HTTP ' + o.status); return o.json(); })
+      .catch(function () { return ugradjeni(); });
+  }
+
+  /**
+   * Arapski tekst sa istog izvora koji Kur'an modul već koristi. Ako ne stigne,
+   * vježba radi bez njega: dijete uči po transkripciji i po učaču.
+   */
+  function ucitajArapski(sura) {
+    return fetch(IZVOR_TEKSTA + encodeURIComponent(sura) + '/quran-uthmani')
+      .then(function (o) { if (!o.ok) throw new Error('HTTP ' + o.status); return o.json(); })
+      .then(function (o) {
+        var ajeti = o && o.data && o.data.ayahs;
+        if (!Array.isArray(ajeti) || !ajeti.length) throw new Error('prazan odgovor');
+        return ajeti.map(function (a) { return String(a.text || '').trim(); });
+      })
+      .catch(function () { return []; });
+  }
+
+  function zvukAjeta(n) {
+    var folder = UCACI[podaci.ucac] || UCACI.husary_muallim;
+    return IZVOR_ZVUKA + folder + '/' + tri(podaci.sura) + tri(n + 1) + '.mp3';
+  }
+
+  /* ---------- crtanje ---------- */
+  function oznaciVrstu() {
+    el.vPrati.setAttribute('aria-pressed', vrsta === 'prati' ? 'true' : 'false');
+    el.vGradi.setAttribute('aria-pressed', vrsta === 'gradi' ? 'true' : 'false');
+    el.vPonavljaj.setAttribute('aria-pressed', vrsta === 'ponavljaj' ? 'true' : 'false');
+  }
+
+  function nacrtajMjerac() {
+    el.mjerac.textContent = '';
+    ocjene.forEach(function (o) {
+      var polje = document.createElement('span');
+      polje.className = 'polje' + (o >= 3 ? ' zna' : o > 0 ? ' krece' : '');
+      el.mjerac.appendChild(polje);
+    });
+  }
+
+  function nacrtajArapski(odKojeg, doKojeg) {
+    el.arapski.textContent = '';
+    if (!arapski.length) return;
+    for (var i = odKojeg; i <= doKojeg && i < arapski.length; i++) {
+      var span = document.createElement('span');
+      span.className = 'ajet' + (i === idx ? ' sad' : i < idx ? ' proslo' : '');
+      span.textContent = arapski[i];
+      el.arapski.appendChild(span);
+      el.arapski.appendChild(document.createTextNode(' '));
+    }
+  }
+
+  function nacrtaj() {
+    oznaciVrstu();
+    el.brojac.textContent = T('%broj% od %ukupno%', { broj: idx + 1, ukupno: transkripcija.length });
+    el.nauceno.textContent = T('%broj% od %ukupno%', { broj: nauceno(), ukupno: transkripcija.length });
+    nacrtajMjerac();
+    el.panel.textContent = '';
+
+    if (vrsta === 'gradi') {
+      nacrtajArapski(0, gradiDo - 1);
+      el.latinica.textContent = transkripcija.slice(0, gradiDo).join(' · ');
+      el.uputica.textContent = T('1. ajet → 1+2 → cijela sura');
+      var korak = document.createElement('b');
+      korak.textContent = T('Korak %broj% od %ukupno%', { broj: gradiDo, ukupno: transkripcija.length });
+      var sitno = document.createElement('p');
+      sitno.className = 'sitno';
+      sitno.textContent = T('Prouči sve što vidiš tri puta. Kad ti ide bez greške, dodaj sljedeći ajet.');
+      var red = document.createElement('div');
+      red.className = 'ocjene';
+      red.appendChild(dugme(T('Slušaj izgrađeno'), 'glavno', function () { pusti(rasponLanca(0, gradiDo - 1)); }));
+      red.appendChild(dugme(T('Dodaj ajet'), '', dodajAjet));
+      el.panel.appendChild(korak); el.panel.appendChild(sitno); el.panel.appendChild(red);
+      return;
+    }
+
+    nacrtajArapski(idx, idx);
+    el.latinica.textContent = transkripcija[idx] || '';
+
+    if (vrsta === 'ponavljaj') {
+      el.uputica.textContent = T('Teži ajeti vraćaju se češće');
+      var pitanje = document.createElement('b');
+      pitanje.textContent = T('Kako ti je išlo?');
+      var objasni = document.createElement('p');
+      objasni.className = 'sitno';
+      objasni.textContent = T('Ocijeni tek nakon što pokušaš proučiti bez gledanja.');
+      var ocjene3 = document.createElement('div');
+      ocjene3.className = 'ocjene';
+      ocjene3.appendChild(dugme(T('Teško'), 'alt', function () { ocijeni(-1); }));
+      ocjene3.appendChild(dugme(T('Skoro'), '', function () { ocijeni(1); }));
+      ocjene3.appendChild(dugme(T('Znam'), 'glavno', function () { ocijeni(2); }));
+      el.panel.appendChild(pitanje); el.panel.appendChild(objasni); el.panel.appendChild(ocjene3);
+      return;
+    }
+
+    el.uputica.textContent = T('Slušaj, pa prouči isti ajet bez gledanja');
+    var naslov = document.createElement('b');
+    naslov.textContent = T('Uči ajet po ajet.');
+    var pomoc = document.createElement('p');
+    pomoc.className = 'sitno';
+    pomoc.textContent = T('Poslušaj tri puta, pa pokušaj sam. Kad ti ide, pređi na sljedeći.');
+    el.panel.appendChild(naslov); el.panel.appendChild(pomoc);
+  }
+
+  function dugme(tekst, vrstaDugmeta, naKlik) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dugme' + (vrstaDugmeta ? ' ' + vrstaDugmeta : '');
+    b.textContent = tekst;
+    b.addEventListener('click', naKlik);
+    return b;
+  }
+
+  /* ---------- zvuk ---------- */
+  function rasponLanca(od, do_) {
+    var niz = [];
+    for (var i = od; i <= do_ && i < transkripcija.length; i++) niz.push(i);
+    return niz;
+  }
+
+  function pusti(niz) {
+    lanac = niz.slice();
+    ponavljanja = 0;
+    sljedeciIzLanca();
+  }
+
+  function sljedeciIzLanca() {
+    if (!lanac || !lanac.length) { lanac = null; return; }
+    idx = lanac.shift();
+    nacrtaj();
+    el.zvuk.src = zvukAjeta(idx);
+    el.zvuk.play().catch(function () { pokaziGresku(T('Recitacija se nije učitala. Provjeri internet.')); });
+  }
+
+  function slusajAjet(puta) {
+    ponavljanja = Math.max(0, (puta || 1) - 1);
+    lanac = null;
+    el.zvuk.src = zvukAjeta(idx);
+    el.zvuk.play().catch(function () { pokaziGresku(T('Recitacija se nije učitala. Provjeri internet.')); });
+  }
+
+  el.zvuk.addEventListener('ended', function () {
+    if (ponavljanja > 0) { ponavljanja--; el.zvuk.currentTime = 0; el.zvuk.play(); return; }
+    if (lanac && lanac.length) { sljedeciIzLanca(); return; }
+    if (lanac) { lanac = null; if (vrsta === 'prati' && idx === transkripcija.length - 1) zavrsiSuru(); }
+  });
+
+  function pokaziGresku(tekst) {
+    el.greska.textContent = tekst;
+    el.greska.hidden = false;
+  }
+
+  /* ---------- napredak ---------- */
+  function ocijeni(promjena) {
+    ocjene[idx] = Math.max(0, Math.min(5, ocjene[idx] + promjena));
+    spremiOcjene();
+    if (ocjene[idx] >= 3) {
+      javi('ajet', { ajet: idx + 1, nauceno: nauceno(), ukupno: transkripcija.length });
+      reci(T('Naučen ajet %broj%.', { broj: idx + 1 }));
+    }
+    if (nauceno() === transkripcija.length) {
+      // Prvo osvježi brojač i mjerač, pa onda poruku: inače bi uz „sve je
+      // naučeno" stajalo „6 od 7".
+      nacrtaj();
+      zavrsi(T('Mašallah, cijela sura je naučena!'));
+      return;
+    }
+    idx = izaberiTezi();
+    nacrtaj();
+  }
+
+  /** Slabije naučeni ajeti vraćaju se češće. */
+  function izaberiTezi() {
+    var tezine = ocjene.map(function (o) { return Math.max(1, 6 - o); });
+    var zbir = tezine.reduce(function (a, b) { return a + b; }, 0);
+    var r = Math.random() * zbir;
+    for (var i = 0; i < tezine.length; i++) { r -= tezine[i]; if (r <= 0) return i; }
+    return 0;
+  }
+
+  function dodajAjet() {
+    if (gradiDo < transkripcija.length) gradiDo++;
+    idx = gradiDo - 1;
+    nacrtaj();
+  }
+
+  function zavrsiSuru() { zavrsi(T('Mašallah, proučio si cijelu suru!')); }
+
+  function zavrsi(poruka) {
+    el.kraj.textContent = poruka;
+    el.kraj.hidden = false;
+    if (javljenKraj) return;
+    javljenKraj = true;
+    javi('kraj', { nauceno: nauceno(), ukupno: transkripcija.length });
+  }
+
+  /* ---------- komande ---------- */
+  function postaviVrstu(v) {
+    vrsta = v;
+    el.zvuk.pause();
+    lanac = null;
+    if (v === 'ponavljaj') idx = izaberiTezi();
+    if (v === 'gradi') idx = gradiDo - 1;
+    nacrtaj();
+  }
+  el.vPrati.addEventListener('click', function () { postaviVrstu('prati'); });
+  el.vGradi.addEventListener('click', function () { postaviVrstu('gradi'); });
+  el.vPonavljaj.addEventListener('click', function () { postaviVrstu('ponavljaj'); });
+
+  el.slusaj.addEventListener('click', function () { slusajAjet(1); });
+  el.ponovi3.addEventListener('click', function () { slusajAjet(3); });
+  el.prethodni.addEventListener('click', function () {
+    el.zvuk.pause(); lanac = null; idx = Math.max(0, idx - 1); nacrtaj();
+  });
+  el.sljedeci.addEventListener('click', function () {
+    el.zvuk.pause(); lanac = null; idx = Math.min(transkripcija.length - 1, idx + 1); nacrtaj();
+  });
+  el.cijela.addEventListener('click', function () {
+    vrsta = 'prati'; idx = 0; pusti(rasponLanca(0, transkripcija.length - 1));
+  });
+  el.ispocetka.addEventListener('click', function () {
+    el.zvuk.pause(); lanac = null; idx = 0; gradiDo = 1; el.kraj.hidden = true; nacrtaj();
+  });
+
+  /* ---------- priprema ---------- */
+  function pripremi(p) {
+    podaci = p || {};
+    transkripcija = Array.isArray(podaci.transkripcija)
+      ? podaci.transkripcija.map(function (r) { return String(r == null ? '' : r).trim(); }).filter(Boolean)
+      : [];
+    el.naslov.textContent = podaci.naslov || T('Nauči napamet');
+    document.title = (podaci.naslov ? podaci.naslov + ' · ' : '') + T('Nauči napamet · Mekteb.net');
+    el.uputa.textContent = podaci.uputa || '';
+    el.uputa.hidden = !el.uputa.textContent;
+    if (!transkripcija.length) {
+      pokaziGresku(T('Za ovu vježbu treba upisati transkripciju, jedan red po ajetu.'));
+      return Promise.resolve();
+    }
+    ucitajOcjene(transkripcija.length);
+    nacrtaj();
+    return ucitajArapski(podaci.sura).then(function (ajeti) {
+      // Broj ajeta iz izvora mora se poklopiti s transkripcijom, inače bi se
+      // dijetetu pokazao pogrešan ajet uz tačnu transkripciju.
+      if (ajeti.length && ajeti.length !== transkripcija.length) {
+        pokaziGresku(T('Broj ajeta se ne poklapa s transkripcijom, pa arapski tekst nije prikazan.'));
+        arapski = [];
+      } else {
+        arapski = ajeti;
+        if (!ajeti.length) pokaziGresku(T('Arapski tekst se nije učitao. Vježba radi po transkripciji i učaču.'));
+      }
+      nacrtaj();
+    });
+  }
+
+  /* ---------- visina za iframe ---------- */
+  if (window.parent !== window && 'ResizeObserver' in window) {
+    new ResizeObserver(function () {
+      javi('visina', { visina: Math.ceil(document.documentElement.getBoundingClientRect().height) });
+    }).observe(document.documentElement);
+  }
+
+  ucitaj().then(pripremi).catch(function () { pripremi(null); });
+})();
+</script>
+</body>
+</html>

@@ -12,6 +12,7 @@ export const NASE_VJEZBE_PREFIKSI = [
   "/vjezbe/razvrstaj/",
   "/vjezbe/spoji/",
   "/vjezbe/upisi/",
+  "/vjezbe/napamet/",
 ];
 
 export function jeNasaVjezbaUrl(url: string | null | undefined): boolean {

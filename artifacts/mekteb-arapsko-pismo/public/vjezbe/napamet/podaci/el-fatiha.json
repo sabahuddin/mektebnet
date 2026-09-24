@@ -1,0 +1,44 @@
+{
+  "id": "el-fatiha",
+  "sura": 1,
+  "naslov": "Nauči El-Fatihu napamet",
+  "uputa": "Slušaj ajet, pa ga prouči sam. Kad ti ide bez greške, dodaj sljedeći.",
+  "ucac": "husary_muallim",
+  "transkripcija": [
+    "Bismillahir-rahmanir-rahim",
+    "Elhamdu lillahi rabbil-alemin",
+    "Er-rahmanir-rahim",
+    "Maliki jevmid-din",
+    "Ijjake na'budu ve ijjake neste'in",
+    "Ihdines-siratal-mustekim",
+    "Siratallezine en'amte alejhim gajril-magdubi alejhim ve led-dallin"
+  ],
+  "prijevodi": {
+    "de": {
+      "naslov": "Lerne Al-Fatiha auswendig",
+      "uputa": "Hör dir den Vers an und sprich ihn dann selbst. Wenn er fehlerfrei geht, nimm den nächsten dazu.",
+      "transkripcija": [
+        "Bismillahir-Rahmanir-Rahim",
+        "Alhamdu lillahi Rabbil-alamin",
+        "Ar-Rahmanir-Rahim",
+        "Maliki yaumid-din",
+        "Iyyaka na'budu wa iyyaka nasta'in",
+        "Ihdinas-siratal-mustaqim",
+        "Siratal-ladhina an'amta alaihim, ghairil-maghdubi alaihim wa lad-dallin"
+      ]
+    },
+    "en": {
+      "naslov": "Learn Al-Fatihah by heart",
+      "uputa": "Listen to the verse, then recite it yourself. When it goes without a mistake, add the next one.",
+      "transkripcija": [
+        "Bismillahir-Rahmanir-Rahim",
+        "Alhamdu lillahi Rabbil-alamin",
+        "Ar-Rahmanir-Rahim",
+        "Maliki yawmid-din",
+        "Iyyaka na'budu wa iyyaka nasta'in",
+        "Ihdinas-siratal-mustaqim",
+        "Siratal-ladhina an'amta alayhim, ghayril-maghdubi alayhim wa lad-dallin"
+      ]
+    }
+  }
+}

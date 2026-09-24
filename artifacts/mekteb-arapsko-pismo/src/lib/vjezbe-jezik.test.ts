@@ -16,7 +16,7 @@ const VJEZBE_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../public/vjezbe",
 );
-const TIPOVI = ["osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji", "upisi"];
+const TIPOVI = ["osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji", "upisi", "napamet"];
 
 /** Učitaj jezik.js kao što ga učita vježba otvorena sa ?lang=<jezik>. */
 interface Jezik {
