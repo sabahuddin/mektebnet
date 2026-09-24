@@ -35,6 +35,12 @@ await page.evaluateOnNewDocument(() => {
 });
 const greske = [];
 page.on("pageerror", (e) => greske.push(String(e)));
+// Zvuk je cijela poenta ove vježbe, pa se prati da li se snimak zaista dohvati
+// i s kojim odgovorom — postojanje datoteke na disku ništa ne dokazuje.
+const zvuci = [];
+page.on("response", (r) => {
+  if (/\/audio\/opismenjavanje\/.*\.mp3$/.test(r.url())) zvuci.push({ url: r.url(), status: r.status() });
+});
 
 const DATOTEKA = process.argv[2] ?? "lekcija-4.json";
 await page.goto(`http://localhost:4210/vjezbe/slusaj/slusaj.html?podaci=/vjezbe/slusaj/podaci/${DATOTEKA}`, { waitUntil: "networkidle0" });
@@ -50,6 +56,20 @@ const ocekivano = JSON.parse(await fs.readFile(path.join(ROOT, "vjezbe/slusaj/po
 ok("spisak ima sve riječi iz JSON-a", (await page.$$(".rijec")).length === ocekivano, `${ocekivano}`);
 ok("prva riječ u spisku je arapska", /[ء-ي]/.test(await page.$eval(".rijec .zapis", (e) => e.textContent)));
 ok("dugme Dalje je na početku zaključano", await page.$eval("#dalje", (e) => e.disabled));
+
+// Pritisni zvučnik i sačekaj da snimak stigne.
+await page.click("#zvucnik");
+await new Promise((r) => setTimeout(r, 600));
+ok("pritisak na zvučnik dohvati snimak", zvuci.length > 0, zvuci.map((z) => z.status).join(","));
+ok("svaki dohvaćeni snimak je stigao", zvuci.length > 0 && zvuci.every((z) => z.status === 200),
+   zvuci.map((z) => `${z.url.split("/").pop()} ${z.status}`).join(" | "));
+// Ni jedan snimak ne smije biti prazan ili sumnjivo malen.
+const velicine = await page.evaluate(async (lista) => {
+  const out = [];
+  for (const u of lista) { const o = await fetch(u); const b = await o.arrayBuffer(); out.push([u.split("/").pop(), b.byteLength]); }
+  return out;
+}, [...new Set(zvuci.map((z) => z.url))]);
+ok("snimci nisu prazni", velicine.every(([, n]) => n > 2000), velicine.map(([n, b]) => `${n} ${b}B`).join(" | "));
 
 // Odigraj sva tri kruga biranjem tačnog odgovora.
 let pitanja = 0;

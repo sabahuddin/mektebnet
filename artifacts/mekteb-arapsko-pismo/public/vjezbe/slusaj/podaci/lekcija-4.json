@@ -8,74 +8,90 @@
     {
       "zapis": "م",
       "ime": "Mim",
-      "glas": "m"
+      "glas": "m",
+      "zvuk": "/audio/opismenjavanje/meem__lettername.mp3"
     },
     {
       "zapis": "ر",
       "ime": "Ra",
-      "glas": "r"
+      "glas": "r",
+      "zvuk": "/audio/opismenjavanje/reh__lettername.mp3"
     },
     {
       "zapis": "ل",
       "ime": "Lam",
-      "glas": "l"
+      "glas": "l",
+      "zvuk": "/audio/opismenjavanje/lam__lettername.mp3"
     },
     {
       "zapis": "ب",
       "ime": "Ba",
-      "glas": "b"
+      "glas": "b",
+      "zvuk": "/audio/opismenjavanje/beh__lettername.mp3"
     },
     {
       "zapis": "ن",
       "ime": "Nun",
-      "glas": "n"
+      "glas": "n",
+      "zvuk": "/audio/opismenjavanje/noon__lettername.mp3"
     },
     {
       "zapis": "ي",
       "ime": "Ja",
-      "glas": "j"
+      "glas": "j",
+      "zvuk": "/audio/opismenjavanje/yeh__lettername.mp3"
     }
   ],
   "slogovi": [
     {
       "zapis": "مَ",
-      "citanje": "me"
+      "citanje": "me",
+      "zvuk": "/audio/opismenjavanje/meem_fathah.mp3"
     },
     {
       "zapis": "مِ",
-      "citanje": "mi"
+      "citanje": "mi",
+      "zvuk": "/audio/opismenjavanje/meem_kasrah.mp3"
     },
     {
       "zapis": "مُ",
-      "citanje": "mu"
+      "citanje": "mu",
+      "zvuk": "/audio/opismenjavanje/meem_dammah.mp3"
     },
     {
       "zapis": "بَ",
-      "citanje": "be"
+      "citanje": "be",
+      "zvuk": "/audio/opismenjavanje/beh_fathah.mp3"
     },
     {
       "zapis": "بِ",
-      "citanje": "bi"
+      "citanje": "bi",
+      "zvuk": "/audio/opismenjavanje/beh_kasrah.mp3"
     },
     {
       "zapis": "بُ",
-      "citanje": "bu"
+      "citanje": "bu",
+      "zvuk": "/audio/opismenjavanje/beh_dammah.mp3"
     },
     {
       "zapis": "نَ",
-      "citanje": "ne"
+      "citanje": "ne",
+      "zvuk": "/audio/opismenjavanje/noon_fathah.mp3"
     },
     {
       "zapis": "نِ",
-      "citanje": "ni"
+      "citanje": "ni",
+      "zvuk": "/audio/opismenjavanje/noon_kasrah.mp3"
     },
     {
       "zapis": "لَ",
-      "citanje": "le"
+      "citanje": "le",
+      "zvuk": "/audio/opismenjavanje/lam_fathah.mp3"
     },
     {
       "zapis": "رَ",
-      "citanje": "re"
+      "citanje": "re",
+      "zvuk": "/audio/opismenjavanje/reh_fathah.mp3"
     },
     {
       "zapis": "را",
@@ -95,7 +111,8 @@
     {
       "zapis": "باب",
       "citanje": "bab",
-      "znacenje": "vrata"
+      "znacenje": "vrata",
+      "zvuk": "/audio/opismenjavanje/rijec-door.mp3"
     },
     {
       "zapis": "نار",
@@ -105,7 +122,8 @@
     {
       "zapis": "ماء",
       "citanje": "maa'",
-      "znacenje": "voda"
+      "znacenje": "voda",
+      "zvuk": "/audio/opismenjavanje/rijec-water.mp3"
     },
     {
       "zapis": "مال",
@@ -125,7 +143,8 @@
     {
       "zapis": "لَبَن",
       "citanje": "leben",
-      "znacenje": "mlijeko"
+      "znacenje": "mlijeko",
+      "zvuk": "/audio/opismenjavanje/rijec-yogurt.mp3"
     },
     {
       "zapis": "نَمِر",
@@ -147,5 +166,6 @@
       "citanje": "emam",
       "znacenje": "ispred"
     }
-  ]
+  ],
+  "izvorZvuka": "Antura and the Letters (Arabic) — Video Games Without Borders, TH Köln / Cologne Game Lab, Wixel Studios. CC BY 4.0."
 }
