@@ -70,6 +70,7 @@ import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { CT_TABLES, getLang, overlayRows } from "../lib/content-translatable.js";
 import { canAccessAdminRoute } from "../lib/admin-route-access.js";
 import { assertStudentCapacity, LicenceLimitError } from "../lib/district-licences.js";
+import { countStudentsByTeacher } from "../lib/teacher-student-counts.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
 import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
 import { optimizePdfFile } from "../lib/dokumenti.js";
@@ -4821,6 +4822,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
         userId: ucenikProfiliTable.userId,
         mektebId: ucenikProfiliTable.mektebId,
         muallimId: ucenikProfiliTable.muallimId,
+        grupaId: ucenikProfiliTable.grupaId,
         isActive: usersTable.isActive,
       }).from(ucenikProfiliTable)
         .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
@@ -4877,6 +4879,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
         )[0] ?? null;
       const dodijeljeneLicence = mMuallimi.reduce((sum, m) => sum + m.licenceCount, 0);
       const brojGrupa = grupe.filter((g) => muallimIds.has(g.muallimId)).length;
+      const uceniciPoMuallimu = countStudentsByTeacher(mUcenici, grupe, muallimIds);
 
       return {
         id: mekteb.id,
@@ -4933,7 +4936,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
             isActive: m.isActive,
             isGlavni: m.userId === glavni?.userId,
             licenceCount: m.licenceCount,
-            licencesUsed: mUcenici.filter((u) => u.muallimId === m.userId).length,
+            licencesUsed: uceniciPoMuallimu.get(m.userId) ?? 0,
           }))
           .sort((a, b) => Number(b.isGlavni) - Number(a.isGlavni) || a.displayName.localeCompare(b.displayName, "bs")),
       };
