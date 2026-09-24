@@ -46,7 +46,7 @@
 - [Encoded HTML atributi i apostrof](encoded-html-attributes.md) — encodeURIComponent ne escapuje `'`; parser double-quoted atributa ne smije prekidati vrijednost na apostrofu.
 - [Scoped route guards](scoped-route-guards.md) — router montiran na API korijenu ne smije imati nezaograničen `router.use(requireRole(...))`, jer blokira sve kasnije rute.
 - [Admin analitika učenja](admin-analitika-ucenja.md) — koristi prijave, napredak i rezultate kvizova; anonimne web posjete su bot-noise, ne indikator rada korisnika.
-- [Dugi HTML prijevodi](html-content-translation-qa.md) — čuvaj markup lokalno; AI prevodi samo tekstualne čvorove uz provjeru pokrivenosti.
+- [Dugi HTML prijevodi](html-content-translation-qa.md) — čuvaj markup i produkcijske medije; prijevod ili obnova mijenja samo tekstualne čvorove.
 - [Njemački overlayji i hash izvora](german-overlay-source-hashes.md) — bundlani prijevod se preskače kad se izmijeni bosanski HTML; osvježi hash i zadrži istu HTML strukturu.
 - [Ilmihal uppercase format](ilmihal-uppercase-format.md) — lekcije 1–20 čuvaju velika slova po izvornim tekstualnim čvorovima i nakon prijevoda.
 - [Mektebska godina — prisustvo](mektebska-godina-prisustvo.md) — tekuće prisustvo se strogo računa od 1. augusta, nikad po kalendarskoj godini ili staroj grupi.
