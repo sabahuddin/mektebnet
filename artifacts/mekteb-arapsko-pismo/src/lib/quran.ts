@@ -1,6 +1,6 @@
-// Kur'an podaci — tekst (Uthmani rasm, kao kod Diyaneta) preko alquran.cloud
-// i audio (Husari Mu'allim, "prouči pa ponovi") sa vanjskog servera everyayah.com.
-// Sve se učitava direktno sa klijenta (CORS dozvoljen na alquran.cloud).
+// Kur'an podaci — kanonski Uthmani tekst preko Quran.com, podaci o surama i
+// stranicama preko alquran.cloud, audio sa vanjskog servera everyayah.com.
+// Oba tekstualna API-ja podržavaju CORS za direktno učitavanje iz klijenta.
 
 export interface SurahMeta {
   number: number;
@@ -18,6 +18,36 @@ export interface Ayah {
 }
 
 const API = "https://api.alquran.cloud/v1";
+const CANONICAL_TEXT_API = "https://api.quran.com/api/v4/quran/verses/uthmani";
+
+interface CanonicalVerse {
+  verse_key: string;
+  text_uthmani: string;
+}
+
+async function fetchCanonicalVerses(filter: "chapter_number" | "page_number", n: number): Promise<CanonicalVerse[]> {
+  const r = await fetch(`${CANONICAL_TEXT_API}?${filter}=${n}`);
+  if (!r.ok) throw new Error("Neuspješno učitavanje kur'anskog teksta.");
+  const j = await r.json();
+  if (!Array.isArray(j?.verses) || !j.verses.length) {
+    throw new Error("Neispravan odgovor servera (kur'anski tekst).");
+  }
+  return j.verses as CanonicalVerse[];
+}
+
+function verifiedVerseTexts(
+  ayahs: { surah: number; numberInSurah: number }[],
+  verses: CanonicalVerse[],
+): string[] {
+  if (ayahs.length !== verses.length || ayahs.some((a, i) =>
+    verses[i]?.verse_key !== `${a.surah}:${a.numberInSurah}` ||
+    typeof verses[i]?.text_uthmani !== "string" ||
+    !verses[i].text_uthmani.trim()
+  )) {
+    throw new Error("Neusklađeni ajeti između izvora kur'anskog teksta.");
+  }
+  return verses.map(v => v.text_uthmani);
+}
 
 // Bismilla (Uthmani) — kako je vraća alquran.cloud. Koristi se za zaglavlje
 // sure i za uklanjanje prefiksa iz prvog ajeta.
@@ -56,15 +86,7 @@ function cleanAyahText(surah: number, numberInSurah: number, raw: string): strin
       t = toks.slice(4).join(" ").trim();
     }
   }
-  // Ova verzija alquran.cloud dodaje U+06ED (mali mim) poslije gotovo svakog
-  // tenvina, čak i gdje ne pripada: "عَيْنًۭا" / "مِصْرًۭا".
-  // Kanonski Uthmani tekst piše "عَيْنًا" / "مِصْرًا". Ne diraj U+06E2
-  // (znak za izgovor) niti znakove stajanja U+06D6–U+06DC.
-  t = t.replace(/([\u064B-\u064D])\u06ED/gu, "$1");
-  // alquran.cloud odvaja znakove stajanja razmakom (npr. "قَوْلِهِمْ ۘ").
-  // To su kombinirajući znakovi: razmak ih odvaja od riječi i pri prijelomu
-  // reda mogu završiti na pogrešnom mjestu. Veži ih za prethodnu riječ.
-  return t.replace(/\s+(?=[\u06D6-\u06DC])/gu, "");
+  return t;
 }
 
 export async function fetchSurahList(): Promise<SurahMeta[]> {
@@ -76,7 +98,10 @@ export async function fetchSurahList(): Promise<SurahMeta[]> {
 }
 
 export async function fetchSurah(n: number): Promise<{ meta: SurahMeta; ayahs: Ayah[] }> {
-  const r = await fetch(`${API}/surah/${n}/quran-uthmani`);
+  const [r, verses] = await Promise.all([
+    fetch(`${API}/surah/${n}/quran-uthmani`),
+    fetchCanonicalVerses("chapter_number", n),
+  ]);
   if (!r.ok) throw new Error("Neuspješno učitavanje sure.");
   const j = await r.json();
   const d = j?.data;
@@ -89,10 +114,14 @@ export async function fetchSurah(n: number): Promise<{ meta: SurahMeta; ayahs: A
     numberOfAyahs: d.numberOfAyahs,
     revelationType: d.revelationType,
   };
-  const ayahs: Ayah[] = d.ayahs.map((a: any) => ({
+  const texts = verifiedVerseTexts(
+    d.ayahs.map((a: any) => ({ surah: d.number, numberInSurah: a.numberInSurah })),
+    verses,
+  );
+  const ayahs: Ayah[] = d.ayahs.map((a: any, i: number) => ({
     number: a.number,
     numberInSurah: a.numberInSurah,
-    text: cleanAyahText(d.number, a.numberInSurah, a.text),
+    text: cleanAyahText(d.number, a.numberInSurah, texts[i]),
   }));
   return { meta, ayahs };
 }
@@ -249,17 +278,24 @@ export const QURAN_PAGES = 604;
 
 /** Učitava jednu Mushaf stranicu (1-604). Ajeti mogu pripadati više sura. */
 export async function fetchPage(p: number): Promise<PageAyah[]> {
-  const r = await fetch(`${API}/page/${p}/quran-uthmani`);
+  const [r, verses] = await Promise.all([
+    fetch(`${API}/page/${p}/quran-uthmani`),
+    fetchCanonicalVerses("page_number", p),
+  ]);
   if (!r.ok) throw new Error("Neuspješno učitavanje stranice.");
   const j = await r.json();
   const ayahs = j?.data?.ayahs;
   if (!Array.isArray(ayahs)) throw new Error("Neispravan odgovor servera (stranica).");
-  return ayahs.map((a: any) => ({
+  const texts = verifiedVerseTexts(
+    ayahs.map((a: any) => ({ surah: a.surah?.number, numberInSurah: a.numberInSurah })),
+    verses,
+  );
+  return ayahs.map((a: any, i: number) => ({
     number: a.number,
     numberInSurah: a.numberInSurah,
     surah: a.surah?.number,
     surahArabicName: surahArabicDisplayName(a.surah?.name ?? ""),
-    text: cleanAyahText(a.surah?.number, a.numberInSurah, a.text),
+    text: cleanAyahText(a.surah?.number, a.numberInSurah, texts[i]),
   }));
 }
 
