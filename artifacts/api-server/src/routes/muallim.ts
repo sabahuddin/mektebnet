@@ -1256,6 +1256,9 @@ router.delete("/grupe/:id/muallimi/:muallimId", async (req, res) => {
     if (!isAdmin && !isVlasnik && !isGlavniInSameMekteb) {
       res.status(403).json({ error: "Samo vlasnik ili glavni muallim mogu uklanjati muallime" }); return;
     }
+    if (muallimId === grupa.muallimId) {
+      res.status(409).json({ error: "Odgovorni muallim mora ostati u grupi. Prvo promijenite odgovornog muallima." }); return;
+    }
 
     await db.execute(sql`
       DELETE FROM grupa_muallimi WHERE grupa_id = ${grupaId} AND muallim_id = ${muallimId}

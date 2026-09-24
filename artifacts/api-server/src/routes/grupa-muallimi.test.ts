@@ -102,7 +102,12 @@ test("jedna grupa ima najviše tri muallima, samo iz istog mekteba", async () =>
   assert.equal((await request(`/grupe/${grupaId}/vrati`, "second", "POST")).status, 403);
 
   assert.equal((await request(`/grupe/${grupaId}/muallimi/${people.second}`, "foreign", "DELETE")).status, 403);
-  assert.equal((await request(`/grupe/${grupaId}/muallimi/${people.second}`, "owner", "DELETE")).status, 200);
+  assert.equal((await request(`/grupe/${grupaId}/muallimi/${people.owner}`, "head", "DELETE")).status, 409);
+  assert.equal((await request(`/grupe/${grupaId}/muallimi/${people.second}`, "head", "DELETE")).status, 200);
+  const [stillAssigned] = await db.select({ muallimId: grupeTable.muallimId }).from(grupeTable).where(eq(grupeTable.id, grupaId));
+  assert.equal(stillAssigned.muallimId, people.owner);
+  assert.equal((await request(`/grupa/${grupaId}/ucenici`, "second")).status, 404);
+  assert.equal((await request(`/grupa/${grupaId}/ucenici`, "head")).status, 200);
   assert.equal((await add("owner", people.fourth)).status, 200);
 
   // Promjena odgovornog muallima ne ostavlja istog čovjeka i na listi dodatnih.
