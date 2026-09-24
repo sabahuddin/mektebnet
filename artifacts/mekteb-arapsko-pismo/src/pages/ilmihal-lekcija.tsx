@@ -208,13 +208,16 @@ interface LekcijaNav {
 // ──────────────────────────────────────────────────
 // Horizontal lesson strip
 // ──────────────────────────────────────────────────
-function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigate, onExit }: {
+function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigate, onExit, heading, onPrint, onEdit }: {
   lekcije: LekcijaNav[];
   currentSlug: string;
   currentId: number;
   completedIds: Set<number>;
   onNavigate: (slug: string) => void;
   onExit: () => void;
+  heading: React.ReactNode;
+  onPrint: () => void;
+  onEdit?: () => void;
 }) {
   const { t } = useLanguage();
   const stripRef = useRef<HTMLDivElement>(null);
@@ -237,12 +240,13 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
   const nextLessonId = lekcije.find(l => !completedIds.has(l.id))?.id ?? null;
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center justify-center gap-2">
+    <div className="mb-2 print:hidden">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] sm:grid-cols-[1fr_minmax(0,2fr)_1fr] items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5">
         <button
           onClick={() => prev && onNavigate(prev.slug)}
           disabled={!prev}
-          className="h-10 w-10 rounded-lg flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-muted-foreground"
+          className="h-9 w-9 rounded-lg flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-muted-foreground"
           title={prev ? `${t("Nazad")}: ${prev.naslov}` : t("Nazad")}
           aria-label={t("Nazad")}
           data-testid="button-lesson-prev"
@@ -254,7 +258,7 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
         <button
           type="button"
           onClick={onExit}
-          className="shrink-0 h-10 w-10 rounded-lg flex items-center justify-center border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
+          className="shrink-0 h-9 w-9 rounded-lg flex items-center justify-center border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors"
           title={t("Vrati se u košnicu")}
           aria-label={t("U košnicu")}
           data-testid="button-lesson-hive"
@@ -263,10 +267,16 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
           <span className="sr-only">{t("U košnicu")}</span>
         </button>
 
+        </div>
+        <div className="min-w-0 text-center">
+          <h1 className="text-lg sm:text-xl font-extrabold text-foreground leading-tight line-clamp-2">{heading}</h1>
+          {currentIdx >= 0 && <span className="text-[11px] text-muted-foreground font-semibold">{currentIdx + 1} / {lekcije.length}</span>}
+        </div>
+        <div className="flex items-center justify-end gap-1.5">
         <button
           onClick={() => next && onNavigate(next.slug)}
           disabled={!next}
-          className="h-10 w-10 rounded-lg flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-muted-foreground"
+          className="h-9 w-9 rounded-lg flex items-center justify-center border border-border/60 bg-white hover:bg-muted disabled:opacity-30 transition-colors text-muted-foreground"
           title={next ? `${t("Naprijed")}: ${next.naslov}` : t("Naprijed")}
           aria-label={t("Naprijed")}
           data-testid="button-lesson-next"
@@ -274,9 +284,18 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
           <span className="sr-only">{t("Naprijed")}</span>
         </button>
+        <button type="button" onClick={onPrint} title={t("Printaj lekciju")} aria-label={t("Printaj lekciju")}
+          className="h-9 w-9 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+          <Printer className="w-4 h-4" />
+        </button>
+        {onEdit && <button type="button" onClick={onEdit} title={t("Uredi sadržaj")} aria-label={t("Uredi sadržaj")}
+          className="h-9 w-9 rounded-lg flex items-center justify-center bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+          <FilePen className="w-4 h-4" />
+        </button>}
+        </div>
       </div>
 
-      <div ref={stripRef} className="mt-3 overflow-x-auto scrollbar-hide flex gap-2 py-1 px-0.5"
+      <div ref={stripRef} className="mt-1.5 overflow-x-auto scrollbar-hide flex gap-1.5 py-1 px-0.5"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
           {lekcije.map((l, i) => {
             const isActive = i === currentIdx;
@@ -288,7 +307,7 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
                 ref={isActive ? activeRef : undefined}
                 onClick={() => onNavigate(l.slug)}
                 title={`${l.naslov}${isDone ? " ✓" : isNext ? ` (${t("sljedeća")})` : ""}`}
-                className={`relative shrink-0 flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-sm font-bold transition-all min-w-[2.75rem]
+                className={`relative shrink-0 flex flex-col items-center rounded-lg px-2.5 py-1.5 text-sm font-bold transition-all min-w-[2.5rem]
                   ${isActive
                     ? "bg-teal-500 text-white shadow-md shadow-teal-200 scale-105"
                     : isDone
@@ -305,14 +324,6 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
               </button>
             );
           })}
-      </div>
-      {/* Current lesson name + position */}
-      <div className="text-center mt-1.5">
-        {currentIdx >= 0 && (
-          <span className="text-xs text-muted-foreground font-medium">
-            {currentIdx + 1} / {lekcije.length} — {lekcije[currentIdx]?.naslov}
-          </span>
-        )}
       </div>
     </div>
   );
@@ -4045,6 +4056,39 @@ export default function IlmihalLekcijaPage() {
     );
   }
 
+  const handlePrintLesson = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    const visibleForPrint = parsed.sections.filter(s => s.type !== "quiz_box" && s.type !== "priprema");
+    const sections = visibleForPrint.map(s => `<h2 style="margin-top:24px;color:#0d6e6e;border-bottom:2px solid #0d6e6e;padding-bottom:4px;">${s.title}</h2><div>${s.html}</div>`).join("");
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${lekcija.naslov} — Mekteb</title><style>
+      @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+      body{font-family:'Nunito',sans-serif;max-width:800px;margin:0 auto;padding:40px 30px;color:#222;line-height:1.7;font-size:15px;}
+      h1{color:#0d6e6e;font-size:22px;margin-bottom:8px;}
+      h2{font-size:18px;}
+      h3{font-size:16px;color:#333;}
+      h4{font-size:15px;color:#555;}
+      img{max-width:100%;height:auto;border-radius:12px;margin:12px 0;}
+      .hero-print{text-align:center;margin-bottom:20px;}
+      .hero-print img{max-height:300px;object-fit:cover;width:100%;}
+      .nivo-badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;color:#0d6e6e;background:#e6f7f7;padding:3px 12px;border-radius:20px;border:1px solid #b2e0e0;margin-bottom:8px;}
+      .footer{margin-top:40px;text-align:center;font-size:12px;color:#999;border-top:1px solid #eee;padding-top:12px;}
+      p{margin:6px 0;}
+      strong{color:#333;}
+      .arabic-card{background:#e8f5e9;border-left:4px solid #2e7d32;padding:12px 16px;border-radius:8px;margin:10px 0;font-size:18px;text-align:center;direction:rtl;}
+      .info-box{background:#fffde7;border-left:4px solid #f9a825;padding:12px 16px;border-radius:8px;margin:10px 0;}
+      @media print{body{padding:20px;}}
+    </style></head><body>
+      <div class="nivo-badge">${t("Nivo")} ${lekcija.nivo}</div>
+      <h1>${lekcija.naslov}</h1>
+      ${parsed.heroImage ? '<div class="hero-print"><img src="' + (parsed.heroImage.startsWith("http") ? parsed.heroImage : "https://mekteb.net" + parsed.heroImage) + '" /></div>' : ""}
+      ${sections}
+      <div class="footer">mekteb.net — ${t("Islamska edukativna platforma")}</div>
+    </body></html>`);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 500);
+  };
+
   return (
     <>
     {showEditor && lekcija && token && (
@@ -4069,10 +4113,8 @@ export default function IlmihalLekcijaPage() {
     <Layout>
       <div className="max-w-3xl mx-auto">
         {/* Upravljanje sadržajem: admin ima sve kontrole, muallim samo editor sadržaja. */}
-        {(user?.role === "admin" || user?.role === "muallim") && (
-          <div className="flex items-center gap-2 mb-4 justify-end flex-wrap">
-            {user?.role === "admin" && (
-              <>
+        {user?.role === "admin" && (
+          <div className="flex items-center gap-2 mb-2 justify-end flex-wrap">
             <button onClick={async () => {
               if (!lekcija || !token) return;
               const isLocked = lekcija.locked;
@@ -4144,12 +4186,6 @@ export default function IlmihalLekcijaPage() {
               title={t("Trajno obriši ovu lekciju")}
             >
               <Trash2 className="w-3.5 h-3.5" /> {t("Obriši lekciju")}
-            </button>
-              </>
-            )}
-            <button onClick={() => setShowEditor(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
-              <FilePen className="w-3.5 h-3.5" /> {t("Uredi sadržaj")}
             </button>
           </div>
         )}
@@ -4266,10 +4302,9 @@ export default function IlmihalLekcijaPage() {
           </div>
         )}
 
-        {/* Header — naslov centriran, Nazad ispod */}
-        <div className="mb-5">
-          {editingNaslov && user?.role === "admin" ? (
-            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+        {/* Kompaktno zaglavlje — naslov, navigacija i akcije u jednom redu. */}
+        {editingNaslov && user?.role === "admin" && (
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mb-2">
               <input
                 autoFocus
                 type="text"
@@ -4297,10 +4332,8 @@ export default function IlmihalLekcijaPage() {
                 </button>
               </div>
             </div>
-          ) : (
-            <h1 className="text-2xl font-extrabold text-foreground leading-tight text-center">{lekcija.naslov}</h1>
-          )}
-          {lekcijeStrip.length > 0 && slug && (
+        )}
+        {lekcijeStrip.length > 0 && slug ? (
             <LekcijeStrip
               lekcije={lekcijeStrip}
               currentSlug={slug}
@@ -4308,50 +4341,22 @@ export default function IlmihalLekcijaPage() {
               completedIds={completedIds}
               onNavigate={s => setLocation(`/ilmihal/${s}`)}
               onExit={() => setLocation(backNivo ? `/nivo${backNivo}-mapa` : "/ilmihal")}
+              heading={lekcija.naslov}
+              onPrint={handlePrintLesson}
+              onEdit={user?.role === "admin" || user?.role === "muallim" ? () => setShowEditor(true) : undefined}
             />
-          )}
-        </div>
-
-        {/* Print button */}
-        <div className="flex justify-end mb-2 print:hidden">
-          <button
-            onClick={() => {
-              const printWindow = window.open("", "_blank");
-              if (!printWindow) return;
-              const visibleForPrint = parsed.sections.filter(s => s.type !== "quiz_box" && s.type !== "priprema");
-              const sections = visibleForPrint.map(s => `<h2 style="margin-top:24px;color:#0d6e6e;border-bottom:2px solid #0d6e6e;padding-bottom:4px;">${s.title}</h2><div>${s.html}</div>`).join("");
-              printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${lekcija.naslov} — Mekteb</title><style>
-                @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
-                body{font-family:'Nunito',sans-serif;max-width:800px;margin:0 auto;padding:40px 30px;color:#222;line-height:1.7;font-size:15px;}
-                h1{color:#0d6e6e;font-size:22px;margin-bottom:8px;}
-                h2{font-size:18px;}
-                h3{font-size:16px;color:#333;}
-                h4{font-size:15px;color:#555;}
-                img{max-width:100%;height:auto;border-radius:12px;margin:12px 0;}
-                .hero-print{text-align:center;margin-bottom:20px;}
-                .hero-print img{max-height:300px;object-fit:cover;width:100%;}
-                .nivo-badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;color:#0d6e6e;background:#e6f7f7;padding:3px 12px;border-radius:20px;border:1px solid #b2e0e0;margin-bottom:8px;}
-                .footer{margin-top:40px;text-align:center;font-size:12px;color:#999;border-top:1px solid #eee;padding-top:12px;}
-                p{margin:6px 0;}
-                strong{color:#333;}
-                .arabic-card{background:#e8f5e9;border-left:4px solid #2e7d32;padding:12px 16px;border-radius:8px;margin:10px 0;font-size:18px;text-align:center;direction:rtl;}
-                .info-box{background:#fffde7;border-left:4px solid #f9a825;padding:12px 16px;border-radius:8px;margin:10px 0;}
-                @media print{body{padding:20px;}}
-              </style></head><body>
-                <div class="nivo-badge">${t("Nivo")} ${lekcija.nivo}</div>
-                <h1>${lekcija.naslov}</h1>
-                ${parsed.heroImage ? '<div class="hero-print"><img src="' + (parsed.heroImage.startsWith("http") ? parsed.heroImage : "https://mekteb.net" + parsed.heroImage) + '" /></div>' : ""}
-                ${sections}
-                <div class="footer">mekteb.net — ${t("Islamska edukativna platforma")}</div>
-              </body></html>`);
-              printWindow.document.close();
-              setTimeout(() => printWindow.print(), 500);
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-          >
-            <Printer className="w-4 h-4" /> {t("Printaj lekciju")}
-          </button>
-        </div>
+        ) : (
+          <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
+            <h1 className="text-xl font-extrabold text-foreground text-center">{lekcija.naslov}</h1>
+            <div className="flex items-center gap-1.5 print:hidden">
+              <button type="button" onClick={handlePrintLesson} title={t("Printaj lekciju")} aria-label={t("Printaj lekciju")}
+                className="h-9 w-9 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200"><Printer className="w-4 h-4" /></button>
+              {(user?.role === "admin" || user?.role === "muallim") &&
+                <button type="button" onClick={() => setShowEditor(true)} title={t("Uredi sadržaj")} aria-label={t("Uredi sadržaj")}
+                  className="h-9 w-9 rounded-lg flex items-center justify-center bg-amber-100 text-amber-700 hover:bg-amber-200"><FilePen className="w-4 h-4" /></button>}
+            </div>
+          </div>
+        )}
 
         {/* Hero image */}
         {parsed.heroImage ? (
