@@ -75,6 +75,12 @@ export const TIPOVI_VJEZBI: Record<string, TipVjezbe> = {
     opis: "Dijete uči suru ajet po ajet, uz učača i transkripciju.",
     html: "/vjezbe/napamet/napamet.html",
   },
+  slusaj: {
+    tip: "slusaj",
+    naziv: "Slušaj i klikni",
+    opis: "Dijete čuje harf, slog ili riječ pa klikne na ono što je čulo.",
+    html: "/vjezbe/slusaj/slusaj.html",
+  },
 };
 
 /** Prefiksi po kojima stranica lekcije prepoznaje našu vježbu. */
@@ -371,6 +377,29 @@ function validirajOsnovu(tip: string, podaci: unknown): string | null {
     if (p.ucac !== undefined && !UCACI.includes(String(p.ucac))) {
       return `Učač može biti: ${UCACI.join(", ")}.`;
     }
+    return null;
+  }
+
+  if (tip === "slusaj") {
+    // Tri kruga idu jedan za drugim: harfovi, pa slogovi, pa prave riječi.
+    // Krug s manje od dvije stavke se preskače, jer nema od čega napraviti
+    // četiri ponude, pa bar jedan mora biti popunjen.
+    const krugovi: [string, unknown][] = [
+      ["harfovi", p.harfovi], ["slogovi", p.slogovi], ["rijeci", p.rijeci],
+    ];
+    let popunjenih = 0;
+    for (const [naziv, vrijednost] of krugovi) {
+      if (vrijednost === undefined) continue;
+      if (!Array.isArray(vrijednost)) return `Polje „${naziv}" mora biti spisak.`;
+      for (const stavka of vrijednost) {
+        const zapis = (stavka as { zapis?: unknown })?.zapis;
+        if (typeof zapis !== "string" || !zapis.trim()) {
+          return `Svaka stavka u „${naziv}" mora imati arapski zapis.`;
+        }
+      }
+      if (vrijednost.length >= 2) popunjenih += 1;
+    }
+    if (!popunjenih) return "Upiši bar jedan krug s najmanje dvije stavke (harfovi, slogovi ili riječi).";
     return null;
   }
 
