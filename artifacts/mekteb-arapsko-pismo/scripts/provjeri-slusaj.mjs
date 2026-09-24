@@ -81,7 +81,8 @@ await page.click("#zvucnik");
 await new Promise((r) => setTimeout(r, 300));
 const stanjeBezZvuka = await page.evaluate(() => {
   const prvi = document.querySelector(".ponuda .slovo")?.textContent ?? "";
-  return { poruka: document.getElementById("napomenaGlas").classList.contains("sakrij") ? "" : document.getElementById("napomenaGlas").textContent, prvi };
+  const n = document.getElementById("bezZvuka");
+  return { poruka: n.classList.contains("sakrij") ? "" : n.textContent, prvi };
 });
 ok("bez snimka vježba to kaže, a ne šuti",
    stanjeBezZvuka.poruka.length > 0 || zvuci.length > 0, JSON.stringify(stanjeBezZvuka).slice(0, 120));

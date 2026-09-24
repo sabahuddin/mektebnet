@@ -84,6 +84,14 @@
   #zvucnik.nijem { background: var(--sivi); }
   @keyframes kucaj { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
   .pomoc { margin-top: 10px; color: var(--sivi); font-size: .9rem; min-height: 1.2em; }
+  .bezZvuka {
+    margin: 10px auto 0; max-width: 420px; padding: 7px 12px; border-radius: 10px;
+    background: #FFFBEB; border: 1px solid #FDE68A; color: #78350F; font-size: .82rem;
+  }
+  /* Zvučnik na kartici riječi: odmah se vidi šta se može čuti. */
+  .rijec .ima-zvuk { font-size: .8rem; color: var(--tirkiz); }
+  .rijec.nijema { opacity: .72; }
+  .rijec.nijema .zapis { color: var(--sivi); }
   .ponude { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
   @media (min-width: 560px) { .ponude { grid-template-columns: repeat(4, 1fr); } }
   .ponuda {
@@ -142,6 +150,7 @@
 
   <div class="kartica" id="igra">
     <button id="zvucnik" type="button" aria-label="Poslušaj">🔊</button>
+    <div class="bezZvuka sakrij" id="bezZvuka"></div>
     <div class="pomoc" id="pomoc"></div>
     <div class="ponude" id="ponude"></div>
     <div class="podnozje">
@@ -157,7 +166,7 @@
 
   <div class="spisak" id="spisak">
     <h2>Riječi koje sada čitaš</h2>
-    <p>Klikni na riječ da je čuješ. Kod učitelja ćeš iste riječi čitati drugim redom.</p>
+    <p id="uputaSpisak">Kod učitelja ćeš iste riječi čitati drugim redom.</p>
     <div class="rijeci" id="rijeci"></div>
     <div class="podnozje">
       <button class="dugme sporedno" id="promijesaj" type="button">Promiješaj redoslijed</button>
@@ -186,7 +195,8 @@
     rezultat: document.getElementById('rezultat'), igra: document.getElementById('igra'),
     gotovo: document.getElementById('gotovo'), zavrsna: document.getElementById('zavrsna'),
     ponovo: document.getElementById('ponovo'), rijeci: document.getElementById('rijeci'),
-    promijesaj: document.getElementById('promijesaj'), napomenaGlas: document.getElementById('napomenaGlas')
+    promijesaj: document.getElementById('promijesaj'), bezZvuka: document.getElementById('bezZvuka'),
+    napomenaGlas: document.getElementById('napomenaGlas')
   };
 
   var podaci = null, krugovi = [], krug = 0, pitanje = 0, tacno = 0, ukupno = 0, pocetak = 0, odgovoreno = false;
@@ -222,11 +232,11 @@
     var bezZvuka = function () {
       gotov();
       el.zvucnik.classList.add('nijem');
-      el.napomenaGlas.textContent = T('Ovaj zapis još nema snimak. Pročitaj ga sam, pa provjeri s muallimom.');
-      el.napomenaGlas.classList.remove('sakrij');
+      el.bezZvuka.textContent = T('Ovaj zapis još nema snimak — pročitaj ga sam.');
+      el.bezZvuka.classList.remove('sakrij');
     };
     el.zvucnik.classList.remove('nijem');
-    el.napomenaGlas.classList.add('sakrij');
+    el.bezZvuka.classList.add('sakrij');
     if (!stavka.zvuk) return bezZvuka();
     el.zvucnik.classList.add('svira');
     pustiSnimak(stavka.zvuk).then(gotov).catch(bezZvuka);
@@ -309,13 +319,22 @@
 
   /* ---------- spisak za čitanje ---------- */
   function nacrtajSpisak(redom) {
+    var saZvukom = redom.filter(function (r) { return r.zvuk; }).length;
+    var uputa = document.getElementById('uputaSpisak');
+    if (uputa) {
+      uputa.textContent = saZvukom
+        ? T('Riječi s oznakom 🔊 možeš čuti — klikni na njih. Ostale pročitaj sam.') + ' (' + saZvukom + '/' + redom.length + ')'
+        : T('Nijedna riječ još nema snimak. Pročitaj ih sam, pa provjeri s muallimom.');
+    }
     el.rijeci.innerHTML = '';
     redom.forEach(function (r) {
       var d = document.createElement('div');
       d.className = 'rijec';
-      d.innerHTML = '<div class="zapis"></div><div class="prijevod"></div>';
+      d.innerHTML = '<div class="zapis"></div><div class="prijevod"></div><div class="ima-zvuk"></div>';
       d.querySelector('.zapis').textContent = r.zapis;
       d.querySelector('.prijevod').textContent = r.znacenje || r.citanje || '';
+      d.querySelector('.ima-zvuk').textContent = r.zvuk ? '🔊' : '';
+      if (!r.zvuk) d.classList.add('nijema');
       d.addEventListener('click', function () { odsviraj(r); });
       el.rijeci.appendChild(d);
     });
