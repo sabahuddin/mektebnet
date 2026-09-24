@@ -43,7 +43,7 @@ function publicAuthUser(user: typeof usersTable.$inferSelect) {
     role: user.role,
     email: user.email,
     isActive: user.isActive,
-    canEditLessons: user.canEditLessons,
+    canEditLessons: user.canEditLessons === true && user.username !== "demo.muallim",
     trialUntil: user.trialUntil ? user.trialUntil.toISOString() : null,
     pendingAcknowledgements: pendingAcknowledgements(user),
   };

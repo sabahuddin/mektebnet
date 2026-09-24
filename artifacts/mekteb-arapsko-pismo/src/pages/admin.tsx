@@ -2317,7 +2317,7 @@ export default function AdminPage() {
   };
 
   const toggleLessonEditing = async (k: Korisnik) => {
-    if (!token || k.role !== "muallim" || lessonPermissionId === k.id) return;
+    if (!token || k.role !== "muallim" || k.username === "demo.muallim" || lessonPermissionId === k.id) return;
     const enabled = k.canEditLessons === false;
     setLessonPermissionId(k.id);
     try {
@@ -3615,22 +3615,22 @@ export default function AdminPage() {
                             <button
                               type="button"
                               onClick={() => void toggleLessonEditing(k)}
-                              disabled={lessonPermissionId === k.id}
+                              disabled={lessonPermissionId === k.id || k.username === "demo.muallim"}
                               className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold transition-colors disabled:opacity-50 ${
-                                k.canEditLessons === false
+                                k.canEditLessons === false || k.username === "demo.muallim"
                                   ? "bg-red-50 text-red-700 hover:bg-red-100"
                                   : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                               }`}
-                              title={k.canEditLessons === false ? t("Omogući uređivanje lekcija") : t("Isključi uređivanje lekcija")}
-                              aria-label={k.canEditLessons === false ? t("Omogući uređivanje lekcija") : t("Isključi uređivanje lekcija")}
+                              title={k.username === "demo.muallim" ? t("Demo muallim je samo za čitanje") : k.canEditLessons === false ? t("Omogući uređivanje lekcija") : t("Isključi uređivanje lekcija")}
+                              aria-label={k.username === "demo.muallim" ? t("Demo muallim je samo za čitanje") : k.canEditLessons === false ? t("Omogući uređivanje lekcija") : t("Isključi uređivanje lekcija")}
                               data-testid={`button-toggle-lesson-editing-${k.id}`}
                             >
                               {lessonPermissionId === k.id
                                 ? <Loader2 className="h-4 w-4 animate-spin" />
-                                : k.canEditLessons === false
+                                : k.canEditLessons === false || k.username === "demo.muallim"
                                   ? <ToggleLeft className="h-4 w-4" />
                                   : <ToggleRight className="h-4 w-4" />}
-                              {k.canEditLessons === false ? t("Uređivanje isključeno") : t("Uređivanje uključeno")}
+                              {k.canEditLessons === false || k.username === "demo.muallim" ? t("Uređivanje isključeno") : t("Uređivanje uključeno")}
                             </button>
                           )}
                           <button onClick={() => toggleActive(k)} disabled={togglingId === k.id}

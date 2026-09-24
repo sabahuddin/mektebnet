@@ -35,7 +35,7 @@ export default function IlmihalSvePage() {
   const [, setLocation] = useLocation();
   const isAdmin = user?.role === "admin";
   const isMuallim = user?.role === "muallim";
-  const canCreateLesson = isAdmin || (isMuallim && user.canEditLessons !== false);
+  const canCreateLesson = isAdmin || (isMuallim && user.canEditLessons === true && user.username !== "demo.muallim");
   const { toast } = useToast();
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [loading, setLoading] = useState(true);

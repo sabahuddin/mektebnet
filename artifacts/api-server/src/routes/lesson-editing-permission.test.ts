@@ -124,6 +124,7 @@ test("admin can disable lesson editing; muallim writes are rejected but reads re
   for (const [method, path] of [
     ["POST", "/api/admin/prilozi/12"],
     ["POST", "/api/admin/prilozi/12/url"],
+    ["POST", "/api/admin/prilozi/12/embed"],
     ["PUT", "/api/admin/prilozi/12/redoslijed"],
     ["PUT", "/api/admin/prilozi/12"],
     ["DELETE", "/api/admin/prilozi/12"],

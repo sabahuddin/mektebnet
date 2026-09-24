@@ -51,7 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         const parsedUser = JSON.parse(storedUser) as AuthUser;
-        parsedUser.canEditLessons = parsedUser.canEditLessons !== false;
+        // Sačuvana sesija nije izvor prava za upis. Sačekaj svjež /auth/me;
+        // ako poziv ne uspije, muallim ostaje u read-only režimu.
+        parsedUser.canEditLessons = false;
         setToken(storedToken);
         setUser(parsedUser);
         // Restore push alias za već-prijavljenog korisnika (npr. nakon refresh-a)
@@ -64,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const fresh = await apiRequest<AuthUser>("GET", "/auth/me", undefined, storedToken);
           if (active) {
             const merged = { ...parsedUser, ...fresh };
-            merged.canEditLessons = merged.canEditLessons !== false;
+            merged.canEditLessons = fresh.canEditLessons === true && fresh.username !== "demo.muallim";
             setUser(merged);
             localStorage.setItem(USER_KEY, JSON.stringify(merged));
           }
@@ -105,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const fresh = await apiRequest<AuthUser>("GET", "/auth/me", undefined, token);
         if (!active) return;
-        const merged = { ...user, ...fresh, canEditLessons: fresh.canEditLessons !== false };
+        const merged = { ...user, ...fresh, canEditLessons: fresh.canEditLessons === true && fresh.username !== "demo.muallim" };
         setUser(merged);
         localStorage.setItem(USER_KEY, JSON.stringify(merged));
       } catch {
@@ -133,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { username, password },
     );
     localStorage.setItem(TOKEN_KEY, res.token);
-    const loggedInUser = { ...res.user, canEditLessons: res.user.canEditLessons !== false };
+    const loggedInUser = { ...res.user, canEditLessons: res.user.canEditLessons === true && res.user.username !== "demo.muallim" };
     localStorage.setItem(USER_KEY, JSON.stringify(loggedInUser));
     setToken(res.token);
     setUser(loggedInUser);

@@ -154,11 +154,11 @@ router.use(async (req, res, next) => {
   if (role === "muallim" && requiresLessonEditingPermission(req.method, req.path)) {
     const userId = req.user?.userId;
     const [user] = userId
-      ? await db.select({ canEditLessons: usersTable.canEditLessons })
+      ? await db.select({ canEditLessons: usersTable.canEditLessons, username: usersTable.username })
         .from(usersTable)
         .where(eq(usersTable.id, userId))
       : [];
-    canEditLessons = user?.canEditLessons === true;
+    canEditLessons = user?.canEditLessons === true && user.username !== "demo.muallim";
     if (!canEditLessons) {
       res.status(403).json({ error: "Nemate dozvolu za uređivanje lekcija i materijala" });
       return;
@@ -1919,11 +1919,15 @@ router.put("/muallimi/:id/lesson-editing", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Tijelo zahtjeva mora sadržavati enabled: boolean" });
     return;
   }
-  const [teacher] = await db.select({ id: usersTable.id, role: usersTable.role })
+  const [teacher] = await db.select({ id: usersTable.id, role: usersTable.role, username: usersTable.username })
     .from(usersTable)
     .where(eq(usersTable.id, userId));
   if (!teacher || teacher.role !== "muallim") {
     res.status(404).json({ error: "Muallim nije pronađen" });
+    return;
+  }
+  if (teacher.username === "demo.muallim" && body.enabled) {
+    res.status(403).json({ error: "Demo muallim je samo za čitanje" });
     return;
   }
   const [updated] = await db.update(usersTable)

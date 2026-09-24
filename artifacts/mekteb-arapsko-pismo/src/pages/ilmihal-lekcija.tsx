@@ -3272,7 +3272,7 @@ export default function IlmihalLekcijaPage() {
   const { user, token, isLoading: authLoading } = useAuth();
   const canViewTeacherResources = user?.role === "admin" || user?.role === "muallim";
   const canEditLessons = user?.role === "admin" ||
-    (user?.role === "muallim" && user.canEditLessons !== false);
+    (user?.role === "muallim" && user.canEditLessons === true && user.username !== "demo.muallim");
   // Task #133: roditelj = gost → read-only kao neprijavljeni gost. Ne upisuje
   // napredak/hasanat/vrijeme; write-akcije (markComplete, heartbeat, quizPassed)
   // su gejtovane na isGuestLike da roditelj ne dobije više od gosta.
