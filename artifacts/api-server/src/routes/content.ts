@@ -693,6 +693,9 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
 
     await overlayOne(result, "ilmihal_lekcije", getLang(req));
     result.contentHtml = regeneratePripremaInHtml(String(result.contentHtml || ""));
+    // Prilozi i napredak ovise o prijavljenom korisniku. Njihov odgovor ne
+    // smije ostati u pregledničkom ili posredničkom cacheu pod javnim URL-om.
+    if (req.user) res.setHeader("Cache-Control", "private, no-store");
     res.json(result);
   } catch (err) {
     req.log.error({ err, slug: req.params.slug }, "GET /content/ilmihal/:slug failed");

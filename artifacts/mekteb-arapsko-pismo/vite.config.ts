@@ -135,9 +135,12 @@ export default defineConfig({
             },
           },
           {
-            // Public Ilmihal lekcije, kvizovi, knjige, rječnik — javan sadržaj,
-            // sigurno za cross-user cache. Mountan na /api/content/* prefiks.
-            urlPattern: /\/api\/content\/(ilmihal|kvizovi|knjige|rjecnik)(\/.*)?$/,
+            // Samo anonimni sadržaj ide u zajednički cache. Odgovor za
+            // prijavljenog muallima sadrži i nastavničke priloge; Workbox
+            // inače dijeli isti URL između gostujućeg i prijavljenog zahtjeva.
+            urlPattern: ({ url, request }) =>
+              !request.headers.has("Authorization")
+              && /\/api\/content\/(ilmihal|kvizovi|knjige|rjecnik)(\/.*)?$/.test(url.pathname),
             handler: "NetworkFirst",
             method: "GET",
             options: {

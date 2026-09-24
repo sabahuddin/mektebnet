@@ -3270,6 +3270,7 @@ export default function IlmihalLekcijaPage() {
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const { user, token, isLoading: authLoading } = useAuth();
+  const canViewTeacherResources = user?.role === "admin" || user?.role === "muallim";
   const canEditLessons = user?.role === "admin" ||
     (user?.role === "muallim" && user.canEditLessons !== false);
   // Task #133: roditelj = gost → read-only kao neprijavljeni gost. Ne upisuje
@@ -3941,12 +3942,14 @@ export default function IlmihalLekcijaPage() {
   // pristup broju i ID-ovima sekcija.
   const visibleSections = React.useMemo(() => {
     if (!parsed) return [] as AccordionSection[];
-    const isMuallim = user?.role === "admin" || user?.role === "muallim";
     return parsed.sections
-      .filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || isMuallim))
+      .filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || canViewTeacherResources))
       .slice()
       .sort((a, b) => (a.type === "priprema" ? 1 : 0) - (b.type === "priprema" ? 1 : 0));
-  }, [parsed, user?.role]);
+  }, [parsed, canViewTeacherResources]);
+  const teacherPreparation = canViewTeacherResources
+    ? parsed?.sections.find(section => section.type === "priprema")
+    : undefined;
 
   // Anti-cheat gate: ČETIRI uslova moraju biti true. `completed` se ne broji
   // ovdje — već-završene lekcije imaju zaseban UI (vidi dugme dolje).
@@ -4492,6 +4495,7 @@ export default function IlmihalLekcijaPage() {
 
               const items: React.ReactNode[] = [];
               for (const section of visibleSections) {
+                if (section.type === "priprema") continue;
                 items.push(
                   <React.Fragment key={`${slug}-${section.id}`}>
                     <SectionAccordion
@@ -4502,16 +4506,30 @@ export default function IlmihalLekcijaPage() {
                       pauseAnswers={lekcija.pauseAnswers}
                       onPauseProgressChange={handlePauseProgressChange}
                     />
-                    {section.type === "priprema" && (user?.role === "admin" || user?.role === "muallim") && (
-                      <PriloziSection
-                        lekcija={lekcija}
-                        token={token}
-                        canManage={canEditLessons}
-                        canDelete={user.role === "admin"}
-                        mode="materijali"
-                      />
-                    )}
                   </React.Fragment>
+                );
+              }
+              // Nastavni sadržaj je za svakog muallima, nezavisno od prava pisanja.
+              // Materijali se prikazuju i kada lekcija nema priprema-akordion.
+              if (canViewTeacherResources) {
+                if (teacherPreparation) items.push(
+                  <SectionAccordion
+                    key={`${slug}-${teacherPreparation.id}`}
+                    section={teacherPreparation}
+                    slug={slug!}
+                    nivo={lekcija.nivo}
+                    onOpened={handleSectionOpened}
+                  />,
+                );
+                items.push(
+                  <PriloziSection
+                    key={`${slug}-nastavni-materijali`}
+                    lekcija={lekcija}
+                    token={token}
+                    canManage={canEditLessons}
+                    canDelete={user!.role === "admin"}
+                    mode="materijali"
+                  />,
                 );
               }
               const kvizNode = renderKvizOrCta();
@@ -4560,14 +4578,13 @@ export default function IlmihalLekcijaPage() {
           </div>
         )}
 
-        {(user?.role === "admin" || user?.role === "muallim")
-          && !visibleSections.some(section => section.type === "priprema") && (
+        {canViewTeacherResources && parsed.sections.length === 0 && (
           <div className="mb-6">
             <PriloziSection
               lekcija={lekcija}
               token={token}
               canManage={canEditLessons}
-              canDelete={user.role === "admin"}
+              canDelete={user!.role === "admin"}
               mode="materijali"
             />
           </div>

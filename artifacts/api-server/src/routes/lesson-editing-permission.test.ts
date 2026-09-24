@@ -4,7 +4,7 @@ import type { Server } from "node:http";
 import bcrypt from "bcryptjs";
 import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db/schema";
+import { ilmihalLekcijeTable, usersTable } from "@workspace/db/schema";
 import app from "../app.js";
 import { signToken, invalidateUserStatusCache } from "../middlewares/auth.js";
 
@@ -13,6 +13,8 @@ let server: Server;
 let baseUrl: string;
 let adminId: number;
 let teacherId: number;
+let lessonId: number;
+const lessonSlug = `${SUFFIX}-prep`;
 const teacherPassword = "lesson-editing-test-password";
 
 function tokenFor(userId: number, role: "admin" | "muallim", label: string): string {
@@ -65,6 +67,13 @@ before(async () => {
     administratorDeclarationAcceptedAt: acknowledgedAt,
   }).returning({ id: usersTable.id });
   teacherId = teacher.id;
+  const [lesson] = await db.insert(ilmihalLekcijeTable).values({
+    nivo: 1,
+    slug: lessonSlug,
+    naslov: "Testna priprema",
+    contentHtml: '<div class="lesson-accordion"><button class="lesson-section-btn">PRIPREMA ZA NASTAVU</button><div id="priprema" class="lesson-content"><p>Plan nastavnog sata</p></div></div>',
+  }).returning({ id: ilmihalLekcijeTable.id });
+  lessonId = lesson.id;
 
   server = app.listen(0);
   await new Promise<void>((resolve) => server.once("listening", resolve));
@@ -75,6 +84,7 @@ before(async () => {
 
 after(async () => {
   if (server) await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  if (lessonId) await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lessonId));
   if (adminId && teacherId) {
     await db.delete(usersTable).where(inArray(usersTable.id, [adminId, teacherId]));
   }
@@ -133,6 +143,14 @@ test("admin can disable lesson editing; muallim writes are rejected but reads re
   assert.notEqual(download.status, 403);
   const materialRead = await request("/api/admin/prilozi/12", teacherToken());
   assert.notEqual(materialRead.status, 403);
+
+  const lessonRead = await request(`/api/content/ilmihal/${lessonSlug}`, teacherToken());
+  assert.equal(lessonRead.status, 200);
+  assert.equal(lessonRead.headers.get("cache-control"), "private, no-store");
+  const lesson = await lessonRead.json() as { slug: string; contentHtml: string; prilozi: unknown[] };
+  assert.equal(lesson.slug, lessonSlug);
+  assert.match(lesson.contentHtml, /id="priprema"/);
+  assert.ok(Array.isArray(lesson.prilozi), "muallim može čitati nastavne priloge bez prava uređivanja");
 
   // Standalone image upload is also used by messages to parents. It must
   // remain available; attaching the uploaded image to a lesson is forbidden.
