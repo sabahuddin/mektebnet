@@ -68,7 +68,7 @@ import {
 import { eq, ne, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { CT_TABLES, getLang, overlayRows } from "../lib/content-translatable.js";
-import { canAccessAdminRoute } from "../lib/admin-route-access.js";
+import { canAccessAdminRoute, requiresLessonEditingPermission } from "../lib/admin-route-access.js";
 import { assertStudentCapacity, LicenceLimitError } from "../lib/district-licences.js";
 import { countStudentsByTeacher } from "../lib/teacher-student-counts.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
@@ -148,13 +148,28 @@ async function validateEtapaZaNivo(etapa: unknown, nivo: unknown): Promise<{ eta
 
 // Prilozi, upload i content-only izmjena postojeće Ilmihal lekcije dostupni su
 // i muallimu; sve ostale admin rute ostaju strogo admin-only.
-router.use((req, res, next) => {
+router.use(async (req, res, next) => {
   const role = (req as unknown as { user?: { role?: string } }).user?.role;
+  let canEditLessons = true;
+  if (role === "muallim" && requiresLessonEditingPermission(req.method, req.path)) {
+    const userId = req.user?.userId;
+    const [user] = userId
+      ? await db.select({ canEditLessons: usersTable.canEditLessons })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+      : [];
+    canEditLessons = user?.canEditLessons === true;
+    if (!canEditLessons) {
+      res.status(403).json({ error: "Nemate dozvolu za uređivanje lekcija i materijala" });
+      return;
+    }
+  }
   if (!canAccessAdminRoute({
     role,
     method: req.method,
     path: req.path,
     body: req.body,
+    canEditLessons,
   })) {
     return res.status(403).json({ error: "Nemaš dozvolu za ovu radnju" });
   }
@@ -1763,6 +1778,7 @@ router.get("/korisnici", async (req, res) => {
         email: usersTable.email,
         role: usersTable.role,
         isActive: usersTable.isActive,
+        canEditLessons: usersTable.canEditLessons,
         createdAt: usersTable.createdAt,
         lastLoginAt: usersTable.lastLoginAt,
         lastSeenAt: usersTable.lastSeenAt,
@@ -1888,6 +1904,35 @@ router.get("/korisnici", async (req, res) => {
 // POST /api/admin/korisnik/:id/billing-override — administrator explicitly
 // moves a school/family-covered account into self billing. Links and all
 // existing subscriptions are deliberately retained.
+// PUT /api/admin/muallimi/:id/lesson-editing — administrator controls whether
+// an individual muallim can change lesson/material content.
+router.put("/muallimi/:id/lesson-editing", async (req, res): Promise<void> => {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId) || userId < 1) {
+    res.status(400).json({ error: "Nevažeći muallim" });
+    return;
+  }
+  const body = req.body;
+  if (!body || typeof body !== "object" || Array.isArray(body)
+    || typeof body.enabled !== "boolean"
+    || Object.keys(body).some((key) => key !== "enabled")) {
+    res.status(400).json({ error: "Tijelo zahtjeva mora sadržavati enabled: boolean" });
+    return;
+  }
+  const [teacher] = await db.select({ id: usersTable.id, role: usersTable.role })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  if (!teacher || teacher.role !== "muallim") {
+    res.status(404).json({ error: "Muallim nije pronađen" });
+    return;
+  }
+  const [updated] = await db.update(usersTable)
+    .set({ canEditLessons: body.enabled })
+    .where(eq(usersTable.id, userId))
+    .returning({ canEditLessons: usersTable.canEditLessons });
+  res.json({ canEditLessons: updated.canEditLessons });
+});
+
 const billingOverrideHandler = async (req: any, res: any) => {
   try {
     const userId = Number(req.params.id);

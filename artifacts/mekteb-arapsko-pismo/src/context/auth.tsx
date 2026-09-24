@@ -11,6 +11,8 @@ export interface AuthUser {
   email?: string;
   /** Da li je admin odobrio pretplatu. Kada je true, baner probnog perioda nestaje. */
   isActive?: boolean;
+  /** Da li muallim smije uređivati lekcije i nastavne materijale. */
+  canEditLessons?: boolean;
   /** ISO datum do kojeg traje 30-dnevni probni period (null nakon aktivacije). */
   trialUntil?: string | null;
   pendingAcknowledgements?: AcknowledgementKey[];
@@ -49,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         const parsedUser = JSON.parse(storedUser) as AuthUser;
+        parsedUser.canEditLessons = parsedUser.canEditLessons !== false;
         setToken(storedToken);
         setUser(parsedUser);
         // Restore push alias za već-prijavljenog korisnika (npr. nakon refresh-a)
@@ -61,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const fresh = await apiRequest<AuthUser>("GET", "/auth/me", undefined, storedToken);
           if (active) {
             const merged = { ...parsedUser, ...fresh };
+            merged.canEditLessons = merged.canEditLessons !== false;
             setUser(merged);
             localStorage.setItem(USER_KEY, JSON.stringify(merged));
           }
@@ -92,6 +96,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, []);
 
+  // Promjene administratorskih dozvola se primjenjuju i u već otvorenoj
+  // kartici čim se korisnik vrati na nju.
+  useEffect(() => {
+    if (!token || user?.role !== "muallim") return;
+    let active = true;
+    const refreshUser = async () => {
+      try {
+        const fresh = await apiRequest<AuthUser>("GET", "/auth/me", undefined, token);
+        if (!active) return;
+        const merged = { ...user, ...fresh, canEditLessons: fresh.canEditLessons !== false };
+        setUser(merged);
+        localStorage.setItem(USER_KEY, JSON.stringify(merged));
+      } catch {
+        // Privremeni mrežni problemi ne smiju odjaviti korisnika.
+      }
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshUser();
+    };
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const interval = window.setInterval(refreshWhenVisible, 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [token, user]);
+
   const login = async (username: string, password: string) => {
     const res = await apiRequest<{ token: string; user: AuthUser }>(
       "POST",
@@ -99,12 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { username, password },
     );
     localStorage.setItem(TOKEN_KEY, res.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(res.user));
+    const loggedInUser = { ...res.user, canEditLessons: res.user.canEditLessons !== false };
+    localStorage.setItem(USER_KEY, JSON.stringify(loggedInUser));
     setToken(res.token);
-    setUser(res.user);
+    setUser(loggedInUser);
     // Poveži OneSignal subscription sa našim user ID-jem; ako je permission
     // već dat, registruje token automatski. Greška ne smije blokirati login.
-    loginPushUser(res.user.id).catch(() => {});
+    loginPushUser(loggedInUser.id).catch(() => {});
   };
 
   const confirmAcknowledgements = async (values: AcknowledgementValues) => {

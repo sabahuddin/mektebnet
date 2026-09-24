@@ -12,6 +12,8 @@ export const usersTable = pgTable("users", {
   displayName: text("display_name").notNull(),
   role: userRoleEnum("role").notNull().default("ucenik"),
   isActive: boolean("is_active").notNull().default(true),
+  // Admin can suspend an individual muallim's ability to edit lessons/materials.
+  canEditLessons: boolean("can_edit_lessons").notNull().default(true),
   // Probni period — popunjeno kod self-registration (NOW + 7 dana). Login je
   // dozvoljen ako je `isActive=true` (admin odobrio) ILI `trialUntil > now`.
   // Kad admin odobri pretplatu, postavi se `isActive=true` i ovo polje se

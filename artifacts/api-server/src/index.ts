@@ -53,6 +53,7 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS administrator_declaration_accepted_at TIMESTAMP;`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_acknowledged_at TIMESTAMP;`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_override varchar(20);`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS can_edit_lessons boolean NOT NULL DEFAULT true;`);
     // Država mekteba nije bila dio ranije šeme; NULL za postojeće redove je
     // namjeran jer se iz billingRegion ne smije zaključivati stvarna država.
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS drzava varchar(100);`);
