@@ -56,7 +56,10 @@ function cleanAyahText(surah: number, numberInSurah: number, raw: string): strin
       t = toks.slice(4).join(" ").trim();
     }
   }
-  return t;
+  // alquran.cloud odvaja znakove stajanja razmakom (npr. "قَوْلِهِمْ ۘ").
+  // To su kombinirajući znakovi: razmak ih odvaja od riječi i pri prijelomu
+  // reda mogu završiti na pogrešnom mjestu. Veži ih za prethodnu riječ.
+  return t.replace(/\s+(?=[\u06D6-\u06DC])/gu, "");
 }
 
 export async function fetchSurahList(): Promise<SurahMeta[]> {
