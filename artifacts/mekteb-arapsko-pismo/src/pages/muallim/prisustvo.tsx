@@ -131,7 +131,7 @@ export default function PrisustvoPage() {
         title: hasExistingRecords ? t("Prisustvo ažurirano!") : t("Prisustvo sačuvano!"),
         description: t("Evidentirano za {datum}", { datum }),
       });
-      setLocation(`/muallim/grupa/${grupaId}`);
+      setLocation(`/muallim/grupa/${grupaId}`, { replace: true });
     } catch {
       toast({ title: t("Greška"), description: t("Nije moguće sačuvati prisustvo"), variant: "destructive" });
     } finally {
@@ -155,7 +155,7 @@ export default function PrisustvoPage() {
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-foreground">
-              {grupa ? t("Prisustvo — {naziv}", { naziv: grupa.naziv }) : t("Prisustvo")}
+              {t("Prisustvo")}{grupa ? ` — ${grupa.naziv}` : ""}
             </h1>
             <p className="text-muted-foreground text-sm">{grupa?.skolskaGodina}</p>
           </div>
