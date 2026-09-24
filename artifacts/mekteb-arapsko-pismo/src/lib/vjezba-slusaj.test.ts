@@ -10,6 +10,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { rasporediZapise } from "./sufara-raspored";
+import { normalizirajZapis } from "./sufara-zapis";
 import { PROGRAM_OPISMENJAVANJA, PROGRAM_SUFARE } from "../data/sufara-program";
 
 const PODACI = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public/vjezbe/slusaj/podaci");
@@ -46,7 +47,10 @@ for (const naziv of datoteke) {
 
     const prerano: string[] = [];
     for (const zapis of zapisi) {
-      const kljuc = zapis.normalize("NFC");
+      // Ista normalizacija kao u raspoređivaču. NFC nije dovoljan: on slaže
+      // samoglasnik ispred tešdida, a Sufara i naš raspored obrnuto, pa bi se
+      // svaka riječ s tešdidom tražila pogrešnim ključem.
+      const kljuc = normalizirajZapis(zapis);
       const lekcija = gdje.get(kljuc);
       if (lekcija === undefined) {
         const razlog = raspored.nesmjesteni.find((n) => n.zapis === kljuc)?.razlog ?? "nije smješten";

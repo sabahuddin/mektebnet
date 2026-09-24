@@ -1,7 +1,7 @@
 // Provjera vježbe „Slušaj i klikni" u pravom pregledniku (Chromium/puppeteer).
 //
 // Pokretanje (iz korijena repozitorija):
-//   node artifacts/mekteb-arapsko-pismo/scripts/provjeri-slusaj.mjs
+//   node artifacts/mekteb-arapsko-pismo/scripts/provjeri-slusaj.mjs [lekcija-16.json]
 //
 // Servira `public` lokalno, odigra sva tri kruga do kraja i provjeri da se
 // podaci učitaju iz JSON-a, da ponuda bude četiri, da spisak riječi radi i da
@@ -36,15 +36,18 @@ await page.evaluateOnNewDocument(() => {
 const greske = [];
 page.on("pageerror", (e) => greske.push(String(e)));
 
-await page.goto("http://localhost:4210/vjezbe/slusaj/slusaj.html?podaci=/vjezbe/slusaj/podaci/lekcija-4.json", { waitUntil: "networkidle0" });
+const DATOTEKA = process.argv[2] ?? "lekcija-4.json";
+await page.goto(`http://localhost:4210/vjezbe/slusaj/slusaj.html?podaci=/vjezbe/slusaj/podaci/${DATOTEKA}`, { waitUntil: "networkidle0" });
 await page.waitForSelector(".ponuda");
 
 const provjere = [];
 const ok = (n, u, d = "") => { provjere.push({ n, u }); console.log(`${u ? "OK  " : "PALO"} ${n}${d ? " — " + d : ""}`); };
 
-ok("naslov je iz JSON-a", (await page.$eval("#naslov", (e) => e.textContent)).includes("Ba, Nun i Ja"));
+const naslov = await page.$eval("#naslov", (e) => e.textContent);
+ok("naslov je iz JSON-a", naslov.trim().startsWith("Lekcija"), naslov);
 ok("četiri ponude", (await page.$$(".ponuda")).length === 4);
-ok("spisak ima 12 riječi", (await page.$$(".rijec")).length === 12);
+const ocekivano = JSON.parse(await fs.readFile(path.join(ROOT, "vjezbe/slusaj/podaci", DATOTEKA), "utf8")).rijeci.length;
+ok("spisak ima sve riječi iz JSON-a", (await page.$$(".rijec")).length === ocekivano, `${ocekivano}`);
 ok("prva riječ u spisku je arapska", /[ء-ي]/.test(await page.$eval(".rijec .zapis", (e) => e.textContent)));
 ok("dugme Dalje je na početku zaključano", await page.$eval("#dalje", (e) => e.disabled));
 
@@ -69,7 +72,7 @@ for (let i = 0; i < 40; i++) {
   await page.click("#dalje");
   await new Promise((r) => setTimeout(r, 40));
 }
-ok("prošlo je bar 25 pitanja kroz tri kruga", pitanja >= 25, `${pitanja}`);
+ok("prošla su sva pitanja kroz tri kruga", pitanja >= 25, `${pitanja}`);
 ok("vježba je završena", !!(await page.$("#gotovo:not(.sakrij)")));
 ok("javljen je događaj kraj", dogadjaji.some((d) => d.dogadjaj === "kraj"), JSON.stringify(dogadjaji.filter(d => d.dogadjaj === "kraj")[0] ?? {}));
 ok("javljena su tri kruga", dogadjaji.filter((d) => d.dogadjaj === "krug").length === 3);
