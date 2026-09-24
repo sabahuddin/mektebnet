@@ -15,7 +15,7 @@
 - [Poređenje arapskog teksta](arabic-text-matching.md) — alquran.cloud Uthmani ima nekanonski redoslijed harakata; nikad ne poredi egzaktno, normalizuj pa odsijeci bismillu po tokenima.
 - [H5P runtime asseti u Vite buildu](h5p-standalone-assets.md) — h5p-standalone se servira iz public/, ne preko ?url; Vite hash je lomio frameJs put (prod-only "Unexpected token '<'").
 - [Zadaća kapi meda vs total_med](zadaca-kapi-meda.md) — muallim-dodijeljene "kapi meda" idu na total_hasanat (znanje), NE total_med (igrice/Aferimi).
-- [Plain-content lekcije i akordion editor](dodatak-plain-content-editor.md) — WysiwygEditor krije sve akordion kontrole kad sadržaj nema `.lesson-accordion`; DODATAK/medaljon lekcije su plain `<p>`.
+- [Plain-content lekcije i akordion editor](dodatak-plain-content-editor.md) — DODATAK počinje kao plain HTML; muallimov sanitizer briše onclick, a stare sačuvane sekcije mogu biti bez dugmeta.
 - [NPP normalizacija predmeta](npp-predmet-normalizacija.md) — `predmet` dropdown sveden na 6 NPP oblasti; necore→"Ostali sadržaji", medaljoni bez predmeta; primjena preko idempotentne startup-migracije.
 - [Naslovi knjiga "a.s."](naslovi-knjiga-as.md) — nesklad je ﷺ ligatura (U+FDFA) kod Muhammeda, NE pisani "عليه السلام"; normalizuj sve počasne oblike u ", a.s.".
 - [Dostupni jezici po muallimu](jezici-po-muallimu.md) — admin uključuje/isključuje jezike po muallimu (učenici prate); bs uvijek; enforcement je namjerno UI-level (UI tekstovi bundlani client-side).

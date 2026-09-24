@@ -397,6 +397,18 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
     onClose();
   };
 
+  const toggleMode = () => {
+    if (mode === "visual") {
+      // Vizuelni editor čuva sekcije interno; preuzmi puni HTML PRIJE
+      // unmounta, inače HTML mod dobije stari contentHtml iz baze.
+      const getFullHtml = (window as any).__wysiwygGetFullHtml;
+      if (typeof getFullHtml === "function") setHtml(getFullHtml());
+      setMode("html");
+    } else {
+      setMode("visual");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <div className="flex md:hidden flex-col items-center justify-center h-full gap-4 p-8 text-center">
@@ -419,7 +431,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => setMode(mode === "visual" ? "html" : "visual")}
+              onClick={toggleMode}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                 mode === "html" ? "bg-zinc-800 text-green-400" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
@@ -574,25 +586,29 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
 
   accordions.forEach(accordion => {
     const btn = accordion.querySelector(".lesson-section-btn");
-    if (!btn) return;
-
-    // Extract section ID from onclick="toggleSection('SECTION_ID', this)"
-    const onclickAttr = btn.getAttribute("onclick") || "";
+    const contentDiv = accordion.querySelector(".lesson-content");
+    if (!contentDiv) return;
+    // Muallimov HTML sanitizer uklanja onclick, a starijim lekcijama je
+    // uklanjao i <button>. ID sadržaja ostaje i nakon sigurnosnog čišćenja.
+    const onclickAttr = btn?.getAttribute("onclick") || "";
     const idMatch = onclickAttr.match(/toggleSection\('([^']+)'/);
-    if (!idMatch) return;
-    const sectionId = idMatch[1];
+    const sectionId = contentDiv.id || idMatch?.[1] || `section-${sections.length}`;
 
     // Button title: text without the span
-    const iconSpan = btn.querySelector(".section-icon");
+    const iconSpan = btn?.querySelector(".section-icon");
     if (iconSpan) iconSpan.remove();
     // Strip leading numbering ("1. ", "2.) ", "3 - " itd.) iz prikazanog naslova akordiona.
     // Zahtijeva najmanje jedan delimiter nakon broja, pa "A1" / "1a" ostaju netaknuti.
-    const rawTitle = btn.textContent?.trim() || sectionId;
+    const legacyHeading = Array.from(accordion.childNodes)
+      .filter(node => node !== contentDiv)
+      .map(node => node.textContent || "")
+      .join(" ")
+      .replace(/[▶▼▲]\s*$/, "")
+      .trim();
+    const rawTitle = btn?.textContent?.trim() || legacyHeading || sectionId;
     let title = rawTitle.replace(/^\s*\d+(?:\s*[.)\-:–])+\s*/, "").trim() || rawTitle;
 
     // Content div
-    const contentDiv = accordion.querySelector(".lesson-content");
-    if (!contentDiv) return;
     const contentHtml = contentDiv.innerHTML.trim();
 
     // Default open: has "active" class or is the story/first narrative section
