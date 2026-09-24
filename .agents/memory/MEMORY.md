@@ -67,6 +67,7 @@
 - [Ocjene po predmetu i Napamet](ocjene-po-predmetu.md) — predmet dolazi iz lekcije; Napamet ulazi u ukupni prosjek jednom, iako isti unos može služiti Napamet prikazu.
 - [Opisne ocjene za mlađu djecu](opisne-ocjene.md) — Urađeno/Neurađeno su prave opisne ocjene; prikazuju se svima, završavaju pregledanu zadaću i ne ulaze u brojčani prosjek.
 - [Hero kopije moraju biti WebP](hero-kopije-webp.md) — galerijska hero kopija se ponovo obrađuje; DB reference se ažuriraju prije brisanja starog fajla.
+- [WebP konverzija priloga](webp-prilozi.md) — pretvaranje uploadovane JPG slike mora uskladiti metapodatke priloga prije brisanja izvornog fajla.
 - [Zadaća — podgrupe i ciljani adresati](zadaca-podgrupe-adresati.md) — podgrupna dodjela čuva snimak primalaca; prazan ciljani skup nikad ne znači cijelu grupu.
 - [Prevedeni naslovi za zadaće](prevedeni-naslovi-za-zadace.md) — picker prikazuje lokalizirani naslov, ali API uz slug traži izvorni naslov; pokrij sve obrasce.
 - [Kanonski naslovi dodijeljenih lekcija](canonical-lesson-labels.md) — API normalizira tipografske crtice; naslove koji se uz slug egzaktno validiraju drži stabilnim.

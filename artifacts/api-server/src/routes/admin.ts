@@ -1492,10 +1492,35 @@ router.delete("/uploads/:filename", async (req, res) => {
 
 export async function convertLegacyUploadsToWebp() {
   try {
+    // Starije konverzije su obrisale izvornu sliku, ali su prilozi i dalje
+    // pokazivali na njen .jpg/.jpeg/.png/.gif naziv. Oporavi takve veze i kada
+    // više nema kandidata za novu konverziju.
+    const imageAttachments = await db.select({
+      id: prilozi.id,
+      storedName: prilozi.storedName,
+      originalName: prilozi.originalName,
+    }).from(prilozi).where(eq(prilozi.kind, "file"));
+    const missingAttachments = imageAttachments.filter(attachment => {
+      const name = attachment.storedName;
+      if (!/\.(jpe?g|png|gif)$/i.test(name) || name !== path.basename(name)) return false;
+      const webpName = name.replace(/\.(jpe?g|png|gif)$/i, ".webp");
+      return !fs.existsSync(path.join(uploadsDir, name)) &&
+        fs.existsSync(path.join(uploadsDir, webpName));
+    });
+    for (const attachment of missingAttachments) {
+      const webpName = attachment.storedName.replace(/\.(jpe?g|png|gif)$/i, ".webp");
+      await db.update(prilozi).set({
+        storedName: webpName,
+        originalName: attachment.originalName.replace(/\.(jpe?g|png|gif)$/i, ".webp"),
+        mimeType: "image/webp",
+        fileSize: fs.statSync(path.join(uploadsDir, webpName)).size,
+      }).where(and(eq(prilozi.id, attachment.id), eq(prilozi.storedName, attachment.storedName)));
+    }
+
     const candidates = fs.existsSync(uploadsDir)
       ? fs.readdirSync(uploadsDir).filter(name => /\.(jpg|jpeg|png|gif)$/i.test(name))
       : [];
-    if (candidates.length === 0) return { ok: true, converted: [], failed: [] };
+    if (candidates.length === 0) return { ok: true, converted: [], failed: [], repairedAttachments: missingAttachments.length };
 
     const sharp = (await import("sharp")).default;
     const occupied = new Set(fs.readdirSync(uploadsDir));
@@ -1525,6 +1550,12 @@ export async function convertLegacyUploadsToWebp() {
           await tx.execute(sql`UPDATE knjige SET cover_image = replace(replace(cover_image, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}) WHERE cover_image LIKE ${`%${sourceName}%`}`);
           await tx.execute(sql`UPDATE knjige SET content_html = replace(replace(content_html, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}) WHERE content_html LIKE ${`%${sourceName}%`}`);
           await tx.execute(sql`UPDATE content_prijevodi SET prijevod = replace(replace(prijevod, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}), updated_at = NOW() WHERE prijevod LIKE ${`%${sourceName}%`}`);
+          await tx.execute(sql`UPDATE prilozi
+            SET stored_name = ${targetName},
+                original_name = regexp_replace(original_name, ${"\\.(jpg|jpeg|png|gif)$"}, '.webp', 'i'),
+                mime_type = 'image/webp',
+                file_size = ${output.length}
+            WHERE kind = 'file' AND stored_name = ${sourceName}`);
         });
 
         fs.unlinkSync(sourcePath);
@@ -1538,7 +1569,7 @@ export async function convertLegacyUploadsToWebp() {
         failed.push({ name: sourceName, error: error instanceof Error ? error.message : String(error) });
       }
     }
-    return { ok: failed.length === 0, converted, failed };
+    return { ok: failed.length === 0, converted, failed, repairedAttachments: missingAttachments.length };
   } catch (e: any) {
     throw new Error(e.message);
   }
