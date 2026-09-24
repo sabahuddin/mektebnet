@@ -81,6 +81,23 @@ const poslije = await page.$$eval(".rijec .zapis", (e) => e.map((x) => x.textCon
 ok("miješanje mijenja redoslijed spiska", prije !== poslije);
 ok("nema grešaka u konzoli", greske.length === 0, greske.join(" | "));
 
+// Pregled prije mergea (htmlpreview): bez ?podaci= i bez jezik.js, jer se
+// apsolutna putanja /vjezbe/jezik.js tamo ne razrješava. Vježba mora raditi
+// na ugrađenoj lekciji, a ne pući.
+{
+  const p2 = await browser.newPage();
+  const greske2 = [];
+  p2.on("pageerror", (e) => greske2.push(String(e)));
+  await p2.setRequestInterception(true);
+  p2.on("request", (r) => (r.url().endsWith("/vjezbe/jezik.js") ? r.abort() : r.continue()));
+  await p2.goto("http://localhost:4210/vjezbe/slusaj/slusaj.html", { waitUntil: "networkidle0" });
+  await p2.waitForSelector(".ponuda");
+  ok("radi i bez servera i bez jezik.js", (await p2.$$(".ponuda")).length === 4 && greske2.length === 0, greske2.join(" | "));
+  ok("bez servera se vidi puna lekcija", (await p2.$$(".rijec")).length === 12);
+  ok("bez servera je naslov prave lekcije", (await p2.$eval("#naslov", (e) => e.textContent)).includes("Ba, Nun i Ja"));
+  await p2.close();
+}
+
 await page.evaluate(() => { document.getElementById("gotovo").classList.add("sakrij"); document.getElementById("ponovo").click(); });
 await page.waitForSelector(".ponuda");
 await page.screenshot({ path: path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../../docs/vjezba-slusaj.png"), fullPage: true });
