@@ -12,6 +12,10 @@ test("district seats are shared across teachers and archived students free a sea
       const [row] = await db.insert(usersTable).values({
         username: `${name}-${part}`, displayName: part, passwordHash: "x",
         role: part === "student" ? "ucenik" : "muallim", isActive: true,
+        termsAcceptedAt: new Date(),
+        privacyAcknowledgedAt: new Date(),
+        administratorDeclarationAcceptedAt: new Date(),
+        parentAcknowledgedAt: new Date(),
       }).returning({ id: usersTable.id });
       return row;
     }),

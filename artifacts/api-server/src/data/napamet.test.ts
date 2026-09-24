@@ -55,6 +55,10 @@ async function createUser(role: "admin" | "muallim" | "ucenik" | "roditelj", lab
     passwordHash: "x",
     role,
     isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
+    administratorDeclarationAcceptedAt: new Date(),
+    parentAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   return user.id;
 }

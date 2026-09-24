@@ -94,6 +94,10 @@ before(async () => {
     passwordHash: "x",
     displayName: "Test učenik",
     role: "ucenik",
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
+    administratorDeclarationAcceptedAt: new Date(),
+    parentAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   studentId = student!.id;
   studentToken = signToken({
