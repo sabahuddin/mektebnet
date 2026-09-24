@@ -62,6 +62,9 @@ const UCITAJ = tekstArg("--iz-izvjestaja");
 // Sa --izlaz se izvornici ne diraju: skraćeni snimci se pišu u zadani folder,
 // pa se mogu preslušati prije nego išta zamijeni postojeće datoteke.
 const IZLAZ = tekstArg("--izlaz");
+// Snimci iz kojih se nema šta spasiti samo zauzimaju disk i u aplikaciji su
+// već odbačeni (audio-approval.ts). Brisanje je namjerno zasebna zastavica.
+const OBRISI = argv.includes("--obrisi-neupotrebljive");
 
 if (!UCITAJ && spawnSync("ffmpeg", ["-version"], { encoding: "utf8" }).status !== 0) {
   throw new Error("Nedostaje ffmpeg. Na Replitu ga dodaj prije pokretanja.");
@@ -225,10 +228,23 @@ if (rucni.length) {
   if (rucni.length > 10) console.log(`  … i još ${rucni.length - 10}`);
 }
 
+if (OBRISI) {
+  const zaBrisanje = [...poIshodu("tišina"), ...poIshodu("ručno")];
+  const oslobodjeno = zaBrisanje.reduce((z, n) => z + n.bajtova, 0);
+  console.log(`\nBrišem ${zaBrisanje.length} neupotrebljivih snimaka (${mb(oslobodjeno)})…`);
+  for (const n of zaBrisanje) await unlink(n.puna);
+  console.log(`Obrisano. U aplikaciji su ti snimci ionako odbačeni, pa se ništa ne mijenja`);
+  console.log(`za dijete: gdje je bila tišina, ostaje tišina.`);
+  console.log(`Povratak: git checkout -- artifacts/mekteb-arapsko-pismo/public/audio`);
+}
+
 if (!PRIMIJENI && !IZLAZ) {
-  console.log(`\nNišta nije promijenjeno.`);
-  console.log(`  --izlaz <folder>  napravi skraćene snimke sa strane, izvornici ostaju netaknuti`);
-  console.log(`  --primijeni       zamijeni ${spasivi.length} izvornika skraćenim snimcima`);
+  if (!OBRISI) {
+    console.log(`\nNišta nije promijenjeno.`);
+    console.log(`  --izlaz <folder>           napravi skraćene snimke sa strane, izvornici ostaju netaknuti`);
+    console.log(`  --primijeni                zamijeni ${spasivi.length} izvornika skraćenim snimcima`);
+    console.log(`  --obrisi-neupotrebljive    obriši ${poIshodu("tišina").length + poIshodu("ručno").length} snimaka iz kojih se nema šta spasiti`);
+  }
   process.exit(0);
 }
 
