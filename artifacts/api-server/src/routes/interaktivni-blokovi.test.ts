@@ -47,6 +47,10 @@ async function createUser(role: "muallim" | "ucenik", label: string): Promise<nu
     passwordHash: "x",
     role,
     isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
+    administratorDeclarationAcceptedAt: new Date(),
+    parentAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   return user.id;
 }

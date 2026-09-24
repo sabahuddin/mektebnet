@@ -99,6 +99,10 @@ before(async () => {
     passwordHash: "x",
     role: "admin",
     isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
+    administratorDeclarationAcceptedAt: new Date(),
+    parentAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   adminId = admin.id;
   adminToken = signToken({

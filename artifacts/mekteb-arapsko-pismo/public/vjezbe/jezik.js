@@ -46,6 +46,47 @@
       "Vraćeno. %tekst%": "Zurückgelegt. %tekst%",
       "Prazno": "Leer",
 
+      /* — nauči napamet — */
+      "Nauči napamet · Mekteb.net": "Auswendig lernen · Mekteb.net",
+      "Nauči napamet": "Auswendig lernen",
+      "Ajet": "Vers",
+      "Naučeno": "Gelernt",
+      "Prati": "Mitlesen",
+      "Gradi suru": "Sure aufbauen",
+      "Ponavljaj": "Wiederholen",
+      "Slušaj ajet": "Vers anhören",
+      "Ponovi 3×": "3× wiederholen",
+      "Prethodni": "Vorheriger",
+      "Sljedeći": "Nächster",
+      "Cijela sura": "Ganze Sure",
+      "1. ajet → 1+2 → cijela sura": "1. Vers → 1+2 → ganze Sure",
+      "Korak %broj% od %ukupno%": "Schritt %broj% von %ukupno%",
+      "Prouči sve što vidiš tri puta. Kad ti ide bez greške, dodaj sljedeći ajet.":
+        "Lies alles, was du siehst, dreimal. Wenn es fehlerfrei geht, nimm den nächsten Vers dazu.",
+      "Slušaj izgrađeno": "Aufgebautes anhören",
+      "Dodaj ajet": "Vers hinzufügen",
+      "Teži ajeti vraćaju se češće": "Schwerere Verse kommen öfter wieder",
+      "Kako ti je išlo?": "Wie ist es dir gegangen?",
+      "Ocijeni tek nakon što pokušaš proučiti bez gledanja.":
+        "Bewerte erst, nachdem du versucht hast, ohne Hinsehen zu lesen.",
+      "Teško": "Schwer",
+      "Skoro": "Fast",
+      "Znam": "Ich kann es",
+      "Slušaj, pa prouči isti ajet bez gledanja": "Hör zu und lies denselben Vers dann ohne Hinsehen",
+      "Uči ajet po ajet.": "Lerne Vers für Vers.",
+      "Poslušaj tri puta, pa pokušaj sam. Kad ti ide, pređi na sljedeći.":
+        "Hör dreimal zu und versuch es dann selbst. Wenn es geht, geh zum nächsten.",
+      "Naučen ajet %broj%.": "Vers %broj% gelernt.",
+      "Mašallah, cijela sura je naučena!": "Maschallah, die ganze Sure ist gelernt!",
+      "Mašallah, proučio si cijelu suru!": "Maschallah, du hast die ganze Sure gelesen!",
+      "Recitacija se nije učitala. Provjeri internet.":
+        "Die Rezitation wurde nicht geladen. Prüfe deine Internetverbindung.",
+      "Arapski tekst se nije učitao. Vježba radi po transkripciji i učaču.":
+        "Der arabische Text wurde nicht geladen. Die Übung läuft mit Umschrift und Rezitation weiter.",
+      "Broj ajeta se ne poklapa s transkripcijom, pa arapski tekst nije prikazan.":
+        "Die Anzahl der Verse stimmt nicht mit der Umschrift überein, darum wird der arabische Text nicht angezeigt.",
+      "Za ovu vježbu treba upisati transkripciju, jedan red po ajetu.":
+        "Für diese Übung muss die Umschrift eingetragen werden, eine Zeile pro Vers.",
       /* — osmosmjerka — */
       "Osmosmjerka · Mekteb.net": "Buchstabengitter · Mekteb.net",
       "Osmosmjerka": "Buchstabengitter",
@@ -241,6 +282,47 @@
       "Vraćeno. %tekst%": "Put back. %tekst%",
       "Prazno": "Empty",
 
+      /* — nauči napamet — */
+      "Nauči napamet · Mekteb.net": "Learn by heart · Mekteb.net",
+      "Nauči napamet": "Learn by heart",
+      "Ajet": "Verse",
+      "Naučeno": "Learned",
+      "Prati": "Follow",
+      "Gradi suru": "Build the surah",
+      "Ponavljaj": "Review",
+      "Slušaj ajet": "Listen to the verse",
+      "Ponovi 3×": "Repeat 3×",
+      "Prethodni": "Previous",
+      "Sljedeći": "Next",
+      "Cijela sura": "Whole surah",
+      "1. ajet → 1+2 → cijela sura": "verse 1 → 1+2 → whole surah",
+      "Korak %broj% od %ukupno%": "Step %broj% of %ukupno%",
+      "Prouči sve što vidiš tri puta. Kad ti ide bez greške, dodaj sljedeći ajet.":
+        "Recite everything you see three times. When it goes without a mistake, add the next verse.",
+      "Slušaj izgrađeno": "Listen to what you built",
+      "Dodaj ajet": "Add a verse",
+      "Teži ajeti vraćaju se češće": "Harder verses come back more often",
+      "Kako ti je išlo?": "How did it go?",
+      "Ocijeni tek nakon što pokušaš proučiti bez gledanja.":
+        "Rate it only after you try reciting without looking.",
+      "Teško": "Hard",
+      "Skoro": "Almost",
+      "Znam": "I know it",
+      "Slušaj, pa prouči isti ajet bez gledanja": "Listen, then recite the same verse without looking",
+      "Uči ajet po ajet.": "Learn verse by verse.",
+      "Poslušaj tri puta, pa pokušaj sam. Kad ti ide, pređi na sljedeći.":
+        "Listen three times, then try on your own. When it goes, move to the next one.",
+      "Naučen ajet %broj%.": "Verse %broj% learned.",
+      "Mašallah, cijela sura je naučena!": "Mashallah, the whole surah is learned!",
+      "Mašallah, proučio si cijelu suru!": "Mashallah, you recited the whole surah!",
+      "Recitacija se nije učitala. Provjeri internet.":
+        "The recitation did not load. Check your internet connection.",
+      "Arapski tekst se nije učitao. Vježba radi po transkripciji i učaču.":
+        "The Arabic text did not load. The exercise continues with the transcription and the reciter.",
+      "Broj ajeta se ne poklapa s transkripcijom, pa arapski tekst nije prikazan.":
+        "The number of verses does not match the transcription, so the Arabic text is not shown.",
+      "Za ovu vježbu treba upisati transkripciju, jedan red po ajetu.":
+        "This exercise needs a transcription, one line per verse.",
       /* — osmosmjerka — */
       "Osmosmjerka · Mekteb.net": "Word search · Mekteb.net",
       "Osmosmjerka": "Word search",

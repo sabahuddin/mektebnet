@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import fs from "node:fs/promises";
+import fsp from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
@@ -24,7 +25,7 @@ import {
 } from "./nase-vjezbe.js";
 
 test("poznate su tačno dvije vrste naših vježbi", () => {
-  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji", "upisi"]);
+  assert.deepEqual(Object.keys(TIPOVI_VJEZBI).sort(), ["napamet", "osmosmjerka", "popuni", "poredak", "razvrstaj", "spoji", "upisi"]);
   for (const tip of Object.keys(TIPOVI_VJEZBI)) assert.equal(isValidTip(tip), true, tip);
   for (const nije of ["", "h5p", "../tajna", 7, null]) {
     assert.equal(isValidTip(nije as unknown), false, String(nije));
@@ -356,11 +357,11 @@ test("svaka ugrađena vježba ima ispravan njemački i engleski prijevod", async
   let provjereno = 0;
   for (const tip of Object.keys(TIPOVI_VJEZBI)) {
     const dir = path.join(PODACI_DIR, tip, "podaci");
-    const datoteke = (await fs.readdir(dir)).filter((f) => f.endsWith(".json"));
+    const datoteke = (await fsp.readdir(dir)).filter((f) => f.endsWith(".json"));
     assert.ok(datoteke.length > 0, `${tip} nema nijednu ugrađenu vježbu`);
     for (const datoteka of datoteke) {
       const oznaka = `${tip}/${datoteka}`;
-      const podaci = JSON.parse(await fs.readFile(path.join(dir, datoteka), "utf8"));
+      const podaci = JSON.parse(await fsp.readFile(path.join(dir, datoteka), "utf8"));
       assert.equal(validirajPodatke(tip, podaci), null, oznaka);
       assert.deepEqual(jeziciPrijevoda(podaci), ["de", "en"], `${oznaka} nema prijevod na oba jezika`);
       for (const jezik of ["de", "en"]) {
@@ -376,4 +377,34 @@ test("svaka ugrađena vježba ima ispravan njemački i engleski prijevod", async
     }
   }
   assert.ok(provjereno >= 24, `provjereno samo ${provjereno} prijevoda`);
+});
+
+test("učenje napamet traži broj sure i transkripciju po ajetu", () => {
+  const ispravno = {
+    naslov: "Nauči El-Fatihu napamet",
+    sura: 1,
+    ucac: "husary_muallim",
+    transkripcija: ["Bismillahir-rahmanir-rahim", "Elhamdu lillahi rabbil-alemin"],
+  };
+  assert.equal(validirajPodatke("napamet", ispravno), null);
+  // Učač nije obavezan — bez njega se koristi zadani.
+  assert.equal(validirajPodatke("napamet", { ...ispravno, ucac: undefined }), null);
+
+  assert.match(String(validirajPodatke("napamet", { ...ispravno, sura: 0 })), /između 1 i 114/);
+  assert.match(String(validirajPodatke("napamet", { ...ispravno, sura: 115 })), /između 1 i 114/);
+  assert.match(String(validirajPodatke("napamet", { ...ispravno, sura: "prva" })), /između 1 i 114/);
+  assert.match(String(validirajPodatke("napamet", { ...ispravno, transkripcija: [] })), /jedan red po ajetu/);
+  assert.match(String(validirajPodatke("napamet", { ...ispravno, transkripcija: ["a", "  "] })), /ne smije biti prazan/);
+  assert.match(String(validirajPodatke("napamet", { ...ispravno, ucac: "neko" })), /Učač može biti/);
+});
+
+test("arapski tekst se ne upisuje u sadržaj vježbe napamet", () => {
+  // Mushafski zapis dolazi sa istog izvora kao u Kur'an modulu, pa ga niko ne
+  // prepisuje rukom. Ako se ipak nađe u datoteci, to je znak da je neko počeo
+  // držati dvije verzije istog teksta.
+  const dir = path.join(PODACI_DIR, "napamet", "podaci");
+  for (const datoteka of fs.readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const sirovo = fs.readFileSync(path.join(dir, datoteka), "utf8");
+    assert.doesNotMatch(sirovo, /[؀-ۿ]/u, `${datoteka} sadrži arapsko pismo`);
+  }
 });

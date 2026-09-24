@@ -49,10 +49,18 @@ before(async () => {
 
   const [muallim] = await db.insert(usersTable).values({
     username: `muallim.${SUFFIX}`, displayName: `Muallim ${SUFFIX}`, passwordHash: "x", role: "muallim", isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
+    administratorDeclarationAcceptedAt: new Date(),
+    parentAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   muallimId = muallim.id;
   const [drugi] = await db.insert(usersTable).values({
     username: `drugi.${SUFFIX}`, displayName: `Drugi ${SUFFIX}`, passwordHash: "x", role: "muallim", isActive: true,
+    termsAcceptedAt: new Date(),
+    privacyAcknowledgedAt: new Date(),
+    administratorDeclarationAcceptedAt: new Date(),
+    parentAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   drugiMuallimId = drugi.id;
 

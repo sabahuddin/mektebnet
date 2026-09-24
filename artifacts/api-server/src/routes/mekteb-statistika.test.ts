@@ -120,6 +120,10 @@ before(async () => {
       passwordHash: "x",
       role: "muallim",
       isActive: true,
+      termsAcceptedAt: new Date(),
+      privacyAcknowledgedAt: new Date(),
+      administratorDeclarationAcceptedAt: new Date(),
+      parentAcknowledgedAt: new Date(),
     })
     .returning({ id: usersTable.id });
   muallimId = muallimUser.id;
@@ -153,6 +157,10 @@ before(async () => {
       passwordHash: "x",
       role: "ucenik",
       isActive: true,
+      termsAcceptedAt: new Date(),
+      privacyAcknowledgedAt: new Date(),
+      administratorDeclarationAcceptedAt: new Date(),
+      parentAcknowledgedAt: new Date(),
     })
     .returning({ id: usersTable.id });
   ucenik1Id = u1.id;
@@ -165,6 +173,10 @@ before(async () => {
       passwordHash: "x",
       role: "ucenik",
       isActive: true,
+      termsAcceptedAt: new Date(),
+      privacyAcknowledgedAt: new Date(),
+      administratorDeclarationAcceptedAt: new Date(),
+      parentAcknowledgedAt: new Date(),
     })
     .returning({ id: usersTable.id });
   ucenik2Id = u2.id;
