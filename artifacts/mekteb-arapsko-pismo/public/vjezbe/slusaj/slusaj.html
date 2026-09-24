@@ -21,8 +21,8 @@
     Vježba čita podatke ovim redom:
       1. window.SLUSAJ_PODACI  (ako ga stranica postavi prije ove skripte)
       2. ?podaci=/putanja/do/datoteke.json  (samo s iste domene)
-      3. ugrađeni primjer na dnu ovog fajla (script id="podaci") — to je
-         puna lekcija 4, da se vježba može otvoriti i bez servera
+      3. ugrađena lekcija u samoj skripti (var UGRADJENO), da se vježba
+         otvori i bez servera
     Polja:
       id        – oznaka vježbe, vraća se u događajima
       naslov    – naslov iznad vježbe
@@ -167,12 +167,15 @@
 
 <!-- Sučelje vježbe na jeziku djeteta (?lang=de). Vidi /vjezbe/jezik.js. -->
 <script src="/vjezbe/jezik.js"></script>
-<script id="podaci" type="application/json">
-{"id":"opismenjavanje-4","program":"opismenjavanje","lekcija":4,"naslov":"Lekcija 4 — Ba, Nun i Ja","uputa":"Pritisni zvučnik, poslušaj, pa klikni ono što si čuo.","harfovi":[{"zapis":"م","ime":"Mim","glas":"m"},{"zapis":"ر","ime":"Ra","glas":"r"},{"zapis":"ل","ime":"Lam","glas":"l"},{"zapis":"ب","ime":"Ba","glas":"b"},{"zapis":"ن","ime":"Nun","glas":"n"},{"zapis":"ي","ime":"Ja","glas":"j"}],"slogovi":[{"zapis":"مَ","citanje":"me"},{"zapis":"مِ","citanje":"mi"},{"zapis":"مُ","citanje":"mu"},{"zapis":"بَ","citanje":"be"},{"zapis":"بِ","citanje":"bi"},{"zapis":"بُ","citanje":"bu"},{"zapis":"نَ","citanje":"ne"},{"zapis":"نِ","citanje":"ni"},{"zapis":"لَ","citanje":"le"},{"zapis":"رَ","citanje":"re"},{"zapis":"را","citanje":"raa"},{"zapis":"با","citanje":"baa"}],"rijeci":[{"zapis":"أَب","citanje":"eb","znacenje":"otac"},{"zapis":"باب","citanje":"bab","znacenje":"vrata"},{"zapis":"نار","citanje":"nar","znacenje":"vatra"},{"zapis":"ماء","citanje":"maa'","znacenje":"voda"},{"zapis":"مال","citanje":"mal","znacenje":"imetak"},{"zapis":"نام","citanje":"nam","znacenje":"spavao je"},{"zapis":"بال","citanje":"bal","znacenje":"pamet, pažnja"},{"zapis":"لَبَن","citanje":"leben","znacenje":"mlijeko"},{"zapis":"نَمِر","citanje":"nemir","znacenje":"tigar"},{"zapis":"أَمَل","citanje":"emel","znacenje":"nada"},{"zapis":"أَلَم","citanje":"elem","znacenje":"bol"},{"zapis":"أَمام","citanje":"emam","znacenje":"ispred"}]}
-</script>
 <script>
 (function () {
   'use strict';
+
+  // Ugrađena lekcija: da se vježba otvori i kad nema ni servera ni JSON-a.
+  // Namjerno je običan objekat, a ne <script type="application/json">, jer
+  // takav blok ne prenese svaki način otvaranja stranice.
+  var UGRADJENO = {"id":"opismenjavanje-4","program":"opismenjavanje","lekcija":4,"naslov":"Lekcija 4 — Ba, Nun i Ja","uputa":"Pritisni zvučnik, poslušaj, pa klikni ono što si čuo.","harfovi":[{"zapis":"م","ime":"Mim","glas":"m"},{"zapis":"ر","ime":"Ra","glas":"r"},{"zapis":"ل","ime":"Lam","glas":"l"},{"zapis":"ب","ime":"Ba","glas":"b"},{"zapis":"ن","ime":"Nun","glas":"n"},{"zapis":"ي","ime":"Ja","glas":"j"}],"slogovi":[{"zapis":"مَ","citanje":"me"},{"zapis":"مِ","citanje":"mi"},{"zapis":"مُ","citanje":"mu"},{"zapis":"بَ","citanje":"be"},{"zapis":"بِ","citanje":"bi"},{"zapis":"بُ","citanje":"bu"},{"zapis":"نَ","citanje":"ne"},{"zapis":"نِ","citanje":"ni"},{"zapis":"لَ","citanje":"le"},{"zapis":"رَ","citanje":"re"},{"zapis":"را","citanje":"raa"},{"zapis":"با","citanje":"baa"}],"rijeci":[{"zapis":"أَب","citanje":"eb","znacenje":"otac"},{"zapis":"باب","citanje":"bab","znacenje":"vrata"},{"zapis":"نار","citanje":"nar","znacenje":"vatra"},{"zapis":"ماء","citanje":"maa'","znacenje":"voda"},{"zapis":"مال","citanje":"mal","znacenje":"imetak"},{"zapis":"نام","citanje":"nam","znacenje":"spavao je"},{"zapis":"بال","citanje":"bal","znacenje":"pamet, pažnja"},{"zapis":"لَبَن","citanje":"leben","znacenje":"mlijeko"},{"zapis":"نَمِر","citanje":"nemir","znacenje":"tigar"},{"zapis":"أَمَل","citanje":"emel","znacenje":"nada"},{"zapis":"أَلَم","citanje":"elem","znacenje":"bol"},{"zapis":"أَمام","citanje":"emam","znacenje":"ispred"}]};
+
   var T = function (t) { return (window.MektebJezik && window.MektebJezik.t) ? window.MektebJezik.t(t) : t; };
   var el = {
     naslov: document.getElementById('naslov'), uputa: document.getElementById('uputa'),
@@ -366,7 +369,7 @@
   function ucitaj() {
     if (window.SLUSAJ_PODACI) return Promise.resolve(window.SLUSAJ_PODACI);
     var trazeno = new URLSearchParams(location.search).get('podaci');
-    if (!trazeno) return Promise.resolve(JSON.parse(document.getElementById('podaci').textContent));
+    if (!trazeno) return Promise.resolve(UGRADJENO);
     var url;
     try { url = new URL(trazeno, location.href); } catch (g) { return Promise.reject(); }
     if (url.origin !== location.origin) return Promise.reject();
@@ -389,9 +392,7 @@
     }).observe(document.documentElement);
   }
 
-  ucitaj().then(pripremi).catch(function () {
-    pripremi(JSON.parse(document.getElementById('podaci').textContent));
-  });
+  ucitaj().then(pripremi).catch(function () { pripremi(UGRADJENO); });
 })();
 </script>
 </body>
