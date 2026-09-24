@@ -77,3 +77,4 @@
 - [Historijska država džemata](historijska-drzava-dzemata.md) — starije registracije čuvale su samo regiju naplate; tačna država je bila u email obavijesti.
 - [Zajedničke licence džemata](dzematske-licence-pool.md) — kapacitet je zajednički, a po muallimu se prikazuje stvarni broj nearhiviranih vezanih učenika.
 - [Grupa s više muallima](grupa-vise-muallima.md) — jedan odgovorni i najviše dva dodatna iz istog mekteba; saradnja bez dupliranja učenika i bez prenošenja ovlasti za brisanje.
+- [Backup vanjske produkcijske baze](prod-postgres-backup.md) — provjeri verziju pg_dump klijenta; ako je stariji od servera, sigurnosnu kopiju ciljane tabele napravi preko psql JSONL izvoza.
