@@ -56,6 +56,11 @@ function cleanAyahText(surah: number, numberInSurah: number, raw: string): strin
       t = toks.slice(4).join(" ").trim();
     }
   }
+  // Ova verzija alquran.cloud dodaje U+06ED (mali mim) poslije gotovo svakog
+  // tenvina, čak i gdje ne pripada: "عَيْنًۭا" / "مِصْرًۭا".
+  // Kanonski Uthmani tekst piše "عَيْنًا" / "مِصْرًا". Ne diraj U+06E2
+  // (znak za izgovor) niti znakove stajanja U+06D6–U+06DC.
+  t = t.replace(/([\u064B-\u064D])\u06ED/gu, "$1");
   // alquran.cloud odvaja znakove stajanja razmakom (npr. "قَوْلِهِمْ ۘ").
   // To su kombinirajući znakovi: razmak ih odvaja od riječi i pri prijelomu
   // reda mogu završiti na pogrešnom mjestu. Veži ih za prethodnu riječ.
