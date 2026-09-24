@@ -84,6 +84,11 @@ export const zadaceTable = pgTable("zadace", {
   // Kanonski identitet Ilmihal lekcije za siguran deep-link iz zadaće.
   lekcijaSlug: varchar("lekcija_slug", { length: 300 }),
   lekcijaTip: varchar("lekcija_tip", { length: 50 }),
+  // Current subgroup label; recipients remain snapshotted in zadace_ucenici.
+  podgrupaId: integer("podgrupa_id"),
+  // Separates group-wide assignments from targeted snapshots whose rows may
+  // later be deleted (for example when a student account is removed).
+  isTargeted: boolean("is_targeted").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -111,9 +116,8 @@ export const zadaceStatusTable = pgTable("zadace_status", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Targeting zadaće na specifične učenike (junction tabela).
-// Ako za zadaću NEMA unosa — zadaća pripada cijeloj grupi (backward compat).
-// Ako IMA — zadaća je vidljiva samo navedenim učenicima.
+// Targeting zadaće na specifične učenike (junction tabela). zadace.is_targeted
+// razlikuje praznu ciljanu snapshot-listu od zadaće za cijelu grupu.
 export const zadaceUceniciTable = pgTable("zadace_ucenici", {
   id: serial("id").primaryKey(),
   zadacaId: integer("zadaca_id").notNull(),

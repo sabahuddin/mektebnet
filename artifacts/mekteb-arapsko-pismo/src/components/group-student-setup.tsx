@@ -45,6 +45,7 @@ interface CreatedUcenik {
 interface GroupStudentSetupProps {
   grupaId: number;
   grupaNaziv: string;
+  onStudentsChanged?: () => void;
 }
 
 interface BulkDuplicate {
@@ -65,7 +66,7 @@ function parseBulkEntries(text: string) {
   }).filter(entry => entry.ucenik.length > 0);
 }
 
-export function GroupStudentSetup({ grupaId, grupaNaziv }: GroupStudentSetupProps) {
+export function GroupStudentSetup({ grupaId, grupaNaziv, onStudentsChanged }: GroupStudentSetupProps) {
   const { token } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -109,6 +110,7 @@ export function GroupStudentSetup({ grupaId, grupaNaziv }: GroupStudentSetupProp
     try {
       const students = await apiRequest<Ucenik[]>("GET", `/muallim/grupa/${grupaId}/ucenici`, undefined, token);
       setGroupStudents(students);
+      onStudentsChanged?.();
     } catch {
       setGroupStudents([]);
     }

@@ -66,7 +66,7 @@
 - [Ocjene po predmetu i Napamet](ocjene-po-predmetu.md) — predmet dolazi iz lekcije; Napamet ulazi u ukupni prosjek jednom, iako isti unos može služiti Napamet prikazu.
 - [Opisne ocjene za mlađu djecu](opisne-ocjene.md) — Urađeno/Neurađeno su prave opisne ocjene; prikazuju se svima, završavaju pregledanu zadaću i ne ulaze u brojčani prosjek.
 - [Hero kopije moraju biti WebP](hero-kopije-webp.md) — galerijska hero kopija se ponovo obrađuje; DB reference se ažuriraju prije brisanja starog fajla.
-- [Zadaća — adresati i ispitivanje](zadaca-adresati-i-ispitivanje.md) — kartica je za jednog učenika; glavni modul za grupu ili 2+; Ispitano broji samo ocjene.
+- [Zadaća — podgrupe i ciljani adresati](zadaca-podgrupe-adresati.md) — podgrupna dodjela čuva snimak primalaca; prazan ciljani skup nikad ne znači cijelu grupu.
 - [Prevedeni naslovi za zadaće](prevedeni-naslovi-za-zadace.md) — picker prikazuje lokalizirani naslov, ali API uz slug traži izvorni naslov; pokrij sve obrasce.
 - [Kanonski naslovi dodijeljenih lekcija](canonical-lesson-labels.md) — API normalizira tipografske crtice; naslove koji se uz slug egzaktno validiraju drži stabilnim.
 - [Bundler template script escape](bundler-template-script-escape.md) — nakon JSON reserializacije obavezno escapuj unutrašnje zatvarajuće script tagove ili browser prekida template JSON.

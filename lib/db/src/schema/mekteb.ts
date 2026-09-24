@@ -52,6 +52,27 @@ export const grupeTable = pgTable("grupe", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Optional teacher-defined subgroups (maximum two per group, enforced by API).
+export const podgrupeTable = pgTable("podgrupe", {
+  id: serial("id").primaryKey(),
+  grupaId: integer("grupa_id").notNull(),
+  naziv: varchar("naziv", { length: 80 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Current subgroup membership; a student can belong to at most one subgroup
+// within a group. grupaId is duplicated deliberately to enforce that invariant.
+export const podgrupeUceniciTable = pgTable("podgrupe_ucenici", {
+  id: serial("id").primaryKey(),
+  grupaId: integer("grupa_id").notNull(),
+  podgrupaId: integer("podgrupa_id").notNull(),
+  ucenikId: integer("ucenik_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  grupaUcenikIdx: uniqueIndex("podgrupe_ucenici_grupa_ucenik_uidx").on(t.grupaId, t.ucenikId),
+  podgrupaUcenikIdx: uniqueIndex("podgrupe_ucenici_podgrupa_ucenik_uidx").on(t.podgrupaId, t.ucenikId),
+}));
+
 // Student profile (extends users where role='ucenik')
 export const ucenikProfiliTable = pgTable("ucenik_profili", {
   userId: integer("user_id").notNull().unique(),

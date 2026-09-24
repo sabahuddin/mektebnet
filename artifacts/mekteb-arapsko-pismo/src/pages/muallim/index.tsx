@@ -316,6 +316,7 @@ interface Zadaca {
   isActive: boolean;
   createdAt: string;
   ucenikIds?: number[];
+  podgrupaId?: number | null;
   zavrsenih?: number;
   ocijenjenih?: number;
   ukupno?: number;
@@ -323,6 +324,12 @@ interface Zadaca {
   lekcijaZavrsenih?: number;
   lekcijaUkupno?: number | null;
   prilozi?: NastavniMaterijal[];
+}
+
+interface Podgrupa {
+  id: number;
+  naziv: string;
+  ucenikIds: number[];
 }
 
 interface ZadacaStatusRed {
@@ -619,10 +626,13 @@ export default function MuallimPanel() {
   const [zadGrupaId, setZadGrupaId] = useState<number | null>(null);
   const [zadace, setZadace] = useState<Zadaca[]>([]);
   const [zadLoading, setZadLoading] = useState(false);
+  const [zadPodgrupe, setZadPodgrupe] = useState<Podgrupa[]>([]);
+  const [zadPodgrupeLoading, setZadPodgrupeLoading] = useState(false);
   const [showZadForm, setShowZadForm] = useState(false);
   const [zadTipTab, setZadTipTab] = useState<"pojedinacno" | "svi">("svi");
   const [zadSubTab, setZadSubTab] = useState<"nova" | "utoku" | "zavrseno">("utoku");
-  const [zadDodjela, setZadDodjela] = useState<"svi" | "pojedinacno">("svi");
+  const [zadDodjela, setZadDodjela] = useState<"svi" | "pojedinacno" | "podgrupa">("svi");
+  const [zadPodgrupaId, setZadPodgrupaId] = useState<number | null>(null);
   const [zadOpis, setZadOpis] = useState("");
   const [zadLekcija, setZadLekcija] = useState("");
   const [zadLekcijaSlug, setZadLekcijaSlug] = useState("");
@@ -973,6 +983,31 @@ export default function MuallimPanel() {
       .finally(() => setZadLoading(false));
   }, [token, zadGrupaId]);
 
+  useEffect(() => {
+    setZadPodgrupe([]);
+    setZadPodgrupaId(null);
+    if (!token || !zadGrupaId) {
+      setZadPodgrupeLoading(false);
+      return;
+    }
+    let active = true;
+    setZadPodgrupeLoading(true);
+    apiRequest<Podgrupa[]>("GET", `/muallim/grupe/${zadGrupaId}/podgrupe`, undefined, token)
+      .then(podgrupe => {
+        if (active) setZadPodgrupe(podgrupe);
+      })
+      .catch(() => {
+        if (active) {
+          setZadPodgrupe([]);
+          toast({ title: t("Greška"), description: t("Nije moguće učitati podgrupe"), variant: "destructive" });
+        }
+      })
+      .finally(() => {
+        if (active) setZadPodgrupeLoading(false);
+      });
+    return () => { active = false; };
+  }, [token, zadGrupaId]);
+
   async function saveZadaca() {
     if (!token || !zadGrupaId) return;
     // Lekcija je naziv zadaće; ako nema lekcije, opis je obavezan.
@@ -982,6 +1017,14 @@ export default function MuallimPanel() {
     }
     if (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2) {
       toast({ title: t("Odaberi najmanje dva učenika"), variant: "destructive" });
+      return;
+    }
+    if (zadDodjela === "podgrupa" && (!zadPodgrupaId || !zadPodgrupe.some(podgrupa => podgrupa.id === zadPodgrupaId))) {
+      toast({ title: t("Odaberi podgrupu"), variant: "destructive" });
+      return;
+    }
+    if (zadDodjela === "podgrupa" && editingZadaca?.podgrupaId !== zadPodgrupaId && (zadPodgrupe.find(podgrupa => podgrupa.id === zadPodgrupaId)?.ucenikIds.length ?? 0) === 0) {
+      toast({ title: t("Odabrana podgrupa nema učenika"), description: t("Dodajte učenike u podgrupu prije dodjele zadaće."), variant: "destructive" });
       return;
     }
     setSavingZadaca(true);
@@ -999,6 +1042,7 @@ export default function MuallimPanel() {
         lekcijaSlug: zadLekcijaSlug || null,
         lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
          tipDodjele: zadDodjela,
+         podgrupaId: zadDodjela === "podgrupa" ? zadPodgrupaId : null,
          ucenikIds: zadDodjela === "pojedinacno" ? Array.from(zadUcenikIds) : [],
       };
       const saved = await apiRequest<Zadaca>(
@@ -1010,7 +1054,8 @@ export default function MuallimPanel() {
       setZadace(prev => editingZadaca
         ? prev.map(z => z.id === saved.id ? saved : z)
         : [saved, ...prev]);
-      setZadOpis(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set());
+      setZadOpis(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set()); setZadPodgrupaId(null);
+      setZadDodjela("svi");
       setEditingZadaca(null);
       setShowZadForm(false);
       setZadTipTab(saved.ucenikIds?.length ? "pojedinacno" : "svi");
@@ -1026,7 +1071,8 @@ export default function MuallimPanel() {
     setZadLekcijaSlug(zadaca.lekcijaSlug || "");
     setZadOpis(zadaca.opis || "");
     setZadUcenikIds(new Set(zadaca.ucenikIds || []));
-    setZadDodjela(zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
+    setZadPodgrupaId(zadaca.podgrupaId ?? null);
+    setZadDodjela(zadaca.podgrupaId ? "podgrupa" : zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
     setZadTipTab(zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
     setZadSubTab("nova");
     setShowZadForm(true);
@@ -3614,8 +3660,8 @@ export default function MuallimPanel() {
 
                     {/* Vrsta zadaće: pojedinačna ili za cijelu grupu */}
                     {(() => {
-                       const pojedinacne = zadace.filter(z => (z.ucenikIds?.length ?? 0) > 1);
-                      const zaSve = zadace.filter(z => !z.ucenikIds?.length);
+                       const pojedinacne = zadace.filter(z => (z.ucenikIds?.length ?? 0) > 1 || z.podgrupaId != null);
+                       const zaSve = zadace.filter(z => !z.ucenikIds?.length && z.podgrupaId == null);
                       return (
                         <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/50 p-1.5">
                           {([
@@ -3650,6 +3696,12 @@ export default function MuallimPanel() {
                       <button
                         onClick={() => {
                           const opening = zadSubTab !== "nova";
+                          if (opening) {
+                            setEditingZadaca(null);
+                            setZadDodjela("svi");
+                            setZadPodgrupaId(null);
+                            setZadUcenikIds(new Set());
+                          }
                           setZadSubTab(opening ? "nova" : "utoku");
                           setShowZadForm(opening);
                         }}
@@ -3670,10 +3722,10 @@ export default function MuallimPanel() {
                         <div className="grid sm:grid-cols-2 gap-4">
                            <div className="sm:col-span-2">
                              <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Dodjela zadaće")}</label>
-                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                <button
                                  type="button"
-                                 onClick={() => { setZadDodjela("svi"); setZadUcenikIds(new Set()); }}
+                                  onClick={() => { setZadDodjela("svi"); setZadUcenikIds(new Set()); setZadPodgrupaId(null); }}
                                  className={`rounded-xl border px-4 py-3 text-left transition-colors ${zadDodjela === "svi" ? "border-emerald-400 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200" : "border-border bg-white text-muted-foreground hover:bg-muted/30"}`}
                                >
                                  <span className="block text-sm font-extrabold">{t("Za sve učenike")}</span>
@@ -3681,12 +3733,21 @@ export default function MuallimPanel() {
                                </button>
                                <button
                                  type="button"
-                                 onClick={() => setZadDodjela("pojedinacno")}
+                                  onClick={() => { setZadDodjela("pojedinacno"); setZadPodgrupaId(null); }}
                                  className={`rounded-xl border px-4 py-3 text-left transition-colors ${zadDodjela === "pojedinacno" ? "border-amber-400 bg-amber-50 text-amber-800 ring-2 ring-amber-200" : "border-border bg-white text-muted-foreground hover:bg-muted/30"}`}
                                >
                                  <span className="block text-sm font-extrabold">{t("Više učenika")}</span>
                                   <span className="block text-xs mt-1 opacity-80">{t("Najmanje dva učenika")}</span>
                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setZadDodjela("podgrupa"); setZadUcenikIds(new Set()); }}
+                                  className={`rounded-xl border px-4 py-3 text-left transition-colors ${zadDodjela === "podgrupa" ? "border-violet-400 bg-violet-50 text-violet-800 ring-2 ring-violet-200" : "border-border bg-white text-muted-foreground hover:bg-muted/30"}`}
+                                  data-testid="button-assignment-subgroup"
+                                >
+                                  <span className="block text-sm font-extrabold">{t("Podgrupa")}</span>
+                                  <span className="block text-xs mt-1 opacity-80">{t("Odaberi grupu učenika")}</span>
+                                </button>
                              </div>
                            </div>
                            {zadDodjela === "svi" && (
@@ -3694,6 +3755,41 @@ export default function MuallimPanel() {
                               {t("Ova zadaća bit će dodijeljena svim aktivnim učenicima odabrane grupe.")}
                             </div>
                           )}
+                           {zadDodjela === "podgrupa" && (
+                             <div className="sm:col-span-2 rounded-xl border border-violet-200 bg-violet-50 p-3">
+                               <label className="text-sm font-bold text-violet-900 block mb-1">{t("Ciljna podgrupa")}</label>
+                               {zadPodgrupeLoading ? (
+                                 <p className="text-sm text-violet-800">{t("Učitavanje podgrupa...")}</p>
+                               ) : zadPodgrupe.length === 0 ? (
+                                 <p className="text-sm text-violet-800">{t("Ova grupa još nema podešene podgrupe. Podesite ih u izmjeni grupe.")}</p>
+                               ) : (
+                                 <>
+                                   <select
+                                     value={zadPodgrupaId ?? ""}
+                                     onChange={event => setZadPodgrupaId(event.target.value ? Number(event.target.value) : null)}
+                                     className="w-full border border-violet-200 rounded-xl px-3 py-2 bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                     data-testid="select-homework-subgroup"
+                                   >
+                                     <option value="">{t("Odaberi podgrupu")}</option>
+                                     {zadPodgrupe.map(podgrupa => (
+                                       <option key={podgrupa.id} value={podgrupa.id}>{podgrupa.naziv}</option>
+                                     ))}
+                                   </select>
+                                   {zadPodgrupaId !== null && (() => {
+                                     const currentCount = zadPodgrupe.find(podgrupa => podgrupa.id === zadPodgrupaId)?.ucenikIds.length ?? 0;
+                                     return (
+                                       <div className="mt-2 text-xs font-bold text-violet-800 space-y-1">
+                                         <p>{t("{n} učenika trenutno u podgrupi", { n: String(currentCount) })}</p>
+                                         {editingZadaca?.podgrupaId === zadPodgrupaId && (
+                                           <p>{t("Ova zadaća zadržava prvobitno dodijeljene učenike.")}</p>
+                                         )}
+                                       </div>
+                                     );
+                                   })()}
+                                 </>
+                               )}
+                             </div>
+                           )}
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                             <LekcijaPicker
@@ -3712,7 +3808,7 @@ export default function MuallimPanel() {
                               placeholder={t("Detalji zadaće...")}
                               className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                           </div>
-                          <div className={`sm:col-span-2 ${zadDodjela === "svi" ? "hidden" : ""}`}>
+                          <div className={`sm:col-span-2 ${zadDodjela !== "pojedinacno" ? "hidden" : ""}`}>
                             <label className="text-sm font-bold text-muted-foreground block mb-1">
                                {t("Učenici")} {t("({n} odabrano)", { n: String(zadUcenikIds.size) })}
                             </label>
@@ -3771,10 +3867,10 @@ export default function MuallimPanel() {
                           </div>
                         </div>
                         <div className="flex flex-col-reverse gap-2 mt-4 sm:flex-row sm:justify-end">
-                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadOpis(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="w-full text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 sm:w-auto">
+                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadPodgrupaId(null); setZadOpis(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="w-full text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 sm:w-auto">
                             {t("Otkaži")}
                           </button>
-                          <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2)} className="w-full rounded-xl font-bold sm:w-auto">
+                          <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2) || (zadDodjela === "podgrupa" && (zadPodgrupaId == null || zadPodgrupeLoading || !zadPodgrupe.some(podgrupa => podgrupa.id === zadPodgrupaId) || (editingZadaca?.podgrupaId !== zadPodgrupaId && (zadPodgrupe.find(podgrupa => podgrupa.id === zadPodgrupaId)?.ucenikIds.length ?? 0) === 0)))} className="w-full rounded-xl font-bold sm:w-auto">
                             {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> {editingZadaca ? t("Sačuvaj izmjene") : t("Sačuvaj")}</>}
                           </Button>
                         </div>
@@ -3782,7 +3878,9 @@ export default function MuallimPanel() {
                     )}
 
                     {zadSubTab !== "nova" && (() => {
-                       const zadacePoTipu = zadace.filter(z => zadTipTab === "svi" ? !z.ucenikIds?.length : (z.ucenikIds?.length ?? 0) > 1);
+                       const zadacePoTipu = zadace.filter(z => zadTipTab === "svi"
+                         ? !z.ucenikIds?.length && z.podgrupaId == null
+                         : (z.ucenikIds?.length ?? 0) > 1 || z.podgrupaId != null);
                       return zadacePoTipu.length === 0 ? (
                       <div className="text-center py-12 text-muted-foreground bg-white rounded-2xl border border-border/50">
                         <ClipboardList className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -3817,7 +3915,11 @@ export default function MuallimPanel() {
                                        </span>
                                      )}
                                     {isExpired && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{t("Isteklo")}</span>}
-                                    {z.ucenikIds && z.ucenikIds.length > 0 ? (
+                                     {z.podgrupaId ? (
+                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700" data-testid={`badge-homework-subgroup-${z.id}`}>
+                                         {t("Podgrupa: {naziv}", { naziv: zadPodgrupe.find(podgrupa => podgrupa.id === z.podgrupaId)?.naziv || `#${z.podgrupaId}` })}
+                                       </span>
+                                     ) : z.ucenikIds && z.ucenikIds.length > 0 ? (
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700" title={
                                         z.ucenikIds.map(id => ucenici.find(u => u.id === id)?.displayName || `#${id}`).join(", ")
                                        }>{t("Odabrano · {n}", { n: String(z.ucenikIds.length) })}</span>
@@ -3860,7 +3962,7 @@ export default function MuallimPanel() {
                                      className="rounded-xl font-bold flex items-center gap-1.5" title={t("Uredi zadaću")}>
                                      <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">{t("Uredi")}</span>
                                    </Button>
-                                   {!z.ucenikIds?.length && z.isActive !== false && (
+                                    {!z.ucenikIds?.length && !z.podgrupaId && z.isActive !== false && (
                                      <Button onClick={() => arhivirajZadacu(z)} variant="outline" size="sm"
                                        className="rounded-xl font-bold flex items-center gap-1.5 text-slate-700" title={t("Arhiviraj zadaću")}>
                                        <Archive className="w-4 h-4" /> <span className="hidden sm:inline">{t("Arhiviraj")}</span>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { GroupStudentSetup } from "@/components/group-student-setup";
+import { GroupSubgroupSettings } from "@/components/group-subgroup-settings";
 
 const DANI = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota", "Nedjelja"];
 
@@ -61,6 +62,7 @@ export default function DodajGrupuPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(isEdit);
   const [loaded, setLoaded] = useState(!isEdit);
+  const [studentsRefreshKey, setStudentsRefreshKey] = useState(0);
 
   // Muallim dodjela (samo za glavnog muallima)
   const [muallimi, setMuallimi] = useState<Muallim[]>([]);
@@ -282,7 +284,16 @@ export default function DodajGrupuPage() {
             {isLoading ? (isEdit ? t("Spremanje...") : t("Kreiranje...")) : (isEdit ? t("Sačuvaj izmjene") : t("Kreiraj grupu"))}
           </Button>
         </form>
-        {isEdit && editId && <GroupStudentSetup grupaId={editId} grupaNaziv={naziv} />}
+        {isEdit && editId && (
+          <>
+            <GroupSubgroupSettings grupaId={editId} refreshKey={studentsRefreshKey} />
+            <GroupStudentSetup
+              grupaId={editId}
+              grupaNaziv={naziv}
+              onStudentsChanged={() => setStudentsRefreshKey(key => key + 1)}
+            />
+          </>
+        )}
         </div>
         )}
       </div>
