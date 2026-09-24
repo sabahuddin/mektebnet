@@ -11,9 +11,10 @@
   ŠTA RADI
     Dijete pritisne zvučnik, čuje harf ili riječ, pa klikne na jednu od četiri
     ponude. Ide u tri kruga, jedan za drugim:
-      1. harfovi    – prepoznavanje slova
-      2. slogovi    – harf s harekom i spojevi od dva slova
-      3. riječi     – prave riječi od tri i više slova, s raznim vokalima
+      1. harf s harekom – nikad go harf: u pismu koje dijete uči svako slovo
+                          nosi znak, pa ga nosi i ovdje
+      2. dva slova      – spojevi i kratke riječi od dva slova
+      3. riječi         – prave riječi od tri i više slova, s raznim vokalima
     Na kraju ostaje spisak riječi za čitanje. Spisak se može promiješati, jer
     kod učitelja dijete te iste riječi čita drugim redom.
 
@@ -34,10 +35,10 @@
     preglednika, i to jasno kaže.
 
   ZVUK
-    Pravi snimak uvijek ima prednost. Glas preglednika je ovdje samo zato da se
-    vježba može isprobati prije nego snimci postoje: nije svaki uređaj ima
-    arapski glas, a ni izgovor nije nastavnički. Kad snimci stignu, dodaje se
-    polje „zvuk" i ništa se drugo ne mijenja.
+    Isključivo snimci iz polja „zvuk". Govorne sinteze nema i ne treba je
+    vraćati: glas se razlikuje od uređaja do uređaja, pa bi dijete u istoj
+    vježbi čulo snimljenog čovjeka i sintetički glas jedno za drugim. Gdje
+    snimka nema, vježba to kaže i traži da dijete pročita samo.
 
   DOGAĐAJI (postMessage roditelju i CustomEvent "mekteb-igra")
     visina – kad se promijeni visina sadržaja
@@ -80,6 +81,7 @@
   #zvucnik:hover { transform: scale(1.05); }
   #zvucnik:active { transform: scale(.96); }
   #zvucnik.svira { animation: kucaj .7s ease-in-out infinite; }
+  #zvucnik.nijem { background: var(--sivi); }
   @keyframes kucaj { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
   .pomoc { margin-top: 10px; color: var(--sivi); font-size: .9rem; min-height: 1.2em; }
   .ponude { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
@@ -132,8 +134,8 @@
   <p class="uputa" id="uputa"></p>
 
   <div class="traka">
-    <span class="znacka" data-krug="0">1. Harfovi</span>
-    <span class="znacka" data-krug="1">2. Slogovi</span>
+    <span class="znacka" data-krug="0">1. Harf s harekom</span>
+    <span class="znacka" data-krug="1">2. Dva slova</span>
     <span class="znacka" data-krug="2">3. Riječi</span>
     <span id="rezultat" style="margin-left:auto"></span>
   </div>
@@ -203,21 +205,9 @@
   }
 
   /* ---------- zvuk ---------- */
-  // Pravi snimak ima prednost; glas preglednika je zamjena dok snimaka nema.
-  var arapskiGlas = null, glasProvjeren = false;
-
-  function nadjiGlas() {
-    if (glasProvjeren) return arapskiGlas;
-    glasProvjeren = true;
-    try {
-      var glasovi = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
-      for (var i = 0; i < glasovi.length; i++) {
-        if (/^ar\b|^ar-/i.test(glasovi[i].lang || '')) { arapskiGlas = glasovi[i]; break; }
-      }
-    } catch (g) {}
-    return arapskiGlas;
-  }
-
+  // Samo pravi snimci. Govorna sinteza je namjerno izbačena: glas se razlikuje
+  // od uređaja do uređaja, a kad upadne pored snimljenog glasa, dijete u istoj
+  // vježbi čuje dva različita čovjeka. Bez snimka vježba to jasno kaže.
   function pustiSnimak(putanja) {
     return new Promise(function (rijesi, odbij) {
       var a = new Audio(putanja);
@@ -227,33 +217,19 @@
     });
   }
 
-  function izgovori(tekst) {
-    if (!window.speechSynthesis) return false;
-    var glas = nadjiGlas();
-    if (!glas) return false;
-    try {
-      window.speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(tekst);
-      u.voice = glas; u.lang = glas.lang; u.rate = 0.7;
-      window.speechSynthesis.speak(u);
-      return true;
-    } catch (g) { return false; }
-  }
-
   function odsviraj(stavka) {
-    el.zvucnik.classList.add('svira');
     var gotov = function () { el.zvucnik.classList.remove('svira'); };
-    if (stavka.zvuk) {
-      pustiSnimak(stavka.zvuk).then(gotov).catch(function () { izgovori(stavka.zapis); setTimeout(gotov, 900); });
-      return;
-    }
-    if (!izgovori(stavka.zapis)) {
+    var bezZvuka = function () {
       gotov();
-      el.napomenaGlas.textContent = T('Ovaj uređaj nema arapski glas, pa se izgovor ne može čuti. Kad snimci budu gotovi, zvuk će raditi svugdje.');
+      el.zvucnik.classList.add('nijem');
+      el.napomenaGlas.textContent = T('Ovaj zapis još nema snimak. Pročitaj ga sam, pa provjeri s muallimom.');
       el.napomenaGlas.classList.remove('sakrij');
-      return;
-    }
-    setTimeout(gotov, 1100);
+    };
+    el.zvucnik.classList.remove('nijem');
+    el.napomenaGlas.classList.add('sakrij');
+    if (!stavka.zvuk) return bezZvuka();
+    el.zvucnik.classList.add('svira');
+    pustiSnimak(stavka.zvuk).then(gotov).catch(bezZvuka);
   }
 
   /* ---------- pitanja ---------- */
@@ -265,7 +241,7 @@
   }
 
   function opisKruga() {
-    return [T('Koji harf si čuo?'), T('Koji slog si čuo?'), T('Koju riječ si čuo?')][krug] || '';
+    return [T('Koji harf s harekom si čuo?'), T('Koja dva slova si čuo?'), T('Koju riječ si čuo?')][krug] || '';
   }
 
   function nacrtajPitanje() {
@@ -384,7 +360,6 @@
   el.dalje.addEventListener('click', dalje);
   el.ponovo.addEventListener('click', pocni);
   el.promijesaj.addEventListener('click', function () { nacrtajSpisak(promijesaj(podaci.rijeci || [])); });
-  if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = function () { glasProvjeren = false; nadjiGlas(); };
 
   if (window.parent !== window && 'ResizeObserver' in window) {
     new ResizeObserver(function () {

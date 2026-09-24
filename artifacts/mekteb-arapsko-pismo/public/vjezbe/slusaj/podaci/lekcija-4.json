@@ -4,45 +4,8 @@
   "lekcija": 4,
   "naslov": "Lekcija 4 — Ba, Nun i Ja",
   "uputa": "Pritisni zvučnik, poslušaj, pa klikni ono što si čuo.",
+  "izvorZvuka": "Antura and the Letters (Arabic) — Video Games Without Borders, TH Köln / Cologne Game Lab, Wixel Studios. CC BY 4.0.",
   "harfovi": [
-    {
-      "zapis": "م",
-      "ime": "Mim",
-      "glas": "m",
-      "zvuk": "/audio/opismenjavanje/meem__lettername.mp3"
-    },
-    {
-      "zapis": "ر",
-      "ime": "Ra",
-      "glas": "r",
-      "zvuk": "/audio/opismenjavanje/reh__lettername.mp3"
-    },
-    {
-      "zapis": "ل",
-      "ime": "Lam",
-      "glas": "l",
-      "zvuk": "/audio/opismenjavanje/lam__lettername.mp3"
-    },
-    {
-      "zapis": "ب",
-      "ime": "Ba",
-      "glas": "b",
-      "zvuk": "/audio/opismenjavanje/beh__lettername.mp3"
-    },
-    {
-      "zapis": "ن",
-      "ime": "Nun",
-      "glas": "n",
-      "zvuk": "/audio/opismenjavanje/noon__lettername.mp3"
-    },
-    {
-      "zapis": "ي",
-      "ime": "Ja",
-      "glas": "j",
-      "zvuk": "/audio/opismenjavanje/yeh__lettername.mp3"
-    }
-  ],
-  "slogovi": [
     {
       "zapis": "مَ",
       "citanje": "me"
@@ -76,6 +39,10 @@
       "citanje": "ni"
     },
     {
+      "zapis": "نُ",
+      "citanje": "nu"
+    },
+    {
       "zapis": "لَ",
       "citanje": "le"
     },
@@ -84,20 +51,62 @@
       "citanje": "re"
     },
     {
-      "zapis": "را",
-      "citanje": "raa"
-    },
-    {
-      "zapis": "با",
-      "citanje": "baa"
+      "zapis": "يَ",
+      "citanje": "je"
     }
   ],
-  "rijeci": [
+  "slogovi": [
     {
       "zapis": "أَب",
       "citanje": "eb",
       "znacenje": "otac"
     },
+    {
+      "zapis": "ما",
+      "citanje": "ma"
+    },
+    {
+      "zapis": "لا",
+      "citanje": "la"
+    },
+    {
+      "zapis": "با",
+      "citanje": "ba"
+    },
+    {
+      "zapis": "نا",
+      "citanje": "na"
+    },
+    {
+      "zapis": "را",
+      "citanje": "ra"
+    },
+    {
+      "zapis": "يا",
+      "citanje": "ja"
+    },
+    {
+      "zapis": "مِي",
+      "citanje": "mi"
+    },
+    {
+      "zapis": "بِي",
+      "citanje": "bi"
+    },
+    {
+      "zapis": "نِي",
+      "citanje": "ni"
+    },
+    {
+      "zapis": "لِي",
+      "citanje": "li"
+    },
+    {
+      "zapis": "رِي",
+      "citanje": "ri"
+    }
+  ],
+  "rijeci": [
     {
       "zapis": "باب",
       "citanje": "bab",
@@ -105,15 +114,21 @@
       "zvuk": "/audio/opismenjavanje/rijec-door.mp3"
     },
     {
-      "zapis": "نار",
-      "citanje": "nar",
-      "znacenje": "vatra"
-    },
-    {
       "zapis": "ماء",
       "citanje": "maa'",
       "znacenje": "voda",
       "zvuk": "/audio/opismenjavanje/rijec-water.mp3"
+    },
+    {
+      "zapis": "لَبَن",
+      "citanje": "leben",
+      "znacenje": "mlijeko",
+      "zvuk": "/audio/opismenjavanje/rijec-yogurt.mp3"
+    },
+    {
+      "zapis": "نار",
+      "citanje": "nar",
+      "znacenje": "vatra"
     },
     {
       "zapis": "مال",
@@ -129,12 +144,6 @@
       "zapis": "بال",
       "citanje": "bal",
       "znacenje": "pamet, pažnja"
-    },
-    {
-      "zapis": "لَبَن",
-      "citanje": "leben",
-      "znacenje": "mlijeko",
-      "zvuk": "/audio/opismenjavanje/rijec-yogurt.mp3"
     },
     {
       "zapis": "نَمِر",
@@ -156,7 +165,5 @@
       "citanje": "emam",
       "znacenje": "ispred"
     }
-  ],
-  "izvorZvuka": "Antura and the Letters (Arabic) — Video Games Without Borders, TH Köln / Cologne Game Lab, Wixel Studios. CC BY 4.0.",
-  "napomenaZvuk": "Slogovi zasad nemaju snimak. Anturini snimci harfa s harekom razvlače vokal — „la\" kod njih traje 0,75 s, a cijela riječ „leben\" 0,66 s — pa bi dijete čulo dužinu tamo gdje je piše kratko."
+  ]
 }

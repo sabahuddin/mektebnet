@@ -5,42 +5,192 @@
   "naslov": "Lekcija 16 — Ponavljanje svega",
   "uputa": "Sada su svi harfovi i svi znakovi. Poslušaj pa klikni ono što si čuo.",
   "harfovi": [
-    { "zapis": "م", "ime": "Mim" }, { "zapis": "ل", "ime": "Lam" },
-    { "zapis": "ب", "ime": "Ba" },  { "zapis": "ن", "ime": "Nun" },
-    { "zapis": "س", "ime": "Sin" }, { "zapis": "د", "ime": "Dal" },
-    { "zapis": "ع", "ime": "Ajn" }, { "zapis": "ق", "ime": "Kaf" },
-    { "zapis": "ك", "ime": "Kef" }, { "zapis": "ف", "ime": "Fa" },
-    { "zapis": "ش", "ime": "Šin" }, { "zapis": "ط", "ime": "Tâ" }
+    {
+      "zapis": "مَ",
+      "citanje": "me"
+    },
+    {
+      "zapis": "لِ",
+      "citanje": "li"
+    },
+    {
+      "zapis": "بُ",
+      "citanje": "bu"
+    },
+    {
+      "zapis": "نَ",
+      "citanje": "ne"
+    },
+    {
+      "zapis": "سِ",
+      "citanje": "si"
+    },
+    {
+      "zapis": "دُ",
+      "citanje": "du"
+    },
+    {
+      "zapis": "عَ",
+      "citanje": "'a"
+    },
+    {
+      "zapis": "قِ",
+      "citanje": "ki"
+    },
+    {
+      "zapis": "كُ",
+      "citanje": "ku"
+    },
+    {
+      "zapis": "فَ",
+      "citanje": "fe"
+    },
+    {
+      "zapis": "شِ",
+      "citanje": "ši"
+    },
+    {
+      "zapis": "طُ",
+      "citanje": "tu"
+    }
   ],
   "slogovi": [
-    { "zapis": "مِنْ", "citanje": "min", "znacenje": "sukun" },
-    { "zapis": "قُلْ", "citanje": "kul", "znacenje": "sukun" },
-    { "zapis": "هَلْ", "citanje": "hel", "znacenje": "sukun" },
-    { "zapis": "كَمْ", "citanje": "kem", "znacenje": "sukun" },
-    { "zapis": "رَبَّ", "citanje": "rabbe", "znacenje": "tešdid" },
-    { "zapis": "أُمّ", "citanje": "umm", "znacenje": "tešdid" },
-    { "zapis": "سِرّ", "citanje": "sirr", "znacenje": "tešdid" },
-    { "zapis": "بًا", "citanje": "ben", "znacenje": "tenvin fetha" },
-    { "zapis": "بٍ", "citanje": "bin", "znacenje": "tenvin kesra" },
-    { "zapis": "بٌ", "citanje": "bun", "znacenje": "tenvin damma" },
-    { "zapis": "ما", "citanje": "ma", "znacenje": "dužina" },
-    { "zapis": "لا", "citanje": "la", "znacenje": "dužina" }
+    {
+      "zapis": "مِنْ",
+      "citanje": "min",
+      "znacenje": "sukun"
+    },
+    {
+      "zapis": "قُلْ",
+      "citanje": "kul",
+      "znacenje": "sukun"
+    },
+    {
+      "zapis": "هَلْ",
+      "citanje": "hel",
+      "znacenje": "sukun"
+    },
+    {
+      "zapis": "كَمْ",
+      "citanje": "kem",
+      "znacenje": "sukun"
+    },
+    {
+      "zapis": "رَبَّ",
+      "citanje": "rabbe",
+      "znacenje": "tešdid"
+    },
+    {
+      "zapis": "أُمّ",
+      "citanje": "umm",
+      "znacenje": "tešdid"
+    },
+    {
+      "zapis": "سِرّ",
+      "citanje": "sirr",
+      "znacenje": "tešdid"
+    },
+    {
+      "zapis": "بًا",
+      "citanje": "ben",
+      "znacenje": "tenvin fetha"
+    },
+    {
+      "zapis": "بٍ",
+      "citanje": "bin",
+      "znacenje": "tenvin kesra"
+    },
+    {
+      "zapis": "بٌ",
+      "citanje": "bun",
+      "znacenje": "tenvin damma"
+    },
+    {
+      "zapis": "ما",
+      "citanje": "ma",
+      "znacenje": "dužina"
+    },
+    {
+      "zapis": "لا",
+      "citanje": "la",
+      "znacenje": "dužina"
+    }
   ],
   "rijeci": [
-    { "zapis": "أُمّ", "citanje": "umm", "znacenje": "majka" },
-    { "zapis": "حُبّ", "citanje": "hubb", "znacenje": "ljubav" },
-    { "zapis": "كُلّ", "citanje": "kull", "znacenje": "sve" },
-    { "zapis": "يَوْم", "citanje": "jevm", "znacenje": "dan" },
-    { "zapis": "بَيْت", "citanje": "bejt", "znacenje": "kuća" },
-    { "zapis": "شَيْء", "citanje": "šej'", "znacenje": "stvar" },
-    { "zapis": "عِنْد", "citanje": "'ind", "znacenje": "kod" },
-    { "zapis": "ماء", "citanje": "maa'", "znacenje": "voda" },
-    { "zapis": "باب", "citanje": "bab", "znacenje": "vrata" },
-    { "zapis": "كان", "citanje": "kane", "znacenje": "bio je" },
-    { "zapis": "قال", "citanje": "kale", "znacenje": "rekao je" },
-    { "zapis": "عِلْمٌ", "citanje": "ilmun", "znacenje": "znanje" },
-    { "zapis": "قَمَرٌ", "citanje": "kamerun", "znacenje": "mjesec" },
-    { "zapis": "وَلَدٌ", "citanje": "veledun", "znacenje": "dječak" },
-    { "zapis": "أَجْرًا", "citanje": "edžran", "znacenje": "nagradu" }
+    {
+      "zapis": "أُمّ",
+      "citanje": "umm",
+      "znacenje": "majka"
+    },
+    {
+      "zapis": "حُبّ",
+      "citanje": "hubb",
+      "znacenje": "ljubav"
+    },
+    {
+      "zapis": "كُلّ",
+      "citanje": "kull",
+      "znacenje": "sve"
+    },
+    {
+      "zapis": "يَوْم",
+      "citanje": "jevm",
+      "znacenje": "dan"
+    },
+    {
+      "zapis": "بَيْت",
+      "citanje": "bejt",
+      "znacenje": "kuća"
+    },
+    {
+      "zapis": "شَيْء",
+      "citanje": "šej'",
+      "znacenje": "stvar"
+    },
+    {
+      "zapis": "عِنْد",
+      "citanje": "'ind",
+      "znacenje": "kod"
+    },
+    {
+      "zapis": "ماء",
+      "citanje": "maa'",
+      "znacenje": "voda"
+    },
+    {
+      "zapis": "باب",
+      "citanje": "bab",
+      "znacenje": "vrata"
+    },
+    {
+      "zapis": "كان",
+      "citanje": "kane",
+      "znacenje": "bio je"
+    },
+    {
+      "zapis": "قال",
+      "citanje": "kale",
+      "znacenje": "rekao je"
+    },
+    {
+      "zapis": "عِلْمٌ",
+      "citanje": "ilmun",
+      "znacenje": "znanje"
+    },
+    {
+      "zapis": "قَمَرٌ",
+      "citanje": "kamerun",
+      "znacenje": "mjesec"
+    },
+    {
+      "zapis": "وَلَدٌ",
+      "citanje": "veledun",
+      "znacenje": "dječak"
+    },
+    {
+      "zapis": "أَجْرًا",
+      "citanje": "edžran",
+      "znacenje": "nagradu"
+    }
   ]
 }

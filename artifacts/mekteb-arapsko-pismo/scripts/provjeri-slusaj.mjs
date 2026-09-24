@@ -10,7 +10,9 @@
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createRequire } from "node:module";
 import puppeteer from "puppeteer";
+const require = createRequire(import.meta.url);
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../public");
 const TIP = { ".html": "text/html; charset=utf-8", ".json": "application/json; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
@@ -57,19 +59,32 @@ ok("spisak ima sve riječi iz JSON-a", (await page.$$(".rijec")).length === ocek
 ok("prva riječ u spisku je arapska", /[ء-ي]/.test(await page.$eval(".rijec .zapis", (e) => e.textContent)));
 ok("dugme Dalje je na početku zaključano", await page.$eval("#dalje", (e) => e.disabled));
 
-// Pritisni zvučnik i sačekaj da snimak stigne.
-await page.click("#zvucnik");
-await new Promise((r) => setTimeout(r, 600));
-ok("pritisak na zvučnik dohvati snimak", zvuci.length > 0, zvuci.map((z) => z.status).join(","));
-ok("svaki dohvaćeni snimak je stigao", zvuci.length > 0 && zvuci.every((z) => z.status === 200),
-   zvuci.map((z) => `${z.url.split("/").pop()} ${z.status}`).join(" | "));
-// Ni jedan snimak ne smije biti prazan ili sumnjivo malen.
-const velicine = await page.evaluate(async (lista) => {
+// Svaki snimak koji podaci obećaju mora se stvarno dohvatiti i ne biti prazan.
+const obecani = (() => {
+  const v = JSON.parse(require("node:fs").readFileSync(path.join(ROOT, "vjezbe/slusaj/podaci", DATOTEKA), "utf8"));
+  return [...(v.harfovi ?? []), ...(v.slogovi ?? []), ...(v.rijeci ?? [])].map((x) => x.zvuk).filter(Boolean);
+})();
+const dohvaceni = await page.evaluate(async (lista) => {
   const out = [];
-  for (const u of lista) { const o = await fetch(u); const b = await o.arrayBuffer(); out.push([u.split("/").pop(), b.byteLength]); }
+  for (const u of lista) {
+    try { const o = await fetch(u); const b = await o.arrayBuffer(); out.push([u.split("/").pop(), o.status, b.byteLength]); }
+    catch (e) { out.push([u, 0, 0]); }
+  }
   return out;
-}, [...new Set(zvuci.map((z) => z.url))]);
-ok("snimci nisu prazni", velicine.every(([, n]) => n > 2000), velicine.map(([n, b]) => `${n} ${b}B`).join(" | "));
+}, obecani);
+ok("svaki obećani snimak se dohvati i nije prazan",
+   dohvaceni.length === obecani.length && dohvaceni.every(([, st, b]) => st === 200 && b > 2000),
+   dohvaceni.map(([n, st, b]) => `${n} ${st} ${b}B`).join(" | ") || "nijedan snimak nije obećan");
+
+// Stavka bez snimka ne smije pući ni šutjeti bez objašnjenja.
+await page.click("#zvucnik");
+await new Promise((r) => setTimeout(r, 300));
+const stanjeBezZvuka = await page.evaluate(() => {
+  const prvi = document.querySelector(".ponuda .slovo")?.textContent ?? "";
+  return { poruka: document.getElementById("napomenaGlas").classList.contains("sakrij") ? "" : document.getElementById("napomenaGlas").textContent, prvi };
+});
+ok("bez snimka vježba to kaže, a ne šuti",
+   stanjeBezZvuka.poruka.length > 0 || zvuci.length > 0, JSON.stringify(stanjeBezZvuka).slice(0, 120));
 
 // Odigraj sva tri kruga biranjem tačnog odgovora.
 let pitanja = 0;
