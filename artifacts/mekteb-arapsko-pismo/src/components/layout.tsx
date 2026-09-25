@@ -6,7 +6,7 @@ import { useLanguage } from "@/context/language";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api";
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
-import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, LogIn, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA, ChevronDown } from "lucide-react";
+import { Home, User, Menu, X, BookOpen, HelpCircle, Library, LayoutDashboard, LogOut, LogIn, Shield, GraduationCap, Globe, Gamepad2, Volume2, VolumeX, MessageSquare, BookMarked, KeyRound, BookA, ChevronDown, BookOpenCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FlyingMaskota, SelamWelcome } from "@/components/maskota";
 import { motion, AnimatePresence } from "framer-motion";
@@ -188,7 +188,12 @@ export function Layout({ children }: LayoutProps) {
     { href: "/igrice", label: t("nav.igrice"), icon: Gamepad2 },
     { href: "/vodic", label: "Vodič", icon: BookMarked },
     ...(user?.role === "admin"
-      ? [{ href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap } as NavLink]
+      ? [
+          { href: "/arapsko-pismo", label: t("nav.sufara"), icon: GraduationCap } as NavLink,
+          // Nov dio platforme, zaseban od Sufare. Dok se gradi, vidi ga samo
+          // admin; da se otvori svima, izvaditi ga iz ovog uslova.
+          { href: "/citanje", label: "Učim čitati", icon: BookOpenCheck } as NavLink,
+        ]
       : []),
     // Demo prijava — vidljiva samo neulogiranim posjetiocima. Vodi direktno na
     // login sa otvorenim "Demo" tabom, jer posjetioci ne znaju da klikom na

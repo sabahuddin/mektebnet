@@ -42,6 +42,8 @@ import Exercise from "./pages/exercise";
 import Progress from "./pages/progress";
 
 // Ilmihal
+import CitanjePage from "./pages/citanje";
+import CitanjeLekcijaPage from "./pages/citanje-lekcija";
 import IlmihalPage from "./pages/ilmihal";
 import IlmihalSvePage from "./pages/ilmihal-sve";
 import IlmihalLekcijaPage from "./pages/ilmihal-lekcija";
@@ -153,6 +155,11 @@ function Router() {
       <Route path="/registracija" component={RegisterRoditeljPage} />
       <Route path="/zaboravljena-sifra" component={ZaboravljenaSifraPage} />
       <Route path="/reset-sifra" component={ResetSifraPage} />
+
+      {/* Učim čitati — nov dio platforme, zaseban od Sufare. Dok se gradi,
+          vidi ga samo admin; da se otvori svima, obrisati SufaraAdminGate. */}
+      <Route path="/citanje" component={() => <SufaraAdminGate><CitanjePage /></SufaraAdminGate>} />
+      <Route path="/citanje/:broj" component={() => <SufaraAdminGate><CitanjeLekcijaPage /></SufaraAdminGate>} />
 
       {/* Arapsko pismo */}
       <Route path="/arapsko-pismo" component={SufaraAdminRoute} />
