@@ -245,7 +245,7 @@ for (const [zapis, gdje] of trazene) {
 
   // Već preuzeto se preskače, pa se prekinut posao može samo ponovo pokrenuti
   // i dovršiti ostatak umjesto da sve ide iznova.
-  const ime = `rijec-${Buffer.from(zapis).toString("hex").slice(0, 16)}.mp3`;
+  const ime = `rijec-${Buffer.from(zapis).toString("hex")}.mp3`;
   try {
     await stat(path.join(ZVUK, ime));
     gdje.stavka.zvuk = `/audio/opismenjavanje/${ime}`;

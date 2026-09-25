@@ -178,7 +178,7 @@ const sumnjivi = [];
 for (let i = 0; i < rijeci.length; i++) {
   const zapis = rijeci[i];
   const [pocetak, kraj] = dionice[i];
-  const ime = `rijec-${Buffer.from(zapis).toString("hex").slice(0, 16)}.mp3`;
+  const ime = `rijec-${Buffer.from(zapis).toString("hex")}.mp3`;
   const privremeno = path.join(os.tmpdir(), `isijeci-${process.pid}-${i}.mp3`);
 
   await pokreni("ffmpeg", [

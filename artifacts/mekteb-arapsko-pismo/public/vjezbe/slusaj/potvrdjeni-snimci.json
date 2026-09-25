@@ -10,15 +10,15 @@
     "Glagoli i čestice taj nastavak nemaju, pa su bezbjedni. Imenice treba poslušati."
   ],
   "potvrdjeno": [
-    "لا",
-    "يَوْم",
-    "بَيْت",
-    "شَيْء",
-    "باب",
-    "كان",
-    "قال",
-    "نار",
-    "أَمام"
+    "لَا",
+    "يَوْمْ",
+    "بَيْتْ",
+    "شَيْءْ",
+    "بَابْ",
+    "كَانَ",
+    "قَالَ",
+    "نَارْ",
+    "أَمَامْ"
   ],
   "cekaRedakturu": {
     "مِنْ": "من je min ili man",
@@ -26,36 +26,36 @@
     "سِرّ": "سر je sirr ili serre",
     "حُبّ": "حب je hubb (ljubav) ili habb (zrno)",
     "كُلّ": "كل je kull (sve) ili kul (jedi!)",
-    "مال": "مال je mal (imetak) ili male (nagnuo se)",
-    "عِنْد": "عند je inde ili anide",
-    "أَب": "أب je eb (otac) ili abb",
-    "أَمَل": "أمل je emel (nada) ili emile",
-    "أَلَم": "ألم je elem (bol) ili elime",
+    "مَالْ": "مال je mal (imetak) ili male (nagnuo se)",
+    "عِنْدْ": "عند je inde ili anide",
+    "أَبْ": "أب je eb (otac) ili abb",
+    "أَمَلْ": "أمل je emel (nada) ili emile",
+    "أَلَمْ": "ألم je elem (bol) ili elime",
     "عِلْمٌ": "علم je ilm, alem, alime ili alleme — i naš zapis ima tenvin, a snimak ga sigurno nema",
     "قَمَرٌ": "قمر jeste kamer, ali naš zapis ima tenvin, a snimak ga nema",
-    "ماء": "snimak izgovara ma'un — tenvin kojeg naš zapis nema; treba drugi snimak ili zapis s tenvinom"
+    "مَاءْ": "snimak izgovara ma'un — tenvin kojeg naš zapis nema; treba drugi snimak ili zapis s tenvinom"
   },
   "bezRizikaOdTenvina": {
     "_": "Glagoli i čestice nemaju padežni nastavak, pa se snimak i zapis ne mogu razići po tome.",
     "riječi": [
-      "لا",
-      "كان",
-      "قال"
+      "لَا",
+      "كَانَ",
+      "قَالَ"
     ]
   },
   "provjeritiTenvin": {
     "_": "Imenice: neko mora poslušati i reći završava li snimak na -un. Ako završava, snimak ne valja za naš zapis.",
     "riječi": [
-      "يَوْم",
-      "بَيْت",
-      "باب",
-      "نار",
-      "أَمام",
-      "لَبَن"
+      "يَوْمْ",
+      "بَيْتْ",
+      "بَابْ",
+      "نَارْ",
+      "أَمَامْ",
+      "لَبَنْ"
     ],
     "većProvjereno": {
-      "شَيْء": "nema tenvina — dobro",
-      "ماء": "ima tenvin — izbačeno"
+      "شَيْءْ": "nema tenvina — dobro",
+      "مَاءْ": "ima tenvin — izbačeno"
     }
   }
 }

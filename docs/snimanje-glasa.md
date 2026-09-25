@@ -20,6 +20,16 @@ pojedinačno bio uredan:
 
 Sve četiri zamke nestaju kad jedan čovjek pročita cijeli spisak odjednom.
 
+## Kako se piše spisak
+
+Zadnji harf svakog zapisa nosi vokal, tenvin, sukun ili tešdid — `مَالْ`, ne
+`مال`. Pravilo je opisano u `CLAUDE.md`; skripta ga ne provjerava, ali test
+`zavrsetak-zapisa.test.ts` pada čim takav zapis uđe u vježbu.
+
+Za snimanje vlastitim glasom to nije pitanje sintetizatora nego tvoje:
+zapis kaže tebi kako da pročitaš. Ako piše `كَانَ`, čitaš *kane*; ako piše
+`كَانْ`, čitaš *kan*.
+
 ## Kako se snima
 
 1. **Dogovori se spisak prije snimanja.** Koje riječi, kojim redom. Spisak je

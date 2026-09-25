@@ -57,33 +57,33 @@
   ],
   "slogovi": [
     {
-      "zapis": "أَب",
+      "zapis": "أَبْ",
       "citanje": "eb",
       "znacenje": "otac"
     },
     {
-      "zapis": "ما",
+      "zapis": "مَا",
       "citanje": "ma"
     },
     {
-      "zapis": "لا",
+      "zapis": "لَا",
       "citanje": "la",
-      "zvuk": "/audio/opismenjavanje/rijec-d984d8a7.mp3"
+      "zvuk": "/audio/opismenjavanje/rijec-d984d98ed8a7.mp3"
     },
     {
-      "zapis": "با",
+      "zapis": "بَا",
       "citanje": "ba"
     },
     {
-      "zapis": "نا",
+      "zapis": "نَا",
       "citanje": "na"
     },
     {
-      "zapis": "را",
+      "zapis": "رَا",
       "citanje": "ra"
     },
     {
-      "zapis": "يا",
+      "zapis": "يَا",
       "citanje": "ja"
     },
     {
@@ -109,63 +109,63 @@
   ],
   "rijeci": [
     {
-      "zapis": "باب",
+      "zapis": "بَابْ",
       "citanje": "bab",
       "znacenje": "vrata",
-      "zvuk": "/audio/opismenjavanje/rijec-d8a8d8a7d8a8.mp3"
+      "zvuk": "/audio/opismenjavanje/rijec-d8a8d98ed8a7d8a8d992.mp3"
     },
     {
-      "zapis": "ماء",
+      "zapis": "مَاءْ",
       "citanje": "maa'",
       "znacenje": "voda"
     },
     {
-      "zapis": "لَبَن",
+      "zapis": "لَبَنْ",
       "citanje": "leben",
       "znacenje": "mlijeko",
-      "zvuk": "/audio/opismenjavanje/rijec-yogurt.mp3"
+      "zvuk": "/audio/opismenjavanje/rijec-d984d98ed8a8d98ed986d992.mp3"
     },
     {
-      "zapis": "نار",
+      "zapis": "نَارْ",
       "citanje": "nar",
       "znacenje": "vatra",
-      "zvuk": "/audio/opismenjavanje/rijec-d986d8a7d8b1.mp3"
+      "zvuk": "/audio/opismenjavanje/rijec-d986d98ed8a7d8b1d992.mp3"
     },
     {
-      "zapis": "مال",
+      "zapis": "مَالْ",
       "citanje": "mal",
       "znacenje": "imetak"
     },
     {
-      "zapis": "نام",
-      "citanje": "nam",
+      "zapis": "نَامَ",
+      "citanje": "name",
       "znacenje": "spavao je"
     },
     {
-      "zapis": "بال",
+      "zapis": "بَالْ",
       "citanje": "bal",
       "znacenje": "pamet, pažnja"
     },
     {
-      "zapis": "نَمِر",
+      "zapis": "نَمِرْ",
       "citanje": "nemir",
       "znacenje": "tigar"
     },
     {
-      "zapis": "أَمَل",
+      "zapis": "أَمَلْ",
       "citanje": "emel",
       "znacenje": "nada"
     },
     {
-      "zapis": "أَلَم",
+      "zapis": "أَلَمْ",
       "citanje": "elem",
       "znacenje": "bol"
     },
     {
-      "zapis": "أَمام",
+      "zapis": "أَمَامْ",
       "citanje": "emam",
       "znacenje": "ispred",
-      "zvuk": "/audio/opismenjavanje/rijec-d8a3d98ed985d8a7.mp3"
+      "zvuk": "/audio/opismenjavanje/rijec-d8a3d98ed985d98ed8a7d985d992.mp3"
     }
   ],
   "izvorZvukaCommons": "Nhaily Mustapha, Vion Nicolas (CC BY 3.0 us); Zannane Mohamed, Heulin Frederic (CC BY 3.0 us)"
