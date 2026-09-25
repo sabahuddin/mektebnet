@@ -160,7 +160,7 @@ export default function RoditeljKalendarPage() {
 
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {DAYS_BS.map(d => (
-                  <div key={d} className="text-center text-xs font-bold text-muted-foreground py-1">{d}</div>
+                  <div key={d} className="text-center text-xs font-bold text-muted-foreground py-1">{t(d)}</div>
                 ))}
               </div>
 
@@ -198,7 +198,7 @@ export default function RoditeljKalendarPage() {
                 {Object.entries(TIP_COLORS).map(([key, val]) => (
                   <div key={key} className="flex items-center gap-1.5">
                     <div className={`w-3 h-3 rounded ${val.bg} border-2 ${val.border}`} />
-                    <span className="text-xs text-muted-foreground font-medium">{val.label}</span>
+                    <span className="text-xs text-muted-foreground font-medium">{t(val.label)}</span>
                   </div>
                 ))}
               </div>
@@ -212,7 +212,7 @@ export default function RoditeljKalendarPage() {
                   {selectedEntries.map(entry => (
                     <div key={entry.id} className={`${TIP_COLORS[entry.tip]?.bg} rounded-lg px-3 py-2 border ${TIP_COLORS[entry.tip]?.border}`} data-testid={`entry-${entry.id}`}>
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{TIP_COLORS[entry.tip]?.label}</span>
+                        <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{t(TIP_COLORS[entry.tip]?.label ?? "")}</span>
                         {entry.grupaNaziv && (
                           <span className="text-xs text-muted-foreground bg-white/60 rounded px-2 py-0.5 font-medium">{entry.grupaNaziv}</span>
                         )}
@@ -242,7 +242,7 @@ export default function RoditeljKalendarPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`text-sm font-bold ${tipStyle?.text}`}>{tipStyle?.label}</span>
+                            <span className={`text-sm font-bold ${tipStyle?.text}`}>{t(tipStyle?.label ?? "")}</span>
                             {entry.grupaNaziv && (
                               <span className="text-xs text-muted-foreground bg-muted/60 rounded px-2 py-0.5 font-medium">{entry.grupaNaziv}</span>
                             )}

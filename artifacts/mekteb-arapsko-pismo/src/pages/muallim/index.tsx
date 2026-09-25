@@ -4192,7 +4192,7 @@ export default function MuallimPanel() {
 
                           <div className="grid grid-cols-7 gap-1">
                             {DAYS_BS.map(d => (
-                              <div key={d} className="text-center text-xs font-extrabold text-muted-foreground py-2">{d}</div>
+                              <div key={d} className="text-center text-xs font-extrabold text-muted-foreground py-2">{t(d)}</div>
                             ))}
                             {getDaysInMonth(currentMonth.year, currentMonth.month).map((day, i) => {
                               if (day === null) return <div key={`e-${i}`} />;
@@ -4252,7 +4252,7 @@ export default function MuallimPanel() {
                                     return (
                                       <div key={e.id} className={`rounded-lg px-3 py-2 border ${ts.bg} ${ts.border}`}>
                                         <div className="flex items-center justify-between gap-2">
-                                          <span className={`text-xs font-extrabold ${ts.text}`}>{ts.label}</span>
+                                          <span className={`text-xs font-extrabold ${ts.text}`}>{t(ts.label)}</span>
                                           <button
                                             onClick={() => { setKalendarMode("grupa"); setSelectedGrupaId(e.grupaId); }}
                                             className="text-xs font-bold text-primary hover:underline">
@@ -4342,7 +4342,7 @@ export default function MuallimPanel() {
                           {Object.entries(TIP_COLORS).map(([key, val]) => (
                             <button key={key} onClick={() => setActiveTip(key as any)}
                               className={`text-xs sm:text-sm font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 transition-all ${activeTip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
-                              {val.label}
+                              {t(val.label)}
                             </button>
                           ))}
                           <button onClick={() => { setBatchMode(!batchMode); setBatchDatumi([]); }}
@@ -4449,7 +4449,7 @@ export default function MuallimPanel() {
 
                         <div className="grid grid-cols-7 gap-0.5">
                           {DAYS_BS.map(d => (
-                            <div key={d} className="text-center text-[10px] sm:text-xs font-extrabold text-muted-foreground py-1 sm:py-2">{d}</div>
+                            <div key={d} className="text-center text-[10px] sm:text-xs font-extrabold text-muted-foreground py-1 sm:py-2">{t(d)}</div>
                           ))}
                           {getDaysInMonth(currentMonth.year, currentMonth.month).map((day, i) => {
                             if (day === null) return <div key={`e-${i}`} />;
@@ -4525,7 +4525,7 @@ export default function MuallimPanel() {
                                         <div className={`text-[10px] leading-tight ${ts?.text} opacity-70`}>{monthNames[parseInt(entry.datum.slice(5,7))-1]?.slice(0,3)}</div>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <span className={`text-xs font-bold ${ts?.text}`}>{ts?.label}</span>
+                                        <span className={`text-xs font-bold ${ts?.text}`}>{t(ts?.label ?? "")}</span>
                                         {entry.opis && <p className={`text-xs ${ts?.text} opacity-80 truncate mt-0.5`}>{entry.opis}</p>}
                                       </div>
                                       <button onClick={e => { e.stopPropagation(); deleteKalendarEntry(entry.id); }}
@@ -4572,7 +4572,7 @@ export default function MuallimPanel() {
                                         }
                                       }}
                                         className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${entry?.tip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
-                                        {val.label}
+                                        {t(val.label)}
                                       </button>
                                     ))}
                                     {entry && (

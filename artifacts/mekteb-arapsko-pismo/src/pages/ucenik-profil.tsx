@@ -1264,7 +1264,7 @@ export default function UcenikProfilPage() {
 
                       <div className="grid grid-cols-7 gap-1">
                         {DAYS_BS.map(d => (
-                          <div key={d} className="text-center text-xs font-extrabold text-muted-foreground py-2">{d}</div>
+                          <div key={d} className="text-center text-xs font-extrabold text-muted-foreground py-2">{t(d)}</div>
                         ))}
                         {getDaysInMonth(currentMonth.year, currentMonth.month).map((day, i) => {
                           if (day === null) return <div key={`e-${i}`} />;
@@ -1315,7 +1315,7 @@ export default function UcenikProfilPage() {
                             <div className="space-y-3">
                               {entry && (
                                 <div className={`${TIP_COLORS[entry.tip]?.bg} rounded-lg px-3 py-2`}>
-                                  <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{TIP_COLORS[entry.tip]?.label}</span>
+                                  <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{t(TIP_COLORS[entry.tip]?.label ?? "")}</span>
                                   {entry.opis && <p className="text-sm text-foreground mt-1">{entry.opis}</p>}
                                 </div>
                               )}
