@@ -74,18 +74,28 @@ function imaMedd(zapis: string): boolean {
   return false;
 }
 
-/**
- * Sukun na zadnjem harfu nije znak koji se uči, nego pravopis: svaka arapska
- * riječ izgovorena zasebno završava bez vokala, pa se tako i piše. Znak koji
- * dijete uči jeste sukun usred riječi — onaj koji zatvara slog, kao vav u
- * „يَوْمْ". Da se završni broji, svaka bi riječ tražila šestu lekciju i prve
- * četiri bi ostale bez ijedne riječi.
- *
- * Tešdid se ovdje ne dira: tešdid na kraju već znači pauzalni izgovor i nikad
- * ne nosi sukun uz sebe.
- */
 function bezZavrsnogSukuna(zapis: string): string {
   return zapis.endsWith(SUKUN) ? zapis.slice(0, -1) : zapis;
+}
+
+export interface OpcijeZnakova {
+  /**
+   * Da li završni sukun traži da je dijete sukun već učilo.
+   *
+   * Dvije su istine i obje su tačne, samo za različite programe.
+   *
+   * Linguistički, završni sukun jeste sukun: dijete koje ga nije učilo ne zna
+   * da zadnji harf nema vokal, pa „لَمْ" ne može pročitati. Zato je zadano
+   * ponašanje da se broji, i zato program čitanja sukun uvodi u četvrtoj
+   * lekciji, a do tada sve riječi završavaju vokalom ili dužinom.
+   *
+   * Stari program opismenjavanja sukun uvodi tek u šestoj lekciji, a njegove
+   * riječi su završni sukun dobile naknadno, kad je uvedeno pravilo da svaki
+   * zapis mora označiti kraj. Da se tamo broji, četvrta lekcija bi ostala bez
+   * ijedne riječi preko noći. Tamo se, dakle, zanemaruje — ali svjesno i
+   * imenovano, ne prećutno.
+   */
+  zanemariZavrsniSukun?: boolean;
 }
 
 /**
@@ -109,8 +119,9 @@ export function zavrsetakOznacen(zapis: string): boolean {
 }
 
 /** Svi znakovi koje zapis traži. */
-export function znakoviZapisa(zapis: string): Znak[] {
-  const z = bezZavrsnogSukuna(normalizirajZapis(zapis));
+export function znakoviZapisa(zapis: string, opcije: OpcijeZnakova = {}): Znak[] {
+  const puni = normalizirajZapis(zapis);
+  const z = opcije.zanemariZavrsniSukun ? bezZavrsnogSukuna(puni) : puni;
   const znakovi: Znak[] = [];
   if (z.includes(FETHA)) znakovi.push("fetha");
   if (z.includes(KESRA)) znakovi.push("kesra");
@@ -130,7 +141,7 @@ export interface ZahtjevZapisa {
 }
 
 /** Sve što jedan zapis traži, na jednom mjestu. */
-export function zahtjevZapisa(zapis: string): ZahtjevZapisa {
+export function zahtjevZapisa(zapis: string, opcije: OpcijeZnakova = {}): ZahtjevZapisa {
   const z = normalizirajZapis(zapis);
-  return { zapis: z, harfovi: harfoviZapisa(z), znakovi: znakoviZapisa(z), duzina: duzinaZapisa(z) };
+  return { zapis: z, harfovi: harfoviZapisa(z), znakovi: znakoviZapisa(z, opcije), duzina: duzinaZapisa(z) };
 }

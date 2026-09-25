@@ -60,3 +60,24 @@ node artifacts/mekteb-arapsko-pismo/scripts/provjeri-izgovor.mjs
 ```
 
 Za tipove uvijek `pnpm run typecheck`, nikad goli `tsc`.
+
+## Učim čitati (`/citanje`)
+
+Zaseban dio platforme, foničko-slogovni model. Ne traži ništa iz Sufare ni iz
+lekcija mekteba.
+
+**Imena slova se ne spominju nigdje** — ni u priči, ni u vježbi, ni u uputi
+koju muallim čita naglas. Dijete uči kako slovo zvuči, ne kako se zove. Zato u
+`citanje-*.ts` nema polja „naziv", za razliku od stare Sufare gdje postoji i
+`HarfData.name` i vježba „Napiši ime harfa".
+
+**Redoslijed slova je izračunat, ne abecedni.** Česta slova prva, a slična
+(`ب ت ث ن ي`, `ج ح خ`, `د ذ`, `ر ز`, `س ش`, `ص ض`, `ط ظ`, `ع غ`, `ف ق`) se
+razdvajaju u vremenu. Vidjeti zaglavlje `citanje-program.ts`.
+
+**Svaki arapski red mora imati `dir="rtl"`.** Bez toga dijelovi riječi idu
+slijeva nadesno, pa dijete uči obrnut redoslijed čitanja.
+
+Zvuk se pravi sa `scripts/generisi-zvuk-citanja.mjs`. U okruženju s posrednikom
+treba `NODE_USE_ENV_PROXY=1`, jer Node-ov `fetch` inače ne vidi posrednika koji
+ubacuje ključ, pa Google odbije zahtjev.
