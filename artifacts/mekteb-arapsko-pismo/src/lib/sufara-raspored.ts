@@ -42,7 +42,8 @@ export function rasporediZapise(
   const sviZnakovi = new Set(koraci.flatMap((k) => k.znakovi));
 
   for (const sirovi of new Set(zapisi)) {
-    const { zapis, harfovi, znakovi, duzina } = zahtjevZapisa(sirovi);
+    // Stari program: vidjeti OpcijeZnakova u sufara-zapis.ts.
+    const { zapis, harfovi, znakovi, duzina } = zahtjevZapisa(sirovi, { zanemariZavrsniSukun: true });
     if (!duzina) continue;
 
     const nemaHarfove = harfovi.filter((h) => !sviHarfovi.has(h));
