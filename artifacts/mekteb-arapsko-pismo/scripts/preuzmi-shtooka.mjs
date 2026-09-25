@@ -40,6 +40,7 @@ const PODACI = path.join(KORIJEN, "public/vjezbe/slusaj/podaci");
 const ZVUK = path.join(KORIJEN, "public/audio/opismenjavanje");
 const API = "https://commons.wikimedia.org/w/api.php";
 const PRIMIJENI = process.argv.includes("--primijeni");
+const SVE = process.argv.includes("--sve");
 const iProba = process.argv.indexOf("--proba");
 const PROBA = iProba === -1 ? null : process.argv[iProba + 1];
 
@@ -178,6 +179,16 @@ try { poImenu = await nadjiPoImenu([...trazene.keys()]); }
 catch (g) { console.log(`  upit po imenima nije uspio: ${g.message}`); }
 console.log(`  nađeno po imenu: ${poImenu.size}\n`);
 
+// Snimak se uzima tek kad se zna da odgovara našem zapisu. Ime datoteke na
+// Commonsu nema hareka, pa „Ar-علم.ogg" može biti ilm, alem ili alime — to
+// presuđuje čovjek koji posluša, ne ova skripta.
+let potvrdjeni = null;
+try {
+  const p = JSON.parse(await readFile(path.join(PODACI, "..", "potvrdjeni-snimci.json"), "utf8"));
+  potvrdjeni = new Set(p.potvrdjeno ?? []);
+} catch { potvrdjeni = new Set(); }
+if (PRIMIJENI && !SVE) console.log(`Uzimaju se samo potvrđene riječi (${potvrdjeni.size}). Za sve, dodaj --sve.\n`);
+
 await mkdir(ZVUK, { recursive: true });
 const prihvaceni = new Map();
 const odbijeni = [];
@@ -200,6 +211,10 @@ for (const [zapis, gdje] of trazene) {
   }
 
   const kandidat = sLicencom[0];
+  if (PRIMIJENI && !SVE && !potvrdjeni.has(zapis)) {
+    odbijeni.push({ zapis, razlog: "nije potvrđeno da snimak odgovara zapisu (vidi potvrdjeni-snimci.json)" });
+    continue;
+  }
   if (!PRIMIJENI) {
     const stranica = `https://commons.wikimedia.org/wiki/${encodeURIComponent(kandidat.naslov.replace(/ /g, "_"))}`;
     console.log(`  ${zapis.padEnd(10)} ${kandidat.licenca.padEnd(14)} ${kandidat.naslov}`);

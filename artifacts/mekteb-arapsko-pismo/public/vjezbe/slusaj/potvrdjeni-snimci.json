@@ -1,0 +1,26 @@
+{
+  "_opis": [
+    "Riječi za koje je potvrđeno da snimak s Commonsa odgovara našem zapisu.",
+    "Ime datoteke na Commonsu nema hareke — „Ar-علم.ogg\" može biti ilm, alem ili alime —",
+    "pa se snimak ne smije uzeti dok se ne zna šta je na njemu.",
+    "Ovdje su samo one kod kojih druga vokalizacija nije vjerovatna.",
+    "Ostale dodaje muallim, pošto ih posluša."
+  ],
+  "potvrdjeno": [
+    "لا", "يَوْم", "بَيْت", "شَيْء", "ماء", "باب", "كان", "قال", "نار", "أَمام"
+  ],
+  "cekaRedakturu": {
+    "مِنْ": "من je min ili man",
+    "أُمّ": "أم je umm ili am (ili)",
+    "سِرّ": "سر je sirr ili serre",
+    "حُبّ": "حب je hubb (ljubav) ili habb (zrno)",
+    "كُلّ": "كل je kull (sve) ili kul (jedi!)",
+    "مال": "مال je mal (imetak) ili male (nagnuo se)",
+    "عِنْد": "عند je inde ili anide",
+    "أَب": "أب je eb (otac) ili abb",
+    "أَمَل": "أمل je emel (nada) ili emile",
+    "أَلَم": "ألم je elem (bol) ili elime",
+    "عِلْمٌ": "علم je ilm, alem, alime ili alleme — i naš zapis ima tenvin, a snimak ga sigurno nema",
+    "قَمَرٌ": "قمر jeste kamer, ali naš zapis ima tenvin, a snimak ga nema"
+  }
+}
