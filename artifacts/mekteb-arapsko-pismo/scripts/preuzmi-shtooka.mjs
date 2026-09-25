@@ -29,7 +29,7 @@
 //   4. kratak slog (harf s harekom, bez dužine) najviše 0,45 s — učači koji
 //      razvlače izolovane slogove uče dijete pogrešnoj dužini.
 // Uz to se mjeri osnovna frekvencija i prijavi ako zbirka miješa glasove.
-import { mkdir, readFile, readdir, writeFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile, unlink, stat } from "node:fs/promises";
 import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
@@ -49,6 +49,26 @@ const PROBA = iProba === -1 ? null : process.argv[iProba + 1];
 // riječi odjednom, pa ih treba svega nekoliko.
 const RAZMAK = 400;
 const pauza = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Preuzimanje same datoteke ima isti predah kao i upiti. Prvi put je to
+ * izostalo, pa je Commons poslije dva snimka uzvratio s 429 i osam ih je
+ * ostalo neprezueto.
+ */
+async function preuzmi(url, pokusaj = 0) {
+  const o = await fetch(url, { headers: { "User-Agent": "mekteb.net-ucenje/1.0 (https://mekteb.net; obrazovni projekat)" } });
+  if (o.status === 429 || o.status === 503) {
+    if (pokusaj >= 4) throw new Error(`preuzimanje ${o.status} i poslije ${pokusaj} pokušaja`);
+    const cekaj = Number(o.headers.get("retry-after")) * 1000 || Math.min(30000, 2000 * 2 ** pokusaj);
+    console.log(`    server traži predah (${o.status}), čekam ${Math.round(cekaj / 1000)} s…`);
+    await pauza(cekaj);
+    return preuzmi(url, pokusaj + 1);
+  }
+  if (!o.ok) throw new Error(`preuzimanje ${o.status}`);
+  const podaci = Buffer.from(await o.arrayBuffer());
+  await pauza(RAZMAK);
+  return podaci;
+}
 
 /**
  * Shtooka imenuje datoteke golom riječju, bez hareka: „Ar-باب.ogg". Zato se
@@ -223,12 +243,20 @@ for (const [zapis, gdje] of trazene) {
     continue;
   }
 
-  const sirovo = path.join(os.tmpdir(), `shtooka-${Math.random().toString(36).slice(2)}`);
+  // Već preuzeto se preskače, pa se prekinut posao može samo ponovo pokrenuti
+  // i dovršiti ostatak umjesto da sve ide iznova.
+  const ime = `rijec-${Buffer.from(zapis).toString("hex").slice(0, 16)}.mp3`;
   try {
-    const o = await fetch(kandidat.url, { headers: { "User-Agent": "mekteb.net/1.0 (obrazovni projekat)" } });
-    if (!o.ok) throw new Error(`preuzimanje ${o.status}`);
-    await writeFile(sirovo, Buffer.from(await o.arrayBuffer()));
-  } catch (g) { odbijeni.push({ zapis, razlog: `preuzimanje nije uspjelo: ${g.message}` }); continue; }
+    await stat(path.join(ZVUK, ime));
+    gdje.stavka.zvuk = `/audio/opismenjavanje/${ime}`;
+    prihvaceni.set(zapis, { ...kandidat, ime, vecImamo: true, gdje });
+    console.log(`  ${zapis.padEnd(10)} već preuzeto → ${ime}`);
+    continue;
+  } catch {}
+
+  const sirovo = path.join(os.tmpdir(), `shtooka-${Math.random().toString(36).slice(2)}`);
+  try { await writeFile(sirovo, await preuzmi(kandidat.url)); }
+  catch (g) { odbijeni.push({ zapis, razlog: `preuzimanje nije uspjelo: ${g.message}` }); continue; }
 
   const { trajanje, glasnoca } = await izmjeri(sirovo);
   const gornja = jeKratakSlog(zapis) ? 0.45 : 3;
@@ -241,7 +269,6 @@ for (const [zapis, gdje] of trazene) {
     await unlink(sirovo).catch(() => {}); continue;
   }
 
-  const ime = `rijec-${Buffer.from(zapis).toString("hex").slice(0, 16)}.mp3`;
   await pokreni("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", sirovo, "-ac", "1", "-ar", "44100", "-b:a", "96k", path.join(ZVUK, ime)]);
   await unlink(sirovo).catch(() => {});
   gdje.stavka.zvuk = `/audio/opismenjavanje/${ime}`;
