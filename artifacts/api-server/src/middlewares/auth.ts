@@ -146,7 +146,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  req.user = payload;
+  // The token may outlive a role change. Authorize using the current DB role,
+  // not the role signed at login (notably for revoked admin/muallim access).
+  req.user = { ...payload, role: status.role };
   next();
 }
 

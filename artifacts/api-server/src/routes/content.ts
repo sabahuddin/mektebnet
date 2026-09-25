@@ -52,10 +52,10 @@ type PauseConfig = { id?: unknown; type?: unknown; correctAnswer?: unknown; corr
 
 
 /**
- * Provjerava samo aktivne zadaće učenikove trenutne grupe. Zadaća bez redova u
- * zadace_ucenici pripada cijeloj grupi, dok ciljane zadaće pripadaju samo
- * upisanim učenicima. Ovo je uski izuzetak od progresijskog gate-a: omogućava
- * čitanje zadate lekcije, ali ne utiče na uslove za označavanje završetka.
+ * Provjerava samo aktivne zadaće učenikove trenutne grupe. `is_targeted`
+ * određuje da li je zadaća vezana za snapshot (koji može biti prazan) ili cijelu
+ * grupu. Ovo je uski izuzetak od progresijskog gate-a: omogućava čitanje zadate
+ * lekcije, ali ne utiče na uslove za označavanje završetka.
  */
 async function hasAssignedLesson(studentId: number, lessonSlug: string): Promise<boolean> {
   const [profil] = await db
@@ -66,7 +66,7 @@ async function hasAssignedLesson(studentId: number, lessonSlug: string): Promise
   if (profil?.grupaId == null) return false;
 
   const assignments = await db
-    .select({ id: zadaceTable.id })
+    .select({ id: zadaceTable.id, isTargeted: zadaceTable.isTargeted })
     .from(zadaceTable)
     .where(and(
       eq(zadaceTable.grupaId, profil.grupaId),
@@ -90,7 +90,7 @@ async function hasAssignedLesson(studentId: number, lessonSlug: string): Promise
 
   return assignments.some((assignment) => {
     const students = targetsByAssignment.get(assignment.id);
-    return !students || students.has(studentId);
+    return !assignment.isTargeted || Boolean(students?.has(studentId));
   });
 }
 
@@ -693,6 +693,9 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
 
     await overlayOne(result, "ilmihal_lekcije", getLang(req));
     result.contentHtml = regeneratePripremaInHtml(String(result.contentHtml || ""));
+    // Prilozi i napredak ovise o prijavljenom korisniku. Njihov odgovor ne
+    // smije ostati u pregledničkom ili posredničkom cacheu pod javnim URL-om.
+    if (req.user) res.setHeader("Cache-Control", "private, no-store");
     res.json(result);
   } catch (err) {
     req.log.error({ err, slug: req.params.slug }, "GET /content/ilmihal/:slug failed");

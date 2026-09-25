@@ -934,20 +934,26 @@ function parseAccordionSections(fullHtml: string): { beforeAccordions: string; s
   const sections: ParsedSection[] = [];
   accordions.forEach(acc => {
     const btn = acc.querySelector(".lesson-section-btn");
-    if (!btn) return;
-
-    const onclickAttr = btn.getAttribute("onclick") || "";
-    const idMatch = onclickAttr.match(/toggleSection\('([^']+)'/);
-    const sectionId = idMatch ? idMatch[1] : `section-${sections.length}`;
-
-    const iconSpan = btn.querySelector(".section-icon");
-    const iconText = iconSpan?.textContent || "▶";
-    const clonedBtn = btn.cloneNode(true) as HTMLElement;
-    const clonedIcon = clonedBtn.querySelector(".section-icon");
-    if (clonedIcon) clonedIcon.remove();
-    const title = clonedBtn.textContent?.trim() || sectionId;
-
     const contentDiv = acc.querySelector(".lesson-content");
+    if (!contentDiv) return;
+
+    const onclickAttr = btn?.getAttribute("onclick") || "";
+    const idMatch = onclickAttr.match(/toggleSection\('([^']+)'/);
+    const sectionId = contentDiv.id || idMatch?.[1] || `section-${sections.length}`;
+
+    const iconSpan = btn?.querySelector(".section-icon") || acc.querySelector(":scope > .section-icon");
+    const iconText = iconSpan?.textContent || "▶";
+    const clonedBtn = btn?.cloneNode(true) as HTMLElement | undefined;
+    const clonedIcon = clonedBtn?.querySelector(".section-icon");
+    if (clonedIcon) clonedIcon.remove();
+    const legacyHeading = Array.from(acc.childNodes)
+      .filter(node => node !== contentDiv)
+      .map(node => node.textContent || "")
+      .join(" ")
+      .replace(/[▶▼▲]\s*$/, "")
+      .trim();
+    const title = clonedBtn?.textContent?.trim() || legacyHeading || sectionId;
+
     // KRITIČNO: ako je HTML nepravilno zatvoren, browser ugnijezdi sljedeće accordion-e
     // unutar contentDiv. Klonira-j i ukloni sve ugnijezđene .lesson-accordion prije
     // ekstrakcije inner HTML-a — inače save bi duplicirao sve sekcije.

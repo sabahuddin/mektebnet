@@ -89,6 +89,7 @@ export function sanitizeMuallimLessonHtml(
       "b",
       "blockquote",
       "br",
+      "button",
       "caption",
       "code",
       "col",

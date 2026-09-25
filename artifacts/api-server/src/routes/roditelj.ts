@@ -493,10 +493,11 @@ router.get("/zadace/:ucenikId", async (req, res) => {
       targetMap.get(t.zadacaId)!.add(t.ucenikId);
     }
 
-    // Vidljive ovom djetetu: bez targeta = cijela grupa; sa targetom = mora biti adresat.
+    // Only non-targeted assignments fall back to the whole group.
     const visible = allGroupZadace.filter(z => {
       const targeted = targetMap.get(z.id);
-      if (!targeted) return true;
+      if (!z.isTargeted) return true;
+      if (!targeted) return false;
       return targeted.has(ucenikId);
     });
     if (visible.length === 0) { res.json([]); return; }
@@ -764,8 +765,8 @@ router.get("/zadace", async (req, res) => {
     const result = zadace.flatMap(z => {
       const grupaDjeca = grupaToDjeca.get(z.grupaId) || [];
       const targeted = targetMap.get(z.id);
-      const adresati = targeted
-        ? grupaDjeca.filter(uid => targeted.has(uid))
+      const adresati = z.isTargeted
+        ? (targeted ? grupaDjeca.filter(uid => targeted.has(uid)) : [])
         : grupaDjeca;
       if (adresati.length === 0) return [];
       const prolongCount = Math.max(0, ...adresati.map(uid => prolongMap.get(`${z.id}:${uid}`) ?? 0));

@@ -16,6 +16,17 @@ test("uklanja izvršivi HTML i event handlere", () => {
   assert.match(result, /<p>Tekst<\/p>/);
 });
 
+test("čuva dugme i sadržaj akordiona, ali uklanja njegov onclick", () => {
+  const result = sanitizeMuallimLessonHtml(
+    `<div class="lesson-accordion"><button class="lesson-section-btn" onclick="toggleSection('prva', this)">Prva <span class="section-icon">▶</span></button><div id="prva" class="lesson-content active"><p>Sačuvani sadržaj</p></div></div>`,
+    iframeHosts,
+  );
+  assert.match(result, /<button class="lesson-section-btn">Prva/);
+  assert.match(result, /id="prva" class="lesson-content active"/);
+  assert.match(result, /<p>Sačuvani sadržaj<\/p>/);
+  assert.equal(result.includes("onclick"), false);
+});
+
 test("uklanja javascript URL i opasan inline CSS", () => {
   const result = sanitizeMuallimLessonHtml(
     `<a href="javascript:alert(1)">Link</a><span style="color:red;background:url(javascript:alert(2))">Tekst</span>`,

@@ -35,6 +35,7 @@ export default function IlmihalSvePage() {
   const [, setLocation] = useLocation();
   const isAdmin = user?.role === "admin";
   const isMuallim = user?.role === "muallim";
+  const canCreateLesson = isAdmin || (isMuallim && user.canEditLessons === true && user.username !== "demo.muallim");
   const { toast } = useToast();
   const [lekcije, setLekcije] = useState<Lekcija[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,7 +151,7 @@ export default function IlmihalSvePage() {
   // po slug-u `dodatak-nivo%`), pa ne kvare brojanje medaljona. Imaju punu
   // strukturu (akordioni, vježbe) — admin ih popunjava u editoru lekcije.
   async function createDodatak(nivo: number) {
-    if (!token || creating) return;
+    if (!isAdmin || !token || creating) return;
     setCreating(true);
     const existing = (groupedByNivo[nivo] || []).filter((l) => l.slug.startsWith(`dodatak-nivo${nivo}-`));
     const nums = existing
@@ -182,7 +183,7 @@ export default function IlmihalSvePage() {
   }
 
   async function createLessonProposal(nivo: number) {
-    if (!token || !newTitle.trim()) return;
+    if (!canCreateLesson || !token || !newTitle.trim()) return;
     setCreating(true);
     try {
       const result = await apiRequest<{ slug: string }>("POST", "/admin/ilmihal", {
@@ -596,7 +597,7 @@ export default function IlmihalSvePage() {
                           <p className="px-3 py-4 text-center text-sm text-amber-800/65">{t("Još nema dodatnih lekcija.")}</p>
                         )}
 
-                        {isMuallim && (
+                        {canCreateLesson && isMuallim && (
                           <div className="mt-2 border-t border-amber-100 pt-3">
                             <button
                               type="button"

@@ -23,5 +23,7 @@ Kad Git Data API stvori commit s drugim SHA-om za isti prethodni posao, remote S
 
 **How to apply:** Provjeri svih izmijenjenih putanja, validiraj SHA novog treeja za njih prije stvaranja commita i odbij upis ako se remote glava promijenila u međuvremenu. Nikada ne radi force push.
 
+GitHub `POST /git/trees` za ugniježđene putanje u odgovoru daje direktorije, ne sve fajlove na dubini. Za potvrdu blob SHA-ova prije commita pročitaj nastali tree sa `GET /git/trees/{sha}?recursive=1`; pri poređenju izlaza shell komande SHA-ove razdvajaj whitespaceom (`\r\n` se može pojaviti).
+
 ## Coolify
 Push triggeruje deploy preko Coolify-ja, ali Coolify uvijek treba RUČNI redeploy nakon push-a (self-hosted, mekteb.net). Napomeni korisniku da uradi redeploy.

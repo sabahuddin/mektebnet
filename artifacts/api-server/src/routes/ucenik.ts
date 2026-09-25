@@ -366,8 +366,8 @@ function currentSchoolYearResetDate(): string {
 }
 
 // GET /api/ucenik/zadace — student sees active homework for their group.
-// Supports per-student targeting: if a zadaca has rows in zadace_ucenici,
-// it is visible only to the listed students. If no rows — visible to whole group.
+// Targeted assignments stay private even after their final recipient row is
+// removed; only assignments explicitly marked non-targeted fall back to group.
 router.get("/zadace", async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -409,7 +409,8 @@ router.get("/zadace", async (req, res) => {
 
     const visible = allGroupZadace.filter(z => {
       const targeted = targetMap.get(z.id);
-      if (!targeted) return true; // bez targeta = cijela grupa
+      if (!z.isTargeted) return true;
+      if (!targeted) return false;
       return targeted.has(userId);
     });
 

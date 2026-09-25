@@ -77,6 +77,7 @@ interface Korisnik {
   email: string | null;
   role: string;
   isActive: boolean;
+  canEditLessons?: boolean;
   createdAt: string;
   lastLoginAt: string | null;
   lastSeenAt?: string | null;
@@ -1976,6 +1977,7 @@ export default function AdminPage() {
   const [pretplatniciSearch, setPretplatniciSearch] = useState("");
   const [billingMoveId, setBillingMoveId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [lessonPermissionId, setLessonPermissionId] = useState<number | null>(null);
 
   const loadData = async () => {
     if (!token) return;
@@ -2311,6 +2313,32 @@ export default function AdminPage() {
       toast({ title: t("Greška"), description: t("Nije moguće promijeniti status"), variant: "destructive" });
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const toggleLessonEditing = async (k: Korisnik) => {
+    if (!token || k.role !== "muallim" || k.username === "demo.muallim" || lessonPermissionId === k.id) return;
+    const enabled = k.canEditLessons === false;
+    setLessonPermissionId(k.id);
+    try {
+      await apiRequest("PUT", `/admin/muallimi/${k.id}/lesson-editing`, { enabled }, token);
+      setKorisnici(prev => prev.map(user =>
+        user.id === k.id ? { ...user, canEditLessons: enabled } : user
+      ));
+      toast({
+        title: t("Sačuvano"),
+        description: enabled
+          ? t("Muallim sada može uređivati lekcije i nastavne materijale.")
+          : t("Muallimu je isključeno uređivanje lekcija i nastavnih materijala."),
+      });
+    } catch (error: any) {
+      toast({
+        title: t("Greška pri promjeni dozvole"),
+        description: error?.message || t("Nije moguće promijeniti dozvolu za uređivanje lekcija."),
+        variant: "destructive",
+      });
+    } finally {
+      setLessonPermissionId(null);
     }
   };
 
@@ -3583,6 +3611,28 @@ export default function AdminPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
+                          {k.role === "muallim" && (
+                            <button
+                              type="button"
+                              onClick={() => void toggleLessonEditing(k)}
+                              disabled={lessonPermissionId === k.id || k.username === "demo.muallim"}
+                              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold transition-colors disabled:opacity-50 ${
+                                k.canEditLessons === false || k.username === "demo.muallim"
+                                  ? "bg-red-50 text-red-700 hover:bg-red-100"
+                                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              }`}
+                              title={k.username === "demo.muallim" ? t("Demo muallim je samo za čitanje") : k.canEditLessons === false ? t("Omogući uređivanje lekcija") : t("Isključi uređivanje lekcija")}
+                              aria-label={k.username === "demo.muallim" ? t("Demo muallim je samo za čitanje") : k.canEditLessons === false ? t("Omogući uređivanje lekcija") : t("Isključi uređivanje lekcija")}
+                              data-testid={`button-toggle-lesson-editing-${k.id}`}
+                            >
+                              {lessonPermissionId === k.id
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : k.canEditLessons === false || k.username === "demo.muallim"
+                                  ? <ToggleLeft className="h-4 w-4" />
+                                  : <ToggleRight className="h-4 w-4" />}
+                              {k.canEditLessons === false || k.username === "demo.muallim" ? t("Uređivanje isključeno") : t("Uređivanje uključeno")}
+                            </button>
+                          )}
                           <button onClick={() => toggleActive(k)} disabled={togglingId === k.id}
                             className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
                             title={k.isActive ? "Deaktiviraj" : "Aktiviraj"}>

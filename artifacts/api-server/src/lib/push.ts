@@ -34,6 +34,9 @@ export interface PushOptions {
  * `playerId`-ove iz `push_tokens` tabele.
  */
 export async function sendPushNotification(opts: PushOptions): Promise<boolean> {
+  // Integration tests use real database-backed fixtures; never deliver their
+  // generated user IDs to an external push provider.
+  if (process.env.NODE_ENV === "test") return false;
   if (!isConfigured()) return false;
   if (opts.userIds.length === 0) return false;
 

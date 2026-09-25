@@ -68,8 +68,9 @@ import {
 import { eq, ne, desc, asc, sql, gte, gt, lt, lte, inArray, and, isNull, isNotNull, or } from "drizzle-orm";
 import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { CT_TABLES, getLang, overlayRows } from "../lib/content-translatable.js";
-import { canAccessAdminRoute } from "../lib/admin-route-access.js";
+import { canAccessAdminRoute, requiresLessonEditingPermission } from "../lib/admin-route-access.js";
 import { assertStudentCapacity, LicenceLimitError } from "../lib/district-licences.js";
+import { countStudentsByTeacher } from "../lib/teacher-student-counts.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
 import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
 import { optimizePdfFile } from "../lib/dokumenti.js";
@@ -147,13 +148,28 @@ async function validateEtapaZaNivo(etapa: unknown, nivo: unknown): Promise<{ eta
 
 // Prilozi, upload i content-only izmjena postojeće Ilmihal lekcije dostupni su
 // i muallimu; sve ostale admin rute ostaju strogo admin-only.
-router.use((req, res, next) => {
+router.use(async (req, res, next) => {
   const role = (req as unknown as { user?: { role?: string } }).user?.role;
+  let canEditLessons = true;
+  if (role === "muallim" && requiresLessonEditingPermission(req.method, req.path)) {
+    const userId = req.user?.userId;
+    const [user] = userId
+      ? await db.select({ canEditLessons: usersTable.canEditLessons, username: usersTable.username })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+      : [];
+    canEditLessons = user?.canEditLessons === true && user.username !== "demo.muallim";
+    if (!canEditLessons) {
+      res.status(403).json({ error: "Nemate dozvolu za uređivanje lekcija i materijala" });
+      return;
+    }
+  }
   if (!canAccessAdminRoute({
     role,
     method: req.method,
     path: req.path,
     body: req.body,
+    canEditLessons,
   })) {
     return res.status(403).json({ error: "Nemaš dozvolu za ovu radnju" });
   }
@@ -1491,10 +1507,35 @@ router.delete("/uploads/:filename", async (req, res) => {
 
 export async function convertLegacyUploadsToWebp() {
   try {
+    // Starije konverzije su obrisale izvornu sliku, ali su prilozi i dalje
+    // pokazivali na njen .jpg/.jpeg/.png/.gif naziv. Oporavi takve veze i kada
+    // više nema kandidata za novu konverziju.
+    const imageAttachments = await db.select({
+      id: prilozi.id,
+      storedName: prilozi.storedName,
+      originalName: prilozi.originalName,
+    }).from(prilozi).where(eq(prilozi.kind, "file"));
+    const missingAttachments = imageAttachments.filter(attachment => {
+      const name = attachment.storedName;
+      if (!/\.(jpe?g|png|gif)$/i.test(name) || name !== path.basename(name)) return false;
+      const webpName = name.replace(/\.(jpe?g|png|gif)$/i, ".webp");
+      return !fs.existsSync(path.join(uploadsDir, name)) &&
+        fs.existsSync(path.join(uploadsDir, webpName));
+    });
+    for (const attachment of missingAttachments) {
+      const webpName = attachment.storedName.replace(/\.(jpe?g|png|gif)$/i, ".webp");
+      await db.update(prilozi).set({
+        storedName: webpName,
+        originalName: attachment.originalName.replace(/\.(jpe?g|png|gif)$/i, ".webp"),
+        mimeType: "image/webp",
+        fileSize: fs.statSync(path.join(uploadsDir, webpName)).size,
+      }).where(and(eq(prilozi.id, attachment.id), eq(prilozi.storedName, attachment.storedName)));
+    }
+
     const candidates = fs.existsSync(uploadsDir)
       ? fs.readdirSync(uploadsDir).filter(name => /\.(jpg|jpeg|png|gif)$/i.test(name))
       : [];
-    if (candidates.length === 0) return { ok: true, converted: [], failed: [] };
+    if (candidates.length === 0) return { ok: true, converted: [], failed: [], repairedAttachments: missingAttachments.length };
 
     const sharp = (await import("sharp")).default;
     const occupied = new Set(fs.readdirSync(uploadsDir));
@@ -1524,6 +1565,12 @@ export async function convertLegacyUploadsToWebp() {
           await tx.execute(sql`UPDATE knjige SET cover_image = replace(replace(cover_image, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}) WHERE cover_image LIKE ${`%${sourceName}%`}`);
           await tx.execute(sql`UPDATE knjige SET content_html = replace(replace(content_html, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}) WHERE content_html LIKE ${`%${sourceName}%`}`);
           await tx.execute(sql`UPDATE content_prijevodi SET prijevod = replace(replace(prijevod, ${oldUrl}, ${newUrl}), ${oldApiUrl}, ${newUrl}), updated_at = NOW() WHERE prijevod LIKE ${`%${sourceName}%`}`);
+          await tx.execute(sql`UPDATE prilozi
+            SET stored_name = ${targetName},
+                original_name = regexp_replace(original_name, ${"\\.(jpg|jpeg|png|gif)$"}, '.webp', 'i'),
+                mime_type = 'image/webp',
+                file_size = ${output.length}
+            WHERE kind = 'file' AND stored_name = ${sourceName}`);
         });
 
         fs.unlinkSync(sourcePath);
@@ -1537,7 +1584,7 @@ export async function convertLegacyUploadsToWebp() {
         failed.push({ name: sourceName, error: error instanceof Error ? error.message : String(error) });
       }
     }
-    return { ok: failed.length === 0, converted, failed };
+    return { ok: failed.length === 0, converted, failed, repairedAttachments: missingAttachments.length };
   } catch (e: any) {
     throw new Error(e.message);
   }
@@ -1731,6 +1778,7 @@ router.get("/korisnici", async (req, res) => {
         email: usersTable.email,
         role: usersTable.role,
         isActive: usersTable.isActive,
+        canEditLessons: usersTable.canEditLessons,
         createdAt: usersTable.createdAt,
         lastLoginAt: usersTable.lastLoginAt,
         lastSeenAt: usersTable.lastSeenAt,
@@ -1856,6 +1904,39 @@ router.get("/korisnici", async (req, res) => {
 // POST /api/admin/korisnik/:id/billing-override — administrator explicitly
 // moves a school/family-covered account into self billing. Links and all
 // existing subscriptions are deliberately retained.
+// PUT /api/admin/muallimi/:id/lesson-editing — administrator controls whether
+// an individual muallim can change lesson/material content.
+router.put("/muallimi/:id/lesson-editing", async (req, res): Promise<void> => {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId) || userId < 1) {
+    res.status(400).json({ error: "Nevažeći muallim" });
+    return;
+  }
+  const body = req.body;
+  if (!body || typeof body !== "object" || Array.isArray(body)
+    || typeof body.enabled !== "boolean"
+    || Object.keys(body).some((key) => key !== "enabled")) {
+    res.status(400).json({ error: "Tijelo zahtjeva mora sadržavati enabled: boolean" });
+    return;
+  }
+  const [teacher] = await db.select({ id: usersTable.id, role: usersTable.role, username: usersTable.username })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  if (!teacher || teacher.role !== "muallim") {
+    res.status(404).json({ error: "Muallim nije pronađen" });
+    return;
+  }
+  if (teacher.username === "demo.muallim" && body.enabled) {
+    res.status(403).json({ error: "Demo muallim je samo za čitanje" });
+    return;
+  }
+  const [updated] = await db.update(usersTable)
+    .set({ canEditLessons: body.enabled })
+    .where(eq(usersTable.id, userId))
+    .returning({ canEditLessons: usersTable.canEditLessons });
+  res.json({ canEditLessons: updated.canEditLessons });
+});
+
 const billingOverrideHandler = async (req: any, res: any) => {
   try {
     const userId = Number(req.params.id);
@@ -4821,6 +4902,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
         userId: ucenikProfiliTable.userId,
         mektebId: ucenikProfiliTable.mektebId,
         muallimId: ucenikProfiliTable.muallimId,
+        grupaId: ucenikProfiliTable.grupaId,
         isActive: usersTable.isActive,
       }).from(ucenikProfiliTable)
         .innerJoin(usersTable, eq(usersTable.id, ucenikProfiliTable.userId))
@@ -4877,6 +4959,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
         )[0] ?? null;
       const dodijeljeneLicence = mMuallimi.reduce((sum, m) => sum + m.licenceCount, 0);
       const brojGrupa = grupe.filter((g) => muallimIds.has(g.muallimId)).length;
+      const uceniciPoMuallimu = countStudentsByTeacher(mUcenici, grupe, muallimIds);
 
       return {
         id: mekteb.id,
@@ -4933,7 +5016,7 @@ router.get("/dzemati-pregled", async (_req, res) => {
             isActive: m.isActive,
             isGlavni: m.userId === glavni?.userId,
             licenceCount: m.licenceCount,
-            licencesUsed: mUcenici.filter((u) => u.muallimId === m.userId).length,
+            licencesUsed: uceniciPoMuallimu.get(m.userId) ?? 0,
           }))
           .sort((a, b) => Number(b.isGlavni) - Number(a.isGlavni) || a.displayName.localeCompare(b.displayName, "bs")),
       };

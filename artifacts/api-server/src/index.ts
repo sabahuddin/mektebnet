@@ -53,6 +53,7 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS administrator_declaration_accepted_at TIMESTAMP;`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_acknowledged_at TIMESTAMP;`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_override varchar(20);`);
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS can_edit_lessons boolean NOT NULL DEFAULT true;`);
     // Država mekteba nije bila dio ranije šeme; NULL za postojeće redove je
     // namjeran jer se iz billingRegion ne smije zaključivati stvarna država.
     await db.execute(sql`ALTER TABLE mektebi ADD COLUMN IF NOT EXISTS drzava varchar(100);`);
@@ -761,6 +762,39 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE INDEX IF NOT EXISTS grupe_arhiva_clanovi_grupa_idx ON grupe_arhiva_clanovi (grupa_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS grupe_arhiva_clanovi_ucenik_idx ON grupe_arhiva_clanovi (ucenik_id);`);
 
+    // Teacher-defined subgroups and explicit homework subgroup label.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS podgrupe (
+        id serial PRIMARY KEY,
+        grupa_id integer NOT NULL,
+        naziv varchar(80) NOT NULL,
+        created_at timestamp DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS podgrupe_ucenici (
+        id serial PRIMARY KEY,
+        grupa_id integer NOT NULL,
+        podgrupa_id integer NOT NULL,
+        ucenik_id integer NOT NULL,
+        created_at timestamp DEFAULT NOW()
+      );
+    `);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS podgrupe_ucenici_grupa_ucenik_uidx ON podgrupe_ucenici (grupa_id, ucenik_id);`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS podgrupe_ucenici_podgrupa_ucenik_uidx ON podgrupe_ucenici (podgrupa_id, ucenik_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS podgrupe_grupa_idx ON podgrupe (grupa_id);`);
+    await db.execute(sql`ALTER TABLE zadace ADD COLUMN IF NOT EXISTS podgrupa_id integer;`);
+    await db.execute(sql`ALTER TABLE zadace ADD COLUMN IF NOT EXISTS is_targeted boolean NOT NULL DEFAULT false;`);
+    await db.execute(sql`
+      UPDATE zadace z
+      SET is_targeted = true
+      WHERE z.is_targeted = false
+        AND (
+          z.podgrupa_id IS NOT NULL
+          OR EXISTS (SELECT 1 FROM zadace_ucenici zu WHERE zu.zadaca_id = z.id)
+        );
+    `);
+
     // Kviz kategorije (admin-definisane). Tabela + idempotent seed iz
     // KVIZ_KATEGORIJE_META ako je tabela prazna (prvi start nakon migracije).
     await db.execute(sql`
@@ -1284,7 +1318,7 @@ async function runResidualSchema() {
         AND ABS(EXTRACT(EPOCH FROM (prateca.created_at - glavna.created_at))) <= 10;
     `);
 
-    logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi + izmjene_lekcija) ready");
+    logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi + izmjene_lekcija + podgrupe + targeted homework snapshots) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

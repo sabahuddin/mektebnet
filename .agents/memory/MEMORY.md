@@ -15,7 +15,7 @@
 - [Poređenje arapskog teksta](arabic-text-matching.md) — alquran.cloud Uthmani ima nekanonski redoslijed harakata; nikad ne poredi egzaktno, normalizuj pa odsijeci bismillu po tokenima.
 - [H5P runtime asseti u Vite buildu](h5p-standalone-assets.md) — h5p-standalone se servira iz public/, ne preko ?url; Vite hash je lomio frameJs put (prod-only "Unexpected token '<'").
 - [Zadaća kapi meda vs total_med](zadaca-kapi-meda.md) — muallim-dodijeljene "kapi meda" idu na total_hasanat (znanje), NE total_med (igrice/Aferimi).
-- [Plain-content lekcije i akordion editor](dodatak-plain-content-editor.md) — WysiwygEditor krije sve akordion kontrole kad sadržaj nema `.lesson-accordion`; DODATAK/medaljon lekcije su plain `<p>`.
+- [Plain-content lekcije i akordion editor](dodatak-plain-content-editor.md) — DODATAK počinje kao plain HTML; muallimov sanitizer briše onclick, a stare sačuvane sekcije mogu biti bez dugmeta.
 - [NPP normalizacija predmeta](npp-predmet-normalizacija.md) — `predmet` dropdown sveden na 6 NPP oblasti; necore→"Ostali sadržaji", medaljoni bez predmeta; primjena preko idempotentne startup-migracije.
 - [Naslovi knjiga "a.s."](naslovi-knjiga-as.md) — nesklad je ﷺ ligatura (U+FDFA) kod Muhammeda, NE pisani "عليه السلام"; normalizuj sve počasne oblike u ", a.s.".
 - [Dostupni jezici po muallimu](jezici-po-muallimu.md) — admin uključuje/isključuje jezike po muallimu (učenici prate); bs uvijek; enforcement je namjerno UI-level (UI tekstovi bundlani client-side).
@@ -38,6 +38,7 @@
 - [Gost-gating frontend-only](gost-gating-frontend-only.md) — lekcije(5)/kvizovi(1) gate je samo na frontu; backend gate-uje samo `ucenik`, pa "rola=gost" (npr. roditelj) ne traži backend izmjene.
 - [Seed vraća obrisane katalog stavke](seed-vraca-obrisane-tagove.md) — fizički obrisana hardkodirana seed stavka se vrati; katalog koji se uređuje u adminu koristi trajni soft-delete/tombstone.
 - [OneSignal env na Coolify](onesignal-coolify-env.md) — VITE_ var mora biti Build Variable; backend /api/push/config je runtime fallback; router.use(requireAuth) hvata i ranije rute.
+- [OneSignal testni ID-ovi](onesignal-test-id-kolizija.md) — dev korisnički ID može pogoditi živi external_id; integracijski testovi ne smiju slati stvarne push pozive.
 - [OneSignal iOS i SPM](onesignal-ios-spm.md) — Cordova plugin koristi CocoaPods; ne radi iOS `cap sync` dok se Capacitor projekt ne migrira sa SPM-a.
 - [Sira kvizovi](sira-app.md) — zaseban statički sajt (sira.mekteb.net, van repoa, izvor u attached_assets zip); localStorage-only bez backenda, pa admin statistika nužno vidi samo naloge s vlastitog uređaja.
 - [Dev grupe su neaktivne](dev-grupe-neaktivne.md) — demo grupe imaju is_active=false pa agregatna statistika izgleda prazna; nije bug, privremeno aktiviraj za provjeru.
@@ -66,13 +67,15 @@
 - [Ocjene po predmetu i Napamet](ocjene-po-predmetu.md) — predmet dolazi iz lekcije; Napamet ulazi u ukupni prosjek jednom, iako isti unos može služiti Napamet prikazu.
 - [Opisne ocjene za mlađu djecu](opisne-ocjene.md) — Urađeno/Neurađeno su prave opisne ocjene; prikazuju se svima, završavaju pregledanu zadaću i ne ulaze u brojčani prosjek.
 - [Hero kopije moraju biti WebP](hero-kopije-webp.md) — galerijska hero kopija se ponovo obrađuje; DB reference se ažuriraju prije brisanja starog fajla.
-- [Zadaća — adresati i ispitivanje](zadaca-adresati-i-ispitivanje.md) — kartica je za jednog učenika; glavni modul za grupu ili 2+; Ispitano broji samo ocjene.
+- [WebP konverzija priloga](webp-prilozi.md) — pretvaranje uploadovane JPG slike mora uskladiti metapodatke priloga prije brisanja izvornog fajla.
+- [Zadaća — podgrupe i ciljani adresati](zadaca-podgrupe-adresati.md) — podgrupna dodjela čuva snimak primalaca; prazan ciljani skup nikad ne znači cijelu grupu.
 - [Prevedeni naslovi za zadaće](prevedeni-naslovi-za-zadace.md) — picker prikazuje lokalizirani naslov, ali API uz slug traži izvorni naslov; pokrij sve obrasce.
 - [Kanonski naslovi dodijeljenih lekcija](canonical-lesson-labels.md) — API normalizira tipografske crtice; naslove koji se uz slug egzaktno validiraju drži stabilnim.
 - [Bundler template script escape](bundler-template-script-escape.md) — nakon JSON reserializacije obavezno escapuj unutrašnje zatvarajuće script tagove ili browser prekida template JSON.
 - [pnpm verzija na Replitu](pnpm-package-manager-version-replit.md) — isključi pnpm samoprebacivanje verzije; inače packageManager noviji od Nix pnpm-a izaziva rekurzivnu instalaciju.
 - [PWA ažuriranje bez prekida rada](pwa-update-bez-reloada.md) — novi service worker čeka zatvaranje svih tabova; ne aktivirati ga usred korisničke sesije.
 - [Odobravanje izmjena lekcija](odobravanje-izmjena-lekcija.md) — muallimove izmjene čekaju admina i moraju ostati vezane za jezik koji je uređivan.
+- [Muallimovo uređivanje lekcija](muallim-uredjivanje-lekcija.md) — admin može pojedinačno ukinuti pisanje, ali pripreme i nastavnički materijali ostaju dostupni za čitanje.
 - [Samostalni pretplatnici](samostalni-pretplatnici.md) — plaćajućeg nosioca razlikuj po vlastitoj porodičnoj/individualnoj pretplati, ne po emailu ili ulozi.
 - [Historijska država džemata](historijska-drzava-dzemata.md) — starije registracije čuvale su samo regiju naplate; tačna država je bila u email obavijesti.
 - [Zajedničke licence džemata](dzematske-licence-pool.md) — kapacitet je zajednički, a po muallimu se prikazuje stvarni broj nearhiviranih vezanih učenika.

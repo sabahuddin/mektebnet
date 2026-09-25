@@ -23,6 +23,8 @@ import {
   ilmihalLekcijeTable,
   zadaceTable,
   zadaceUceniciTable,
+  podgrupeTable,
+  podgrupeUceniciTable,
   zadacePriloziTable,
   zadaceStatusTable,
   porukeTable,
@@ -1256,6 +1258,9 @@ router.delete("/grupe/:id/muallimi/:muallimId", async (req, res) => {
     if (!isAdmin && !isVlasnik && !isGlavniInSameMekteb) {
       res.status(403).json({ error: "Samo vlasnik ili glavni muallim mogu uklanjati muallime" }); return;
     }
+    if (muallimId === grupa.muallimId) {
+      res.status(409).json({ error: "Odgovorni muallim mora ostati u grupi. Prvo promijenite odgovornog muallima." }); return;
+    }
 
     await db.execute(sql`
       DELETE FROM grupa_muallimi WHERE grupa_id = ${grupaId} AND muallim_id = ${muallimId}
@@ -1308,6 +1313,7 @@ router.post("/grupe/:id/arhiviraj", async (req, res) => {
       await tx.update(ucenikProfiliTable)
         .set({ grupaId: null })
         .where(eq(ucenikProfiliTable.grupaId, grupaId));
+      await tx.delete(podgrupeUceniciTable).where(eq(podgrupeUceniciTable.grupaId, grupaId));
     });
     if (!transitioned) {
       res.status(400).json({ error: "Grupa je već arhivirana" });
@@ -2725,6 +2731,9 @@ router.put("/ucenici/:id/grupa", async (req, res) => {
     }
     if (transferVlasnistva && noviMuallimId !== null) {
       await db.transaction(async (tx) => {
+        if (profil.grupaId !== (grupaId || null)) {
+          await tx.delete(podgrupeUceniciTable).where(eq(podgrupeUceniciTable.ucenikId, ucenikId));
+        }
         if (noviMektebId !== (profil.mektebId ?? ctx?.mektebId ?? null)) {
           await assertStudentCapacity(tx, noviMuallimId);
         }
@@ -2748,10 +2757,15 @@ router.put("/ucenici/:id/grupa", async (req, res) => {
       });
       res.json({ success: true, transferred: true });
     } else {
-      const [updated] = await db.update(ucenikProfiliTable)
-        .set({ grupaId: grupaId || null })
-        .where(eq(ucenikProfiliTable.userId, ucenikId))
-        .returning();
+      const [updated] = await db.transaction(async (tx) => {
+        if (profil.grupaId !== (grupaId || null)) {
+          await tx.delete(podgrupeUceniciTable).where(eq(podgrupeUceniciTable.ucenikId, ucenikId));
+        }
+        return tx.update(ucenikProfiliTable)
+          .set({ grupaId: grupaId || null })
+          .where(eq(ucenikProfiliTable.userId, ucenikId))
+          .returning();
+      });
       res.json(updated);
     }
   } catch (err) {
@@ -5931,10 +5945,11 @@ router.get("/zadace", async (req, res) => {
     const recipientsByHomework = new Map<number, number[]>();
     for (const z of zadace) {
       const explicitIds = targetMap.get(z.id) || [];
-      // Trenutni adresati: eksplicitni ciljani učenici, inače aktivna grupa.
+      // Snapshot assignments never fall back to the group, including an empty
+      // snapshot after all targeted student accounts have been removed.
       recipientsByHomework.set(
         z.id,
-        explicitIds.length > 0 ? explicitIds : (grupaUceniciMap.get(z.grupaId) || []),
+        z.isTargeted ? explicitIds : (grupaUceniciMap.get(z.grupaId) || []),
       );
     }
     const recipientIds = Array.from(new Set(Array.from(recipientsByHomework.values()).flat()));
@@ -6016,9 +6031,175 @@ router.get("/zadace", async (req, res) => {
   }
 });
 
+router.get("/grupe/:id/podgrupe", async (req, res) => {
+  try {
+    const grupaId = Number(req.params.id);
+    if (!Number.isSafeInteger(grupaId) || grupaId <= 0) {
+      res.status(400).json({ error: "Neispravna grupa" });
+      return;
+    }
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+    const rows = await db.select({
+      id: podgrupeTable.id,
+      naziv: podgrupeTable.naziv,
+      ucenikId: podgrupeUceniciTable.ucenikId,
+    }).from(podgrupeTable)
+      .leftJoin(podgrupeUceniciTable, and(
+        eq(podgrupeUceniciTable.podgrupaId, podgrupeTable.id),
+        eq(podgrupeUceniciTable.grupaId, grupaId),
+      ))
+      .where(eq(podgrupeTable.grupaId, grupaId))
+      .orderBy(asc(podgrupeTable.id), asc(podgrupeUceniciTable.ucenikId));
+    const grouped = new Map<number, { id: number; naziv: string; ucenikIds: number[] }>();
+    for (const row of rows) {
+      let podgrupa = grouped.get(row.id);
+      if (!podgrupa) {
+        podgrupa = { id: row.id, naziv: row.naziv, ucenikIds: [] };
+        grouped.set(row.id, podgrupa);
+      }
+      if (row.ucenikId !== null) podgrupa.ucenikIds.push(row.ucenikId);
+    }
+    res.json([...grouped.values()]);
+  } catch (err) {
+    req.log.error({ err }, "[GET /muallim/grupe/:id/podgrupe] failed");
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+router.put("/grupe/:id/podgrupe", async (req, res) => {
+  try {
+    const grupaId = Number(req.params.id);
+    if (!Number.isSafeInteger(grupaId) || grupaId <= 0) {
+      res.status(400).json({ error: "Neispravna grupa" });
+      return;
+    }
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+    const incoming = req.body?.podgrupe;
+    if (!Array.isArray(incoming) || incoming.length !== 2) {
+      res.status(400).json({ error: "Potrebno je poslati tačno dvije podgrupe" });
+      return;
+    }
+    const names: string[] = [];
+    const ids: number[] = [];
+    const allMembers = new Set<number>();
+    for (const item of incoming) {
+      if (!item || typeof item.naziv !== "string" || !Array.isArray(item.ucenikIds)) {
+        res.status(400).json({ error: "Neispravni podaci podgrupe" });
+        return;
+      }
+      const naziv = item.naziv.trim();
+      if (!naziv || [...naziv].length > 80) {
+        res.status(400).json({ error: "Naziv podgrupe mora imati 1–80 znakova" });
+        return;
+      }
+      names.push(naziv.toLocaleLowerCase());
+      if (item.id !== undefined) {
+        if (!Number.isSafeInteger(item.id) || item.id <= 0 || ids.includes(item.id)) {
+          res.status(400).json({ error: "Neispravan ID podgrupe" });
+          return;
+        }
+        ids.push(item.id);
+      }
+      const memberIds: number[] = [];
+      for (const rawId of item.ucenikIds) {
+        if (!Number.isSafeInteger(rawId) || rawId <= 0 || memberIds.includes(rawId)) {
+          res.status(400).json({ error: "Neispravni ili ponovljeni ID učenika" });
+          return;
+        }
+        if (allMembers.has(rawId)) {
+          res.status(400).json({ error: "Učenik ne može biti u obje podgrupe" });
+          return;
+        }
+        allMembers.add(rawId);
+        memberIds.push(rawId);
+      }
+      item._validatedMemberIds = memberIds;
+    }
+    if (names[0] === names[1]) {
+      res.status(400).json({ error: "Nazivi podgrupa moraju biti različiti" });
+      return;
+    }
+    const saved = await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT id FROM grupe WHERE id = ${grupaId} FOR UPDATE`);
+      if (allMembers.size) {
+        await tx.execute(sql`
+          SELECT user_id FROM ucenik_profili
+          WHERE grupa_id = ${grupaId}
+            AND user_id IN (${sql.join([...allMembers].map(id => sql`${id}`), sql`, `)})
+          FOR UPDATE
+        `);
+        const active = await tx.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
+          .where(and(
+            eq(ucenikProfiliTable.grupaId, grupaId),
+            eq(ucenikProfiliTable.isArchived, false),
+            inArray(ucenikProfiliTable.userId, [...allMembers]),
+          ));
+        if (active.length !== allMembers.size) throw new Error("INVALID_PODGRUPA_STUDENT");
+      }
+      const existing = await tx.select({ id: podgrupeTable.id }).from(podgrupeTable)
+        .where(eq(podgrupeTable.grupaId, grupaId));
+      const existingIds = new Set(existing.map(row => row.id));
+      if (existing.length > 0 &&
+        (existing.length !== 2 || incoming.some(item => item.id === undefined) ||
+          ids.length !== 2 || existing.some(row => !ids.includes(row.id)))) {
+        throw new Error("STABLE_PODGRUPA_IDS_REQUIRED");
+      }
+      if (ids.some(id => !existingIds.has(id))) throw new Error("INVALID_PODGRUPA_ID");
+      await tx.delete(podgrupeUceniciTable).where(eq(podgrupeUceniciTable.grupaId, grupaId));
+      const rows: Array<{ id: number; naziv: string; ucenikIds: number[] }> = [];
+      for (const item of incoming) {
+        const memberIds = item._validatedMemberIds as number[];
+        let id: number;
+        if (item.id !== undefined) {
+          const [row] = await tx.update(podgrupeTable)
+            .set({ naziv: item.naziv.trim() })
+            .where(and(eq(podgrupeTable.id, item.id), eq(podgrupeTable.grupaId, grupaId)))
+            .returning({ id: podgrupeTable.id });
+          id = row.id;
+        } else {
+          const [row] = await tx.insert(podgrupeTable)
+            .values({ grupaId, naziv: item.naziv.trim() })
+            .returning({ id: podgrupeTable.id });
+          id = row.id;
+        }
+        if (memberIds.length) {
+          await tx.insert(podgrupeUceniciTable).values(memberIds.map(ucenikId => ({
+            grupaId, podgrupaId: id, ucenikId,
+          })));
+        }
+        rows.push({ id, naziv: item.naziv.trim(), ucenikIds: memberIds });
+      }
+      const retainedIds = rows.map(row => row.id);
+      await tx.delete(podgrupeTable).where(and(
+        eq(podgrupeTable.grupaId, grupaId),
+        sql`${podgrupeTable.id} NOT IN (${sql.join(retainedIds.map(id => sql`${id}`), sql`, `)})`,
+      ));
+      return rows;
+    });
+    res.json(saved);
+  } catch (err) {
+    if (err instanceof Error && err.message === "INVALID_PODGRUPA_ID") {
+      res.status(400).json({ error: "Podgrupa ne pripada ovoj grupi" });
+      return;
+    }
+    if (err instanceof Error && err.message === "INVALID_PODGRUPA_STUDENT") {
+      res.status(400).json({ error: "Svaki učenik mora biti aktivan član ove grupe" });
+      return;
+    }
+    if (err instanceof Error && err.message === "STABLE_PODGRUPA_IDS_REQUIRED") {
+      res.status(400).json({ error: "Za izmjenu podgrupa potrebno je poslati oba postojeća ID-a" });
+      return;
+    }
+    req.log.error({ err }, "[PUT /muallim/grupe/:id/podgrupe] failed");
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
 router.post("/zadace", async (req, res) => {
   try {
-    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds, tipDodjele } = req.body;
+    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds, tipDodjele, podgrupaId } = req.body;
     const quranPageMatch = typeof lekcijaSlug === "string" ? /^kuran-stranica-([1-9]\d*)$/.exec(lekcijaSlug) : null;
     const quranPage = quranPageMatch && Number(quranPageMatch[1]) <= 604 ? Number(quranPageMatch[1]) : null;
     if (Array.isArray(req.body?.priloziIds) && req.body.priloziIds.length > 0) {
@@ -6030,7 +6211,7 @@ router.post("/zadace", async (req, res) => {
     const individualna = tipDodjele === undefined
       ? Array.isArray(ucenikIds) && ucenikIds.length > 0
       : tipDodjele === "pojedinacno";
-    if (tipDodjele !== undefined && tipDodjele !== "svi" && tipDodjele !== "pojedinacno") {
+    if (tipDodjele !== undefined && tipDodjele !== "svi" && tipDodjele !== "pojedinacno" && tipDodjele !== "podgrupa") {
       res.status(400).json({ error: "Neispravna vrsta dodjele" }); return;
     }
     if (individualna && (!Array.isArray(ucenikIds) || ucenikIds.length === 0)) {
@@ -6047,6 +6228,12 @@ router.post("/zadace", async (req, res) => {
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+    if (tipDodjele === "podgrupa" && (!Number.isSafeInteger(podgrupaId) || podgrupaId <= 0)) {
+      res.status(400).json({ error: "Odaberi ispravnu podgrupu" }); return;
+    }
+    if (tipDodjele !== "podgrupa" && podgrupaId != null) {
+      res.status(400).json({ error: "ID podgrupe je dozvoljen samo za dodjelu podgrupi" }); return;
+    }
 
     let canonicalSlug: string | null = null;
     if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
@@ -6074,7 +6261,25 @@ router.post("/zadace", async (req, res) => {
       canonicalSlug = lekcije.length === 1 ? lekcije[0].slug : null;
     }
     let validUcenikIds: number[] = [];
-    if (individualna && Array.isArray(ucenikIds) && ucenikIds.length > 0) {
+    if (tipDodjele === "podgrupa") {
+      const [podgrupa] = await db.select({ id: podgrupeTable.id }).from(podgrupeTable)
+        .where(and(eq(podgrupeTable.id, podgrupaId), eq(podgrupeTable.grupaId, grupaId)));
+      if (!podgrupa) { res.status(400).json({ error: "Podgrupa ne pripada ovoj grupi" }); return; }
+      validUcenikIds = (await db.select({ ucenikId: podgrupeUceniciTable.ucenikId })
+        .from(podgrupeUceniciTable)
+        .innerJoin(ucenikProfiliTable, and(
+          eq(ucenikProfiliTable.userId, podgrupeUceniciTable.ucenikId),
+          eq(ucenikProfiliTable.grupaId, grupaId),
+          eq(ucenikProfiliTable.isArchived, false),
+        ))
+        .where(and(
+          eq(podgrupeUceniciTable.grupaId, grupaId),
+          eq(podgrupeUceniciTable.podgrupaId, podgrupaId),
+        ))).map(row => row.ucenikId);
+      if (validUcenikIds.length === 0) {
+        res.status(400).json({ error: "Podgrupa nema aktivnih učenika" }); return;
+      }
+    } else if (individualna && Array.isArray(ucenikIds) && ucenikIds.length > 0) {
       const numericIds = ucenikIds.map((x: any) => Number(x)).filter((x: number) => Number.isFinite(x));
       if (numericIds.length > 0) {
         const ucenici = await db.select({ userId: ucenikProfiliTable.userId })
@@ -6085,17 +6290,37 @@ router.post("/zadace", async (req, res) => {
     }
 
     const nova = await db.transaction(async (tx) => {
+      if (tipDodjele === "podgrupa") {
+        await tx.execute(sql`SELECT id FROM grupe WHERE id = ${grupaId} FOR SHARE`);
+        const [currentSubgroup] = await tx.select({ id: podgrupeTable.id }).from(podgrupeTable)
+          .where(and(eq(podgrupeTable.id, podgrupaId), eq(podgrupeTable.grupaId, grupaId)));
+        if (!currentSubgroup) throw new Error("INVALID_SUBGROUP");
+        validUcenikIds = (await tx.select({ ucenikId: podgrupeUceniciTable.ucenikId })
+          .from(podgrupeUceniciTable)
+          .innerJoin(ucenikProfiliTable, and(
+            eq(ucenikProfiliTable.userId, podgrupeUceniciTable.ucenikId),
+            eq(ucenikProfiliTable.grupaId, grupaId),
+            eq(ucenikProfiliTable.isArchived, false),
+          ))
+          .where(and(
+            eq(podgrupeUceniciTable.grupaId, grupaId),
+            eq(podgrupeUceniciTable.podgrupaId, podgrupaId),
+          ))).map(row => row.ucenikId);
+        if (!validUcenikIds.length) throw new Error("EMPTY_SUBGROUP");
+      }
       const [created] = await tx.insert(zadaceTable).values({
         grupaId, muallimId: req.user!.userId, naslov: naslovFinal, opis: opis || null,
         rokDo: rokDo || null, lekcijaNaslov: lekcijaNaslov || null, lekcijaSlug: canonicalSlug,
         lekcijaTip: quranPage ? "kuran" : canonicalSlug ? "ilmihal" : (lekcijaTip || null),
+        podgrupaId: tipDodjele === "podgrupa" ? podgrupaId : null,
+        isTargeted: individualna || tipDodjele === "podgrupa",
       }).returning();
       if (validUcenikIds.length) await tx.insert(zadaceUceniciTable).values(validUcenikIds.map(ucenikId => ({ zadacaId: created.id, ucenikId })));
       return created;
     });
 
     // Push notifikacija — ciljanim učenicima ili cijeloj grupi (default).
-    const notifyIds = validUcenikIds.length > 0
+    const notifyIds = nova.isTargeted
       ? validUcenikIds
       : (await db.select({ userId: ucenikProfiliTable.userId })
           .from(ucenikProfiliTable)
@@ -6137,6 +6362,10 @@ router.post("/zadace", async (req, res) => {
 
     res.status(201).json({ ...nova, ucenikIds: validUcenikIds, prilozi: await getHomeworkAttachments([nova.id]).then(m => m.get(nova.id) || []) });
   } catch (err) {
+    if (err instanceof Error && (err.message === "INVALID_SUBGROUP" || err.message === "EMPTY_SUBGROUP")) {
+      res.status(400).json({ error: err.message === "INVALID_SUBGROUP" ? "Podgrupa ne pripada ovoj grupi" : "Podgrupa nema aktivnih učenika" });
+      return;
+    }
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -6144,7 +6373,7 @@ router.post("/zadace", async (req, res) => {
 router.put("/zadace/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds, tipDodjele } = req.body;
+    const { naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, isActive, ucenikIds, tipDodjele, podgrupaId } = req.body;
     if (Array.isArray(req.body?.priloziIds) && req.body.priloziIds.length > 0) {
       res.status(400).json({ error: "Materijali za nastavu dostupni su samo u Pripremi za nastavu" });
       return;
@@ -6152,7 +6381,7 @@ router.put("/zadace/:id", async (req, res) => {
     const individualna = tipDodjele === undefined
       ? Array.isArray(ucenikIds) && ucenikIds.length > 0
       : tipDodjele === "pojedinacno";
-    if (tipDodjele !== undefined && tipDodjele !== "svi" && tipDodjele !== "pojedinacno") {
+    if (tipDodjele !== undefined && tipDodjele !== "svi" && tipDodjele !== "pojedinacno" && tipDodjele !== "podgrupa") {
       res.status(400).json({ error: "Neispravna vrsta dodjele" }); return;
     }
     if (individualna && (!Array.isArray(ucenikIds) || ucenikIds.length === 0)) {
@@ -6165,6 +6394,35 @@ router.put("/zadace/:id", async (req, res) => {
     const [existing] = await db.select().from(zadaceTable)
       .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
     if (!existing) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
+    if (tipDodjele === "podgrupa" && (!Number.isSafeInteger(podgrupaId) || podgrupaId <= 0)) {
+      res.status(400).json({ error: "Odaberi ispravnu podgrupu" }); return;
+    }
+    if (tipDodjele !== "podgrupa" && podgrupaId != null) {
+      res.status(400).json({ error: "ID podgrupe je dozvoljen samo za dodjelu podgrupi" }); return;
+    }
+    let subgroupRecipients: number[] | null = null;
+    const keepSubgroupSnapshot = tipDodjele === "podgrupa" && existing.podgrupaId === podgrupaId;
+    if (tipDodjele === "podgrupa") {
+      const [podgrupa] = await db.select({ id: podgrupeTable.id }).from(podgrupeTable)
+        .where(and(eq(podgrupeTable.id, podgrupaId), eq(podgrupeTable.grupaId, existing.grupaId)));
+      if (!podgrupa) { res.status(400).json({ error: "Podgrupa ne pripada ovoj grupi" }); return; }
+      if (!keepSubgroupSnapshot) {
+        subgroupRecipients = (await db.select({ ucenikId: podgrupeUceniciTable.ucenikId })
+          .from(podgrupeUceniciTable)
+          .innerJoin(ucenikProfiliTable, and(
+            eq(ucenikProfiliTable.userId, podgrupeUceniciTable.ucenikId),
+            eq(ucenikProfiliTable.grupaId, existing.grupaId),
+            eq(ucenikProfiliTable.isArchived, false),
+          ))
+          .where(and(
+            eq(podgrupeUceniciTable.grupaId, existing.grupaId),
+            eq(podgrupeUceniciTable.podgrupaId, podgrupaId),
+          ))).map(row => row.ucenikId);
+        if (subgroupRecipients.length === 0) {
+          res.status(400).json({ error: "Podgrupa nema aktivnih učenika" }); return;
+        }
+      }
+    }
 
     let canonicalSlug: string | null = null;
     if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
@@ -6187,19 +6445,43 @@ router.put("/zadace/:id", async (req, res) => {
       canonicalSlug = existing.lekcijaSlug;
     }
     const updated = await db.transaction(async (tx) => {
+      if (tipDodjele === "podgrupa" && !keepSubgroupSnapshot) {
+        await tx.execute(sql`SELECT id FROM grupe WHERE id = ${existing.grupaId} FOR SHARE`);
+        const [currentSubgroup] = await tx.select({ id: podgrupeTable.id }).from(podgrupeTable)
+          .where(and(eq(podgrupeTable.id, podgrupaId), eq(podgrupeTable.grupaId, existing.grupaId)));
+        if (!currentSubgroup) throw new Error("INVALID_SUBGROUP");
+        subgroupRecipients = (await tx.select({ ucenikId: podgrupeUceniciTable.ucenikId })
+          .from(podgrupeUceniciTable)
+          .innerJoin(ucenikProfiliTable, and(
+            eq(ucenikProfiliTable.userId, podgrupeUceniciTable.ucenikId),
+            eq(ucenikProfiliTable.grupaId, existing.grupaId),
+            eq(ucenikProfiliTable.isArchived, false),
+          ))
+          .where(and(
+            eq(podgrupeUceniciTable.grupaId, existing.grupaId),
+            eq(podgrupeUceniciTable.podgrupaId, podgrupaId),
+          ))).map(row => row.ucenikId);
+        if (!subgroupRecipients.length) throw new Error("EMPTY_SUBGROUP");
+      }
       const [row] = await tx.update(zadaceTable).set({
         naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug: canonicalSlug,
         lekcijaTip: canonicalSlug ? "ilmihal" : lekcijaTip, isActive,
+        ...(tipDodjele !== undefined || Array.isArray(ucenikIds)
+          ? {
+              podgrupaId: tipDodjele === "podgrupa" ? podgrupaId : null,
+              isTargeted: tipDodjele === "podgrupa" || individualna,
+            }
+          : {}),
       }).where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId))).returning();
-      if (tipDodjele !== undefined || Array.isArray(ucenikIds)) {
+      if ((tipDodjele !== undefined || Array.isArray(ucenikIds)) && !keepSubgroupSnapshot) {
         await tx.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
-        const numericIds = individualna
+        const numericIds = subgroupRecipients ?? (individualna
           ? [...new Set<number>(
               (ucenikIds as unknown[])
                 .map((value) => Number(value))
                 .filter((value): value is number => Number.isFinite(value)),
             )]
-          : [];
+          : []);
         if (numericIds.length) {
           const ucenici = await tx.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
             .where(and(eq(ucenikProfiliTable.grupaId, existing.grupaId), inArray(ucenikProfiliTable.userId, numericIds)));
@@ -6212,6 +6494,10 @@ router.put("/zadace/:id", async (req, res) => {
     const targets = await db.select().from(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, id));
     res.json({ ...updated, ucenikIds: targets.map(t => t.ucenikId), prilozi: (await getHomeworkAttachments([id])).get(id) || [] });
   } catch (err) {
+    if (err instanceof Error && (err.message === "INVALID_SUBGROUP" || err.message === "EMPTY_SUBGROUP")) {
+      res.status(400).json({ error: err.message === "INVALID_SUBGROUP" ? "Podgrupa ne pripada ovoj grupi" : "Podgrupa nema aktivnih učenika" });
+      return;
+    }
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -6234,7 +6520,7 @@ router.put("/zadace/:id/arhiviraj", async (req, res) => {
       .from(zadaceUceniciTable)
       .where(eq(zadaceUceniciTable.zadacaId, id))
       .limit(1);
-    if (targets.length > 0) {
+    if (entry.isTargeted || targets.length > 0) {
       res.status(400).json({ error: "Arhivirati se može samo zadaća za cijelu grupu" });
       return;
     }
@@ -6261,12 +6547,12 @@ router.delete("/zadace/:id", async (req, res) => {
   }
 });
 
-// Razrješava primatelje zadaće: ako ima ciljanih (zadace_ucenici) -> oni;
-// inače cijela grupa (svi aktivni učenici grupe).
-async function resolveZadacaRecipients(zadacaId: number, grupaId: number): Promise<number[]> {
+// Resolve an explicit snapshot or the current active group roster. An empty
+// targeted snapshot is intentionally empty, never a group-wide fallback.
+async function resolveZadacaRecipients(zadacaId: number, grupaId: number, isTargeted: boolean): Promise<number[]> {
   const targets = await db.select({ ucenikId: zadaceUceniciTable.ucenikId })
     .from(zadaceUceniciTable).where(eq(zadaceUceniciTable.zadacaId, zadacaId));
-  if (targets.length > 0) return targets.map(t => t.ucenikId);
+  if (isTargeted) return targets.map(t => t.ucenikId);
   const grupa = await db.select({ userId: ucenikProfiliTable.userId })
     .from(ucenikProfiliTable)
     .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
@@ -6282,7 +6568,7 @@ router.get("/zadace/:id/pregled", async (req, res) => {
       .where(and(eq(zadaceTable.id, id), eq(zadaceTable.muallimId, req.user!.userId)));
     if (!zadaca) { res.status(404).json({ error: "Zadaća nije pronađena" }); return; }
 
-    const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId);
+    const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId, zadaca.isTargeted);
     if (recipientIds.length === 0) {
       res.json({ zadaca: { ...zadaca, prilozi: (await getHomeworkAttachments([id])).get(id) || [] }, ocijenjenih: 0, ukupno: 0, lekcija: null, lekcijaZavrsenih: 0, lekcijaUkupno: null, ucenici: [] });
       return;
@@ -6383,10 +6669,11 @@ router.get("/ucenik/:id/zadace", async (req, res) => {
       targetMap.get(t.zadacaId)!.add(t.ucenikId);
     }
 
-    // Vidljive ovom učeniku: bez targeta = cijela grupa; inače mora biti adresat.
+    // Only non-targeted assignments fall back to all students in the group.
     const visible = grupneZadace.filter(z => {
       const targeted = targetMap.get(z.id);
-      if (!targeted) return true;
+      if (!z.isTargeted) return true;
+      if (!targeted) return false;
       return targeted.has(ucenikId);
     });
     if (visible.length === 0) { res.json([]); return; }
@@ -6451,7 +6738,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
 
     // Učenik mora biti stvarni adresat ove zadaće (spriječi pisanje statusa /
     // dodjelu hasanata proizvoljnim korisnicima).
-    const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId);
+    const recipientIds = await resolveZadacaRecipients(id, zadaca.grupaId, zadaca.isTargeted);
     if (!recipientIds.includes(ucenikId)) {
       res.status(403).json({ error: "Učenik nije adresat ove zadaće" });
       return;
@@ -6711,7 +6998,7 @@ router.get("/zadace-pregled-badge", async (req, res) => {
 
     let count = 0;
     for (const z of zadace) {
-      const recipients = await resolveZadacaRecipients(z.id, z.grupaId);
+      const recipients = await resolveZadacaRecipients(z.id, z.grupaId, z.isTargeted);
       if (recipients.length === 0) continue;
       // Zadaća se broji ako bar jedan adresat ima prošli EFEKTIVNI rok
       // (per-učenik noviRok ?? zadaca.rokDo) a nije označen završenim.

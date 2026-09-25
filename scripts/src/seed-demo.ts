@@ -122,6 +122,7 @@ export async function seedDemo() {
       email: "demo.muallim@mekteb.net",
       passwordHash: hash,
       role: "muallim",
+      canEditLessons: false,
     }).returning();
     await db.insert(muallimProfiliTable).values({
       userId: muallimUser.id,
@@ -129,6 +130,11 @@ export async function seedDemo() {
       licenceCount: 30,
     });
     console.log("✅ Demo muallim: demo.muallim / demo123");
+  } else if (muallimUser.canEditLessons !== false) {
+    [muallimUser] = await db.update(usersTable)
+      .set({ canEditLessons: false })
+      .where(eq(usersTable.id, muallimUser.id))
+      .returning();
   }
 
   // 3) Demo grupe i učenici

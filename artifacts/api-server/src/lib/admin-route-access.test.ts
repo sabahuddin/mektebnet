@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canAccessAdminRoute } from "./admin-route-access.js";
+import { canAccessAdminRoute, requiresLessonEditingPermission } from "./admin-route-access.js";
 
 test("admin zadržava pristup svim admin rutama", () => {
   assert.equal(canAccessAdminRoute({
@@ -98,6 +98,55 @@ test("muallim može dodati Embed, ali H5P i naše vježbe ostaju admin-only", ()
       path: `/prilozi/12/${suffix}`,
     }), false, suffix);
   }
+});
+
+test("isključeno uređivanje blokira samo mutacije lekcija i materijala", () => {
+  for (const [method, path] of [
+    ["POST", "/prilozi/12"],
+    ["PUT", "/prilozi/12"],
+    ["PUT", "/prilozi/12/redoslijed"],
+    ["DELETE", "/prilozi/12"],
+    ["POST", "/ilmihal"],
+    ["PUT", "/ilmihal/12"],
+    ["DELETE", "/ilmihal/12"],
+  ]) {
+    assert.equal(requiresLessonEditingPermission(method, path), true, `${method} ${path}`);
+    assert.equal(canAccessAdminRoute({
+      role: "muallim",
+      method,
+      path,
+      body: { contentHtml: "<p>Lesson</p>" },
+      canEditLessons: false,
+    }), false, `${method} ${path}`);
+  }
+});
+
+test("čitanja i admin bypass nisu zahvaćeni dozvolom za uređivanje", () => {
+  for (const path of ["/prilozi/12", "/prilozi/download/12", "/ilmihal/12", "/upload"]) {
+    assert.equal(requiresLessonEditingPermission("GET", path), false, path);
+  }
+  assert.equal(requiresLessonEditingPermission("HEAD", "/prilozi/download/12"), false);
+  // Generički upload služi i za poruke roditeljima; tek povezivanje fajla
+  // s lekcijom preko /prilozi zahtijeva dozvolu za uređivanje.
+  assert.equal(requiresLessonEditingPermission("POST", "/upload"), false);
+  assert.equal(canAccessAdminRoute({
+    role: "muallim",
+    method: "POST",
+    path: "/upload",
+    canEditLessons: false,
+  }), true);
+  assert.equal(canAccessAdminRoute({
+    role: "muallim",
+    method: "GET",
+    path: "/prilozi/download/12",
+    canEditLessons: false,
+  }), true);
+  assert.equal(canAccessAdminRoute({
+    role: "admin",
+    method: "DELETE",
+    path: "/ilmihal/12",
+    canEditLessons: false,
+  }), true);
 });
 
 test("ostale uloge ne mogu pristupiti admin rutama", () => {

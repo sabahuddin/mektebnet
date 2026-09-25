@@ -89,7 +89,9 @@ export async function runHomeworkLifecycleJob(now = new Date()): Promise<{ prolo
   for (const task of homework) {
     if (!task.createdAt) continue;
     const explicitTargets = targetsByHomework.get(task.id) || [];
-    const recipients = explicitTargets.length > 0 ? explicitTargets : (studentsByGroup.get(task.grupaId) || []);
+    const recipients = task.isTargeted
+      ? explicitTargets
+      : (studentsByGroup.get(task.grupaId) || []);
     for (const studentId of recipients) {
       const existing = statusByRecipient.get(`${task.id}:${studentId}`);
       const action = calculateHomeworkLifecycle({

@@ -3,7 +3,20 @@ type AdminRouteAccessInput = {
   method: string;
   path: string;
   body?: unknown;
+  canEditLessons?: boolean;
 };
+
+/**
+ * These admin endpoints directly create or change lesson/material content.
+ * Safe HTTP methods intentionally remain outside this permission check.
+ */
+export function requiresLessonEditingPermission(method: string, path: string): boolean {
+  if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) return false;
+  return path === "/prilozi"
+    || path.startsWith("/prilozi/")
+    || path === "/ilmihal"
+    || path.startsWith("/ilmihal/");
+}
 
 /**
  * Centralna dozvola za /api/admin rute koje su dostupne i muallimu.
@@ -14,9 +27,11 @@ export function canAccessAdminRoute({
   method,
   path,
   body,
+  canEditLessons = true,
 }: AdminRouteAccessInput): boolean {
   if (role === "admin") return true;
   if (role !== "muallim") return false;
+  if (!canEditLessons && requiresLessonEditingPermission(method, path)) return false;
 
   const isPriloziRoute = path === "/prilozi" || path.startsWith("/prilozi/");
   if (isPriloziRoute) {

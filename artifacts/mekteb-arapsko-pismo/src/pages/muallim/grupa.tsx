@@ -731,8 +731,9 @@ export default function GrupaPage() {
     }
   }
 
-  async function removeSekundarniMuallim(muallimId: number) {
+  async function removeSekundarniMuallim(muallimId: number, ime: string) {
     if (!token || !grupa) return;
+    if (!window.confirm(t('Ukloniti muallima "{ime}" iz grupe "{grupa}"? Njegov nalog i podaci ostaju sačuvani, a odgovorni muallim ostaje u grupi.', { ime, grupa: grupa.naziv }))) return;
     setRemovingSecMuallimId(muallimId);
     try {
       await apiRequest("DELETE", `/muallim/grupe/${grupa.id}/muallimi/${muallimId}`, undefined, token);
@@ -859,9 +860,9 @@ export default function GrupaPage() {
                      <button type="button" aria-label={`${t("Ukloni muallima iz grupe")}: ${m.displayName}`}
                        data-testid={`button-ukloni-muallima-${m.id}`}
                        disabled={removingSecMuallimId !== null}
-                       onClick={() => void removeSekundarniMuallim(m.id)}
-                       className="text-red-600 hover:text-red-800 disabled:opacity-50">
-                       <X className="h-4 w-4" />
+                       onClick={() => void removeSekundarniMuallim(m.id, m.displayName)}
+                       className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50">
+                       <X className="h-3.5 w-3.5" /> {t("Ukloni iz grupe")}
                      </button>
                    )}
                  </span>

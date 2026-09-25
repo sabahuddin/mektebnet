@@ -397,6 +397,18 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
     onClose();
   };
 
+  const toggleMode = () => {
+    if (mode === "visual") {
+      // Vizuelni editor čuva sekcije interno; preuzmi puni HTML PRIJE
+      // unmounta, inače HTML mod dobije stari contentHtml iz baze.
+      const getFullHtml = (window as any).__wysiwygGetFullHtml;
+      if (typeof getFullHtml === "function") setHtml(getFullHtml());
+      setMode("html");
+    } else {
+      setMode("visual");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
       <div className="flex md:hidden flex-col items-center justify-center h-full gap-4 p-8 text-center">
@@ -419,7 +431,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => setMode(mode === "visual" ? "html" : "visual")}
+              onClick={toggleMode}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                 mode === "html" ? "bg-zinc-800 text-green-400" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
@@ -574,25 +586,29 @@ function parseSections(html: string): { heroImage: string | null; sections: Acco
 
   accordions.forEach(accordion => {
     const btn = accordion.querySelector(".lesson-section-btn");
-    if (!btn) return;
-
-    // Extract section ID from onclick="toggleSection('SECTION_ID', this)"
-    const onclickAttr = btn.getAttribute("onclick") || "";
+    const contentDiv = accordion.querySelector(".lesson-content");
+    if (!contentDiv) return;
+    // Muallimov HTML sanitizer uklanja onclick, a starijim lekcijama je
+    // uklanjao i <button>. ID sadržaja ostaje i nakon sigurnosnog čišćenja.
+    const onclickAttr = btn?.getAttribute("onclick") || "";
     const idMatch = onclickAttr.match(/toggleSection\('([^']+)'/);
-    if (!idMatch) return;
-    const sectionId = idMatch[1];
+    const sectionId = contentDiv.id || idMatch?.[1] || `section-${sections.length}`;
 
     // Button title: text without the span
-    const iconSpan = btn.querySelector(".section-icon");
+    const iconSpan = btn?.querySelector(".section-icon");
     if (iconSpan) iconSpan.remove();
     // Strip leading numbering ("1. ", "2.) ", "3 - " itd.) iz prikazanog naslova akordiona.
     // Zahtijeva najmanje jedan delimiter nakon broja, pa "A1" / "1a" ostaju netaknuti.
-    const rawTitle = btn.textContent?.trim() || sectionId;
+    const legacyHeading = Array.from(accordion.childNodes)
+      .filter(node => node !== contentDiv)
+      .map(node => node.textContent || "")
+      .join(" ")
+      .replace(/[▶▼▲]\s*$/, "")
+      .trim();
+    const rawTitle = btn?.textContent?.trim() || legacyHeading || sectionId;
     let title = rawTitle.replace(/^\s*\d+(?:\s*[.)\-:–])+\s*/, "").trim() || rawTitle;
 
     // Content div
-    const contentDiv = accordion.querySelector(".lesson-content");
-    if (!contentDiv) return;
     const contentHtml = contentDiv.innerHTML.trim();
 
     // Default open: has "active" class or is the story/first narrative section
@@ -1877,7 +1893,7 @@ function PriloziSection({
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0 || !token) return;
+    if (!canManage || files.length === 0 || !token) return;
     setUploading(true);
     setUploadProgress({ current: 0, total: files.length });
     let uploadedCount = 0;
@@ -1924,7 +1940,7 @@ function PriloziSection({
 
   const handleH5pUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !token) return;
+    if (!canManage || !canDelete || !file || !token) return;
     setUploadingH5p(true);
     try {
       const fd = new FormData();
@@ -2103,7 +2119,7 @@ function PriloziSection({
   }, [token, h5pSubmitting, toast, refreshH5pAttempts, isGuestLike, promptRegister, t]);
 
   const handleAddUrl = async () => {
-    if (!urlValue.trim() || !token) return;
+    if (!canManage || !urlValue.trim() || !token) return;
     setSavingUrl(true);
     try {
       const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/url`, {
@@ -2120,7 +2136,7 @@ function PriloziSection({
   };
 
   const handleAddNasaVjezba = async () => {
-    if (!nasTip || !nasaVjezbaId || !token) return;
+    if (!canManage || !canDelete || !nasTip || !nasaVjezbaId || !token) return;
     setSavingNasaVjezba(true);
     try {
       const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/nasa-vjezba`, {
@@ -2140,7 +2156,7 @@ function PriloziSection({
   };
 
   const handleAddEmbed = async () => {
-    if (!embedValue.trim() || !token) return;
+    if (!canManage || !embedValue.trim() || !token) return;
     setSavingEmbed(true);
     try {
       const result = await apiRequest<Prilog>("POST", `/admin/prilozi/${lekcija.id}/embed`, {
@@ -2166,7 +2182,7 @@ function PriloziSection({
   };
 
   const handleSaveEditEmbed = async () => {
-    if (!editEmbed || !token) return;
+    if (!canManage || !canDelete || !editEmbed || !token) return;
     if (!editEmbedLabel.trim()) {
       toast({ title: t("Greška"), description: t("Naziv ne može biti prazan"), variant: "destructive" });
       return;
@@ -2226,6 +2242,7 @@ function PriloziSection({
   };
 
   const handleDelete = async (id: number, name: string) => {
+    if (!canManage || !canDelete) return;
     if (!confirm(t('Obrisati "{name}"?', { name }))) return;
     try {
       await apiRequest("DELETE", `/admin/prilozi/${id}`, undefined, token);
@@ -2237,7 +2254,7 @@ function PriloziSection({
   };
 
   const saveMaterialTitle = async () => {
-    if (!editingMaterial || !token || !editingMaterialTitle.trim()) return;
+    if (!canManage || !editingMaterial || !token || !editingMaterialTitle.trim()) return;
     setSavingMaterialTitle(true);
     try {
       const result = await apiRequest<Prilog>(
@@ -2259,7 +2276,7 @@ function PriloziSection({
   };
 
   const moveMaterial = async (materialId: number, delta: -1 | 1) => {
-    if (!token || savingMaterialOrder) return;
+    if (!canManage || !token || savingMaterialOrder) return;
     const materialIds = attachments
       .filter(item => item.kind === "file" || item.kind === "url")
       .map(item => item.id);
@@ -2388,7 +2405,6 @@ function PriloziSection({
   }, [galleryItems.length]);
 
   if (mode === "materijali") {
-    if (!canManage) return null;
     const materijali = attachments.filter(a => a.kind === "file" || a.kind === "url");
     const slike = materijali.filter(a =>
       a.kind === "file" && (a.mimeType.startsWith("image/") || /\.(jpe?g|webp|png|gif)$/i.test(a.originalName))
@@ -2408,8 +2424,9 @@ function PriloziSection({
           {" "}
           {t("JPG i WEBP mape i slike čuvaju se u originalnoj rezoluciji i mogu se otvoriti preko cijelog ekrana.")}
         </p>
-        <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf,.jpg,.jpeg,.webp,image/jpeg,image/webp" onChange={handleUpload} className="hidden" />
+        {canManage && <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.txt,.rtf,.jpg,.jpeg,.webp,image/jpeg,image/webp" onChange={handleUpload} className="hidden" />}
         <div className="mb-3 flex flex-wrap gap-2">
+          {canManage && <>
           <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
             {uploading ? (
               <>
@@ -2423,6 +2440,7 @@ function PriloziSection({
           <Button onClick={() => setShowUrlForm(v => !v)} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
             <ExternalLink className="w-4 h-4 mr-2" /> {showUrlForm ? t("Odustani") : t("Dodaj link")}
           </Button>
+          </>}
           {slike.length > 0 && (
             <Button onClick={() => openGallery(slike)} variant="outline" className="rounded-xl border-teal-300 text-teal-700 hover:bg-teal-50 font-bold">
               <ImagePlus className="w-4 h-4 mr-2" />
@@ -2430,7 +2448,7 @@ function PriloziSection({
             </Button>
           )}
         </div>
-        {showUrlForm && (
+        {canManage && showUrlForm && (
           <div className="mb-3 flex flex-col gap-2 rounded-xl border border-teal-200 bg-teal-50 p-3">
             <input type="url" placeholder="https://…" value={urlValue} onChange={e => setUrlValue(e.target.value)} className="rounded-lg border border-teal-200 px-3 py-2 text-sm" />
             <input type="text" placeholder={t("Naziv (opciono)")} value={urlLabel} onChange={e => setUrlLabel(e.target.value)} className="rounded-lg border border-teal-200 px-3 py-2 text-sm" />
@@ -2442,7 +2460,7 @@ function PriloziSection({
         <div className="flex flex-col gap-2">
           {materijali.map((a, index) => (
             <div key={a.id} className="flex items-center gap-3 rounded-xl border border-teal-100 bg-teal-50/60 p-3">
-              <div className="flex shrink-0 flex-col">
+              {canManage && <div className="flex shrink-0 flex-col">
                 <button
                   type="button"
                   onClick={() => void moveMaterial(a.id, -1)}
@@ -2463,11 +2481,11 @@ function PriloziSection({
                 >
                   <ArrowDown className="h-4 w-4" />
                 </button>
-              </div>
+              </div>}
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
                 {a.kind === "url" ? <ExternalLink className="h-5 w-5 text-teal-600" aria-label="Link" /> : getFileIcon(a.mimeType, a.originalName)}
               </span>
-              <button
+              {canManage && <button
                 type="button"
                 onClick={() => {
                   setEditingMaterial(a);
@@ -2478,7 +2496,7 @@ function PriloziSection({
                 aria-label={t("Uredi naslov")}
               >
                 <Pencil className="h-4 w-4" />
-              </button>
+              </button>}
               <span className="min-w-0 flex-1 break-words text-sm font-semibold" title={a.originalName}>
                 {a.kind === "file" ? displayMaterialName(a.originalName) : a.originalName}
               </span>
@@ -2501,7 +2519,7 @@ function PriloziSection({
           {materijali.length === 0 && <p className="text-sm italic text-muted-foreground">{t("Nema materijala za nastavu.")}</p>}
         </div>
       </div>
-      <Dialog open={!!editingMaterial} onOpenChange={open => { if (!open) setEditingMaterial(null); }}>
+      <Dialog open={canManage && !!editingMaterial} onOpenChange={open => { if (!open) setEditingMaterial(null); }}>
         <DialogContent className="max-w-md">
           <DialogTitle>{t("Uredi naslov materijala")}</DialogTitle>
           <div className="space-y-4">
@@ -3252,6 +3270,9 @@ export default function IlmihalLekcijaPage() {
   const { slug } = useParams<{ slug: string }>();
   const [, setLocation] = useLocation();
   const { user, token, isLoading: authLoading } = useAuth();
+  const canViewTeacherResources = user?.role === "admin" || user?.role === "muallim";
+  const canEditLessons = user?.role === "admin" ||
+    (user?.role === "muallim" && user.canEditLessons === true && user.username !== "demo.muallim");
   // Task #133: roditelj = gost → read-only kao neprijavljeni gost. Ne upisuje
   // napredak/hasanat/vrijeme; write-akcije (markComplete, heartbeat, quizPassed)
   // su gejtovane na isGuestLike da roditelj ne dobije više od gosta.
@@ -3921,12 +3942,14 @@ export default function IlmihalLekcijaPage() {
   // pristup broju i ID-ovima sekcija.
   const visibleSections = React.useMemo(() => {
     if (!parsed) return [] as AccordionSection[];
-    const isMuallim = user?.role === "admin" || user?.role === "muallim";
     return parsed.sections
-      .filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || isMuallim))
+      .filter(s => s.type !== "quiz_box" && (s.type !== "priprema" || canViewTeacherResources))
       .slice()
       .sort((a, b) => (a.type === "priprema" ? 1 : 0) - (b.type === "priprema" ? 1 : 0));
-  }, [parsed, user?.role]);
+  }, [parsed, canViewTeacherResources]);
+  const teacherPreparation = canViewTeacherResources
+    ? parsed?.sections.find(section => section.type === "priprema")
+    : undefined;
 
   // Anti-cheat gate: ČETIRI uslova moraju biti true. `completed` se ne broji
   // ovdje — već-završene lekcije imaju zaseban UI (vidi dugme dolje).
@@ -4091,7 +4114,7 @@ export default function IlmihalLekcijaPage() {
 
   return (
     <>
-    {showEditor && lekcija && token && (
+    {showEditor && canEditLessons && lekcija && token && (
       <AdminLekcijaEditor
         lekcija={{ id: lekcija.id, naslov: lekcija.naslov, contentHtml: lekcija.contentHtml }}
         token={token}
@@ -4343,7 +4366,7 @@ export default function IlmihalLekcijaPage() {
               onExit={() => setLocation(backNivo ? `/nivo${backNivo}-mapa` : "/ilmihal")}
               heading={lekcija.naslov}
               onPrint={handlePrintLesson}
-              onEdit={user?.role === "admin" || user?.role === "muallim" ? () => setShowEditor(true) : undefined}
+              onEdit={canEditLessons ? () => setShowEditor(true) : undefined}
             />
         ) : (
           <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
@@ -4351,7 +4374,7 @@ export default function IlmihalLekcijaPage() {
             <div className="flex items-center gap-1.5 print:hidden">
               <button type="button" onClick={handlePrintLesson} title={t("Printaj lekciju")} aria-label={t("Printaj lekciju")}
                 className="h-9 w-9 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200"><Printer className="w-4 h-4" /></button>
-              {(user?.role === "admin" || user?.role === "muallim") &&
+              {canEditLessons &&
                 <button type="button" onClick={() => setShowEditor(true)} title={t("Uredi sadržaj")} aria-label={t("Uredi sadržaj")}
                   className="h-9 w-9 rounded-lg flex items-center justify-center bg-amber-100 text-amber-700 hover:bg-amber-200"><FilePen className="w-4 h-4" /></button>}
             </div>
@@ -4472,6 +4495,7 @@ export default function IlmihalLekcijaPage() {
 
               const items: React.ReactNode[] = [];
               for (const section of visibleSections) {
+                if (section.type === "priprema") continue;
                 items.push(
                   <React.Fragment key={`${slug}-${section.id}`}>
                     <SectionAccordion
@@ -4482,16 +4506,30 @@ export default function IlmihalLekcijaPage() {
                       pauseAnswers={lekcija.pauseAnswers}
                       onPauseProgressChange={handlePauseProgressChange}
                     />
-                    {section.type === "priprema" && (user?.role === "admin" || user?.role === "muallim") && (
-                      <PriloziSection
-                        lekcija={lekcija}
-                        token={token}
-                        canManage
-                        canDelete={user.role === "admin"}
-                        mode="materijali"
-                      />
-                    )}
                   </React.Fragment>
+                );
+              }
+              // Nastavni sadržaj je za svakog muallima, nezavisno od prava pisanja.
+              // Materijali se prikazuju i kada lekcija nema priprema-akordion.
+              if (canViewTeacherResources) {
+                if (teacherPreparation) items.push(
+                  <SectionAccordion
+                    key={`${slug}-${teacherPreparation.id}`}
+                    section={teacherPreparation}
+                    slug={slug!}
+                    nivo={lekcija.nivo}
+                    onOpened={handleSectionOpened}
+                  />,
+                );
+                items.push(
+                  <PriloziSection
+                    key={`${slug}-nastavni-materijali`}
+                    lekcija={lekcija}
+                    token={token}
+                    canManage={canEditLessons}
+                    canDelete={user!.role === "admin"}
+                    mode="materijali"
+                  />,
                 );
               }
               const kvizNode = renderKvizOrCta();
@@ -4540,14 +4578,13 @@ export default function IlmihalLekcijaPage() {
           </div>
         )}
 
-        {(user?.role === "admin" || user?.role === "muallim")
-          && !visibleSections.some(section => section.type === "priprema") && (
+        {canViewTeacherResources && parsed.sections.length === 0 && (
           <div className="mb-6">
             <PriloziSection
               lekcija={lekcija}
               token={token}
-              canManage
-              canDelete={user.role === "admin"}
+              canManage={canEditLessons}
+              canDelete={user!.role === "admin"}
               mode="materijali"
             />
           </div>
@@ -4558,7 +4595,7 @@ export default function IlmihalLekcijaPage() {
           <PriloziSection
             lekcija={lekcija}
             token={token}
-            canManage={user.role === "admin" || user.role === "muallim"}
+            canManage={canEditLessons}
             canDelete={user.role === "admin"}
             mode="vjezbe"
             onH5pCelebration={setCelebration}
