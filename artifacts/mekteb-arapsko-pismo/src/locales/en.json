@@ -1666,6 +1666,8 @@
   "želi se povezati sa učenikom:": "wants to connect with student:",
   "Nema učenika. Dodaj prvog učenika.": "No students. Add the first student.",
   "Arhiviran": "Archived",
+  "Arhivirani": "Archived",
+  "Učitavanje učenika nije uspjelo. Osvježite stranicu.": "Could not load students. Refresh the page.",
   "Arhiviraj učenika": "Archive student",
   "Nema grupa. Kreiraj prvu grupu (razred).": "No groups. Create the first group (class).",
   "Obriši grupu": "Delete group",
