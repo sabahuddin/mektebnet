@@ -13,6 +13,7 @@
     "audio:sufara:fix-za": "node scripts/fix-za-harf-audio.mjs",
     "audio:sufara:fix-early": "node scripts/fix-early-lesson-audio.mjs",
     "audio:sufara:normalize": "node scripts/normalize-sufara-audio.mjs",
+    "audio:trajanje": "node scripts/provjeri-trajanje-zvuka.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "cap:sync": "pnpm run cap:sync:android",

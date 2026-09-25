@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="bs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slušaj i klikni · Mekteb.net</title>
+<!--
+  SLUŠAJ I KLIKNI – vježba opismenjavanja za mekteb.net
+  Jedan fajl, bez vanjskih skripti, fontova, kolačića i analitike.
+
+  ŠTA RADI
+    Dijete pritisne zvučnik, čuje harf ili riječ, pa klikne na jednu od četiri
+    ponude. Ide u tri kruga, jedan za drugim:
+      1. harf s harekom – nikad go harf: u pismu koje dijete uči svako slovo
+                          nosi znak, pa ga nosi i ovdje
+      2. dva slova      – spojevi i kratke riječi od dva slova
+      3. riječi         – prave riječi od tri i više slova, s raznim vokalima
+    Na kraju ostaje spisak riječi za čitanje. Spisak se može promiješati, jer
+    kod učitelja dijete te iste riječi čita drugim redom.
+
+  SADRŽAJ
+    Vježba čita podatke ovim redom:
+      1. window.SLUSAJ_PODACI  (ako ga stranica postavi prije ove skripte)
+      2. ?podaci=/putanja/do/datoteke.json  (samo s iste domene)
+      3. ugrađena lekcija u samoj skripti (var UGRADJENO), da se vježba
+         otvori i bez servera
+    Polja:
+      id        – oznaka vježbe, vraća se u događajima
+      naslov    – naslov iznad vježbe
+      uputa     – jedna rečenica (nije obavezno)
+      harfovi   – [{ zapis, ime, glas, zvuk? }]
+      slogovi   – [{ zapis, citanje, zvuk? }]
+      rijeci    – [{ zapis, citanje, znacenje, zvuk? }]
+    Polje „zvuk" je putanja do snimka. Ako ga nema, vježba poseže za glasom
+    preglednika, i to jasno kaže.
+
+  ZVUK
+    Isključivo snimci iz polja „zvuk". Govorne sinteze nema i ne treba je
+    vraćati: glas se razlikuje od uređaja do uređaja, pa bi dijete u istoj
+    vježbi čulo snimljenog čovjeka i sintetički glas jedno za drugim. Gdje
+    snimka nema, vježba to kaže i traži da dijete pročita samo.
+
+  DOGAĐAJI (postMessage roditelju i CustomEvent "mekteb-igra")
+    visina – kad se promijeni visina sadržaja
+    krug   – kad se završi jedan krug { krug, tacno, ukupno }
+    kraj   – kad su sva tri kruga gotova { id, tacno, ukupno, sekunde }
+-->
+<style>
+  :root {
+    --tirkiz: #248F92; --tirkiz-tamni: #1B6E70; --amber: #F59E0B;
+    --papir: #FAF9F5; --bijela: #FFFFFF; --tekst: #1F2937; --sivi: #6B7280;
+    --obrub: #E5E7EB; --zeleni: #059669; --crveni: #DC2626;
+    --zaobljenje: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px; background: var(--papir); color: var(--tekst);
+    font-family: Nunito, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .okvir { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; margin: 0 0 4px; }
+  .uputa { color: var(--sivi); font-size: .95rem; margin: 0 0 14px; }
+  .traka {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 14px; font-size: .85rem; color: var(--sivi);
+  }
+  .znacka {
+    padding: 3px 10px; border-radius: 999px; background: var(--obrub);
+    font-weight: 700; color: var(--tekst);
+  }
+  .znacka.aktivna { background: var(--tirkiz); color: #fff; }
+  .kartica {
+    background: var(--bijela); border: 1px solid var(--obrub);
+    border-radius: var(--zaobljenje); padding: 20px; text-align: center;
+  }
+  #zvucnik {
+    width: 104px; height: 104px; border-radius: 50%; border: none; cursor: pointer;
+    background: var(--tirkiz); color: #fff; font-size: 2.6rem; line-height: 1;
+    box-shadow: 0 6px 16px rgba(36,143,146,.3); transition: transform .12s;
+  }
+  #zvucnik:hover { transform: scale(1.05); }
+  #zvucnik:active { transform: scale(.96); }
+  #zvucnik.svira { animation: kucaj .7s ease-in-out infinite; }
+  #zvucnik.nijem { background: var(--sivi); }
+  @keyframes kucaj { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+  .pomoc { margin-top: 10px; color: var(--sivi); font-size: .9rem; min-height: 1.2em; }
+  .bezZvuka {
+    margin: 10px auto 0; max-width: 420px; padding: 7px 12px; border-radius: 10px;
+    background: #FFFBEB; border: 1px solid #FDE68A; color: #78350F; font-size: .82rem;
+  }
+  /* Zvučnik na kartici riječi: odmah se vidi šta se može čuti. */
+  .rijec .ima-zvuk { font-size: .8rem; color: var(--tirkiz); }
+  .rijec.nijema { opacity: .72; }
+  .rijec.nijema .zapis { color: var(--sivi); }
+  .ponude { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
+  @media (min-width: 560px) { .ponude { grid-template-columns: repeat(4, 1fr); } }
+  .ponuda {
+    background: var(--bijela); border: 2px solid var(--obrub); border-radius: var(--zaobljenje);
+    padding: 18px 8px 12px; cursor: pointer; text-align: center; transition: border-color .15s, background .15s;
+  }
+  .ponuda:hover:not(.zakljucana) { border-color: var(--tirkiz); }
+  .ponuda .slovo {
+    font-family: "Noto Naskh Arabic", "Traditional Arabic", serif;
+    font-size: 2.6rem; line-height: 1.6; color: var(--tirkiz-tamni); direction: rtl;
+  }
+  .ponuda .oznaka { font-weight: 800; color: var(--sivi); font-size: .8rem; }
+  .ponuda.tacna { border-color: var(--zeleni); background: #ECFDF5; }
+  .ponuda.netacna { border-color: var(--crveni); background: #FEF2F2; }
+  .ponuda.zakljucana { cursor: default; }
+  .dugme {
+    border: none; border-radius: 999px; padding: 10px 22px; font-weight: 800;
+    font-family: inherit; font-size: .95rem; cursor: pointer;
+    background: var(--tirkiz); color: #fff;
+  }
+  .dugme.sporedno { background: var(--obrub); color: var(--tekst); }
+  .dugme:disabled { opacity: .5; cursor: default; }
+  .podnozje { margin-top: 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .spisak { margin-top: 24px; }
+  .spisak h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  .spisak p { color: var(--sivi); font-size: .9rem; margin: 0 0 12px; }
+  .rijeci { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .rijec {
+    background: var(--bijela); border: 1px solid var(--obrub); border-radius: 12px;
+    padding: 10px; text-align: center; cursor: pointer;
+  }
+  .rijec:hover { border-color: var(--tirkiz); }
+  .rijec .zapis {
+    font-family: "Noto Naskh Arabic", "Traditional Arabic", serif;
+    font-size: 1.8rem; color: var(--tirkiz-tamni); direction: rtl; line-height: 1.7;
+  }
+  .rijec .prijevod { font-size: .8rem; color: var(--sivi); }
+  .napomena {
+    margin-top: 18px; padding: 10px 14px; border-radius: 12px;
+    background: #FFFBEB; border: 1px solid #FDE68A; color: #78350F; font-size: .85rem;
+  }
+  .sakrij { display: none !important; }
+</style>
+</head>
+<body>
+<div class="okvir">
+  <h1 id="naslov">Slušaj i klikni</h1>
+  <p class="uputa" id="uputa"></p>
+
+  <div class="traka">
+    <span class="znacka" data-krug="0">1. Harf s harekom</span>
+    <span class="znacka" data-krug="1">2. Dva slova</span>
+    <span class="znacka" data-krug="2">3. Riječi</span>
+    <span id="rezultat" style="margin-left:auto"></span>
+  </div>
+
+  <div class="kartica" id="igra">
+    <button id="zvucnik" type="button" aria-label="Poslušaj">🔊</button>
+    <div class="bezZvuka sakrij" id="bezZvuka"></div>
+    <div class="pomoc" id="pomoc"></div>
+    <div class="ponude" id="ponude"></div>
+    <div class="podnozje">
+      <button class="dugme sporedno" id="dalje" type="button" disabled>Dalje</button>
+    </div>
+  </div>
+
+  <div class="kartica sakrij" id="gotovo">
+    <div style="font-size:2.4rem">🎉</div>
+    <p id="zavrsna" style="font-weight:800;margin:8px 0"></p>
+    <button class="dugme" id="ponovo" type="button">Igraj ponovo</button>
+  </div>
+
+  <div class="spisak" id="spisak">
+    <h2>Riječi koje sada čitaš</h2>
+    <p id="uputaSpisak">Kod učitelja ćeš iste riječi čitati drugim redom.</p>
+    <div class="rijeci" id="rijeci"></div>
+    <div class="podnozje">
+      <button class="dugme sporedno" id="promijesaj" type="button">Promiješaj redoslijed</button>
+    </div>
+  </div>
+
+  <div class="napomena sakrij" id="napomenaGlas"></div>
+</div>
+
+<!-- Sučelje vježbe na jeziku djeteta (?lang=de). Vidi /vjezbe/jezik.js. -->
+<script src="/vjezbe/jezik.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // Ugrađena lekcija: da se vježba otvori i kad nema ni servera ni JSON-a.
+  // Namjerno je običan objekat, a ne <script type="application/json">, jer
+  // takav blok ne prenese svaki način otvaranja stranice.
+  var UGRADJENO = {"id":"opismenjavanje-4","program":"opismenjavanje","lekcija":4,"naslov":"Lekcija 4 — Ba, Nun i Ja","uputa":"Pritisni zvučnik, poslušaj, pa klikni ono što si čuo.","harfovi":[{"zapis":"م","ime":"Mim","glas":"m"},{"zapis":"ر","ime":"Ra","glas":"r"},{"zapis":"ل","ime":"Lam","glas":"l"},{"zapis":"ب","ime":"Ba","glas":"b"},{"zapis":"ن","ime":"Nun","glas":"n"},{"zapis":"ي","ime":"Ja","glas":"j"}],"slogovi":[{"zapis":"مَ","citanje":"me"},{"zapis":"مِ","citanje":"mi"},{"zapis":"مُ","citanje":"mu"},{"zapis":"بَ","citanje":"be"},{"zapis":"بِ","citanje":"bi"},{"zapis":"بُ","citanje":"bu"},{"zapis":"نَ","citanje":"ne"},{"zapis":"نِ","citanje":"ni"},{"zapis":"لَ","citanje":"le"},{"zapis":"رَ","citanje":"re"},{"zapis":"را","citanje":"raa"},{"zapis":"با","citanje":"baa"}],"rijeci":[{"zapis":"أَب","citanje":"eb","znacenje":"otac"},{"zapis":"باب","citanje":"bab","znacenje":"vrata"},{"zapis":"نار","citanje":"nar","znacenje":"vatra"},{"zapis":"ماء","citanje":"maa'","znacenje":"voda"},{"zapis":"مال","citanje":"mal","znacenje":"imetak"},{"zapis":"نام","citanje":"nam","znacenje":"spavao je"},{"zapis":"بال","citanje":"bal","znacenje":"pamet, pažnja"},{"zapis":"لَبَن","citanje":"leben","znacenje":"mlijeko"},{"zapis":"نَمِر","citanje":"nemir","znacenje":"tigar"},{"zapis":"أَمَل","citanje":"emel","znacenje":"nada"},{"zapis":"أَلَم","citanje":"elem","znacenje":"bol"},{"zapis":"أَمام","citanje":"emam","znacenje":"ispred"}]};
+
+  var T = function (t) { return (window.MektebJezik && window.MektebJezik.t) ? window.MektebJezik.t(t) : t; };
+  var el = {
+    naslov: document.getElementById('naslov'), uputa: document.getElementById('uputa'),
+    zvucnik: document.getElementById('zvucnik'), pomoc: document.getElementById('pomoc'),
+    ponude: document.getElementById('ponude'), dalje: document.getElementById('dalje'),
+    rezultat: document.getElementById('rezultat'), igra: document.getElementById('igra'),
+    gotovo: document.getElementById('gotovo'), zavrsna: document.getElementById('zavrsna'),
+    ponovo: document.getElementById('ponovo'), rijeci: document.getElementById('rijeci'),
+    promijesaj: document.getElementById('promijesaj'), bezZvuka: document.getElementById('bezZvuka'),
+    napomenaGlas: document.getElementById('napomenaGlas')
+  };
+
+  var podaci = null, krugovi = [], krug = 0, pitanje = 0, tacno = 0, ukupno = 0, pocetak = 0, odgovoreno = false;
+
+  function javi(dogadjaj, dodatno) {
+    var poruka = { izvor: 'mekteb-igra', igra: 'slusaj', id: podaci && podaci.id, dogadjaj: dogadjaj };
+    for (var k in dodatno) if (Object.prototype.hasOwnProperty.call(dodatno, k)) poruka[k] = dodatno[k];
+    try { if (window.parent !== window) window.parent.postMessage(poruka, '*'); } catch (g) {}
+    document.dispatchEvent(new CustomEvent('mekteb-igra', { detail: poruka }));
+  }
+
+  function promijesaj(niz) {
+    var k = niz.slice();
+    for (var i = k.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var p = k[i]; k[i] = k[j]; k[j] = p; }
+    return k;
+  }
+
+  /* ---------- zvuk ---------- */
+  // Samo pravi snimci. Govorna sinteza je namjerno izbačena: glas se razlikuje
+  // od uređaja do uređaja, a kad upadne pored snimljenog glasa, dijete u istoj
+  // vježbi čuje dva različita čovjeka. Bez snimka vježba to jasno kaže.
+  function pustiSnimak(putanja) {
+    return new Promise(function (rijesi, odbij) {
+      var a = new Audio(putanja);
+      a.addEventListener('ended', function () { rijesi(); });
+      a.addEventListener('error', function () { odbij(); });
+      a.play().catch(odbij);
+    });
+  }
+
+  function odsviraj(stavka) {
+    var gotov = function () { el.zvucnik.classList.remove('svira'); };
+    var bezZvuka = function () {
+      gotov();
+      el.zvucnik.classList.add('nijem');
+      el.bezZvuka.textContent = T('Ovaj zapis još nema snimak — pročitaj ga sam.');
+      el.bezZvuka.classList.remove('sakrij');
+    };
+    el.zvucnik.classList.remove('nijem');
+    el.bezZvuka.classList.add('sakrij');
+    if (!stavka.zvuk) return bezZvuka();
+    el.zvucnik.classList.add('svira');
+    pustiSnimak(stavka.zvuk).then(gotov).catch(bezZvuka);
+  }
+
+  /* ---------- pitanja ---------- */
+  function napraviKrug(stavke, brojPonuda) {
+    return promijesaj(stavke).map(function (tocna) {
+      var ostale = promijesaj(stavke.filter(function (s) { return s.zapis !== tocna.zapis; })).slice(0, brojPonuda - 1);
+      return { tocna: tocna, ponude: promijesaj([tocna].concat(ostale)) };
+    });
+  }
+
+  function opisKruga() {
+    return [T('Koji harf s harekom si čuo?'), T('Koja dva slova si čuo?'), T('Koju riječ si čuo?')][krug] || '';
+  }
+
+  function nacrtajPitanje() {
+    odgovoreno = false;
+    el.dalje.disabled = true;
+    var p = krugovi[krug][pitanje];
+    el.pomoc.textContent = opisKruga();
+    el.ponude.innerHTML = '';
+    var oznake = ['A', 'B', 'C', 'D'];
+    p.ponude.forEach(function (stavka, i) {
+      var d = document.createElement('div');
+      d.className = 'ponuda';
+      d.innerHTML = '<div class="slovo"></div><div class="oznaka"></div>';
+      d.querySelector('.slovo').textContent = stavka.zapis;
+      d.querySelector('.oznaka').textContent = oznake[i] || '';
+      d.addEventListener('click', function () { odgovori(d, stavka, p); });
+      el.ponude.appendChild(d);
+    });
+    osvjeziTraku();
+    odsviraj(p.tocna);
+  }
+
+  function odgovori(cvor, stavka, p) {
+    if (odgovoreno) return;
+    odgovoreno = true;
+    ukupno += 1;
+    var jeTacno = stavka.zapis === p.tocna.zapis;
+    if (jeTacno) { tacno += 1; cvor.classList.add('tacna'); } else { cvor.classList.add('netacna'); }
+    Array.prototype.forEach.call(el.ponude.children, function (c, i) {
+      c.classList.add('zakljucana');
+      if (p.ponude[i].zapis === p.tocna.zapis) c.classList.add('tacna');
+    });
+    try { if (window.MektebZvuk) (jeTacno ? window.MektebZvuk.tacno : window.MektebZvuk.greska)(); } catch (g) {}
+    var opis = p.tocna.znacenje ? p.tocna.citanje + ' — ' + p.tocna.znacenje
+             : (p.tocna.citanje || p.tocna.ime || '');
+    el.pomoc.textContent = (jeTacno ? T('Tačno!') : T('Ovo je bilo:')) + ' ' + p.tocna.zapis + (opis ? '  (' + opis + ')' : '');
+    el.dalje.disabled = false;
+    osvjeziTraku();
+  }
+
+  function dalje() {
+    pitanje += 1;
+    if (pitanje >= krugovi[krug].length) {
+      javi('krug', { krug: krug + 1, tacno: tacno, ukupno: ukupno });
+      krug += 1; pitanje = 0;
+      if (krug >= krugovi.length) return zavrsi();
+    }
+    nacrtajPitanje();
+  }
+
+  function osvjeziTraku() {
+    Array.prototype.forEach.call(document.querySelectorAll('.znacka[data-krug]'), function (z) {
+      z.classList.toggle('aktivna', Number(z.getAttribute('data-krug')) === krug);
+    });
+    el.rezultat.textContent = ukupno ? tacno + ' / ' + ukupno : '';
+  }
+
+  function zavrsi() {
+    el.igra.classList.add('sakrij');
+    el.gotovo.classList.remove('sakrij');
+    el.zavrsna.textContent = T('Tačnih odgovora:') + ' ' + tacno + ' / ' + ukupno;
+    try { if (window.MektebZvuk) window.MektebZvuk.kraj(); } catch (g) {}
+    javi('kraj', { tacno: tacno, ukupno: ukupno, sekunde: Math.round((Date.now() - pocetak) / 1000) });
+  }
+
+  /* ---------- spisak za čitanje ---------- */
+  function nacrtajSpisak(redom) {
+    var saZvukom = redom.filter(function (r) { return r.zvuk; }).length;
+    var uputa = document.getElementById('uputaSpisak');
+    if (uputa) {
+      uputa.textContent = saZvukom
+        ? T('Riječi s oznakom 🔊 možeš čuti — klikni na njih. Ostale pročitaj sam.') + ' (' + saZvukom + '/' + redom.length + ')'
+        : T('Nijedna riječ još nema snimak. Pročitaj ih sam, pa provjeri s muallimom.');
+    }
+    el.rijeci.innerHTML = '';
+    redom.forEach(function (r) {
+      var d = document.createElement('div');
+      d.className = 'rijec';
+      d.innerHTML = '<div class="zapis"></div><div class="prijevod"></div><div class="ima-zvuk"></div>';
+      d.querySelector('.zapis').textContent = r.zapis;
+      d.querySelector('.prijevod').textContent = r.znacenje || r.citanje || '';
+      d.querySelector('.ima-zvuk').textContent = r.zvuk ? '🔊' : '';
+      if (!r.zvuk) d.classList.add('nijema');
+      d.addEventListener('click', function () { odsviraj(r); });
+      el.rijeci.appendChild(d);
+    });
+  }
+
+  /* ---------- pokretanje ---------- */
+  function pocni() {
+    krugovi = [
+      napraviKrug(podaci.harfovi || [], 4),
+      napraviKrug(podaci.slogovi || [], 4),
+      napraviKrug(podaci.rijeci || [], 4)
+    ].filter(function (k) { return k.length >= 2; });
+    krug = 0; pitanje = 0; tacno = 0; ukupno = 0; pocetak = Date.now();
+    el.gotovo.classList.add('sakrij');
+    el.igra.classList.remove('sakrij');
+    nacrtajPitanje();
+  }
+
+  function pripremi(p) {
+    podaci = p || {};
+    el.naslov.textContent = podaci.naslov || T('Slušaj i klikni');
+    el.uputa.textContent = podaci.uputa || '';
+    nacrtajSpisak(podaci.rijeci || []);
+    pocni();
+  }
+
+  function ucitaj() {
+    if (window.SLUSAJ_PODACI) return Promise.resolve(window.SLUSAJ_PODACI);
+    var trazeno = new URLSearchParams(location.search).get('podaci');
+    if (!trazeno) return Promise.resolve(UGRADJENO);
+    var url;
+    try { url = new URL(trazeno, location.href); } catch (g) { return Promise.reject(); }
+    if (url.origin !== location.origin) return Promise.reject();
+    return fetch(window.MektebJezik.saJezikom(url.href), { credentials: 'same-origin' })
+      .then(function (o) { return o.json(); });
+  }
+
+  el.zvucnik.addEventListener('click', function () {
+    if (!krugovi.length || krug >= krugovi.length) return;
+    odsviraj(krugovi[krug][pitanje].tocna);
+  });
+  el.dalje.addEventListener('click', dalje);
+  el.ponovo.addEventListener('click', pocni);
+  el.promijesaj.addEventListener('click', function () { nacrtajSpisak(promijesaj(podaci.rijeci || [])); });
+
+  if (window.parent !== window && 'ResizeObserver' in window) {
+    new ResizeObserver(function () {
+      javi('visina', { visina: Math.ceil(document.documentElement.getBoundingClientRect().height) });
+    }).observe(document.documentElement);
+  }
+
+  ucitaj().then(pripremi).catch(function () { pripremi(UGRADJENO); });
+})();
+</script>
+</body>
+</html>

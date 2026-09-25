@@ -1,0 +1,169 @@
+{
+  "id": "opismenjavanje-4",
+  "program": "opismenjavanje",
+  "lekcija": 4,
+  "naslov": "Lekcija 4 — Ba, Nun i Ja",
+  "uputa": "Pritisni zvučnik, poslušaj, pa klikni ono što si čuo.",
+  "izvorZvuka": "Antura and the Letters (Arabic) — Video Games Without Borders, TH Köln / Cologne Game Lab, Wixel Studios. CC BY 4.0.",
+  "harfovi": [
+    {
+      "zapis": "مَ",
+      "citanje": "me"
+    },
+    {
+      "zapis": "مِ",
+      "citanje": "mi"
+    },
+    {
+      "zapis": "مُ",
+      "citanje": "mu"
+    },
+    {
+      "zapis": "بَ",
+      "citanje": "be"
+    },
+    {
+      "zapis": "بِ",
+      "citanje": "bi"
+    },
+    {
+      "zapis": "بُ",
+      "citanje": "bu"
+    },
+    {
+      "zapis": "نَ",
+      "citanje": "ne"
+    },
+    {
+      "zapis": "نِ",
+      "citanje": "ni"
+    },
+    {
+      "zapis": "نُ",
+      "citanje": "nu"
+    },
+    {
+      "zapis": "لَ",
+      "citanje": "le"
+    },
+    {
+      "zapis": "رَ",
+      "citanje": "re"
+    },
+    {
+      "zapis": "يَ",
+      "citanje": "je"
+    }
+  ],
+  "slogovi": [
+    {
+      "zapis": "أَب",
+      "citanje": "eb",
+      "znacenje": "otac"
+    },
+    {
+      "zapis": "ما",
+      "citanje": "ma"
+    },
+    {
+      "zapis": "لا",
+      "citanje": "la"
+    },
+    {
+      "zapis": "با",
+      "citanje": "ba"
+    },
+    {
+      "zapis": "نا",
+      "citanje": "na"
+    },
+    {
+      "zapis": "را",
+      "citanje": "ra"
+    },
+    {
+      "zapis": "يا",
+      "citanje": "ja"
+    },
+    {
+      "zapis": "مِي",
+      "citanje": "mi"
+    },
+    {
+      "zapis": "بِي",
+      "citanje": "bi"
+    },
+    {
+      "zapis": "نِي",
+      "citanje": "ni"
+    },
+    {
+      "zapis": "لِي",
+      "citanje": "li"
+    },
+    {
+      "zapis": "رِي",
+      "citanje": "ri"
+    }
+  ],
+  "rijeci": [
+    {
+      "zapis": "باب",
+      "citanje": "bab",
+      "znacenje": "vrata",
+      "zvuk": "/audio/opismenjavanje/rijec-door.mp3"
+    },
+    {
+      "zapis": "ماء",
+      "citanje": "maa'",
+      "znacenje": "voda",
+      "zvuk": "/audio/opismenjavanje/rijec-water.mp3"
+    },
+    {
+      "zapis": "لَبَن",
+      "citanje": "leben",
+      "znacenje": "mlijeko",
+      "zvuk": "/audio/opismenjavanje/rijec-yogurt.mp3"
+    },
+    {
+      "zapis": "نار",
+      "citanje": "nar",
+      "znacenje": "vatra"
+    },
+    {
+      "zapis": "مال",
+      "citanje": "mal",
+      "znacenje": "imetak"
+    },
+    {
+      "zapis": "نام",
+      "citanje": "nam",
+      "znacenje": "spavao je"
+    },
+    {
+      "zapis": "بال",
+      "citanje": "bal",
+      "znacenje": "pamet, pažnja"
+    },
+    {
+      "zapis": "نَمِر",
+      "citanje": "nemir",
+      "znacenje": "tigar"
+    },
+    {
+      "zapis": "أَمَل",
+      "citanje": "emel",
+      "znacenje": "nada"
+    },
+    {
+      "zapis": "أَلَم",
+      "citanje": "elem",
+      "znacenje": "bol"
+    },
+    {
+      "zapis": "أَمام",
+      "citanje": "emam",
+      "znacenje": "ispred"
+    }
+  ]
+}

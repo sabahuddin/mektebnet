@@ -32,8 +32,10 @@
     "transfer-content": "tsx ./src/transfer-content.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "vrati-sadrzaj": "tsx ./src/vrati-sadrzaj.ts",
-    "test": "tsx --test ./src/transkripcija.test.ts ./src/translate-content.test.ts ./src/translate-content-force.test.ts",
-    "test:frontend-lib": "tsx --test ../artifacts/mekteb-arapsko-pismo/src/lib/*.test.ts"
+    "test": "tsx --test ./src/transkripcija.test.ts ./src/translate-content.test.ts ./src/translate-content-force.test.ts ./src/mp3-trajanje.test.ts",
+    "opismenjavanje": "tsx --tsconfig ../artifacts/mekteb-arapsko-pismo/tsconfig.json ../artifacts/mekteb-arapsko-pismo/scripts/izvjestaj-opismenjavanja.ts",
+    "sufara:raspored": "tsx --tsconfig ../artifacts/mekteb-arapsko-pismo/tsconfig.json ../artifacts/mekteb-arapsko-pismo/scripts/izvjestaj-sufare.ts",
+    "test:frontend-lib": "tsx --tsconfig ../artifacts/mekteb-arapsko-pismo/tsconfig.json --test ../artifacts/mekteb-arapsko-pismo/src/lib/*.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
