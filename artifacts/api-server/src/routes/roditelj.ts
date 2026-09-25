@@ -6,6 +6,7 @@ import {
   usersTable,
   ucenikProfiliTable,
   roditeljUcenikTable,
+  roditeljProfiliTable,
   priustvoTable,
   ocjeneTable,
   korisnikNapredakTable,
@@ -32,6 +33,33 @@ import { getNapametKatalog } from "../data/napamet.js";
 
 const router = Router();
 router.use(requireAuth, requireRole("roditelj", "admin"));
+const jeziciObavijesti = ["bs", "en", "de", "sq"] as const;
+
+router.get("/jezik-obavijesti", async (req, res) => {
+  if (req.user!.role !== "roditelj") { res.status(403).json({ error: "Samo za roditelje" }); return; }
+  try {
+    const [profil] = await db.select({ jezik: roditeljProfiliTable.jezikObavijesti })
+      .from(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, req.user!.userId));
+    res.json({ jezik: profil?.jezik ?? "bs" });
+  } catch {
+    res.status(500).json({ error: "Nije moguće učitati jezik obavijesti" });
+  }
+});
+
+router.put("/jezik-obavijesti", async (req, res) => {
+  if (req.user!.role !== "roditelj") { res.status(403).json({ error: "Samo za roditelje" }); return; }
+  const jezik = req.body?.jezik;
+  if (typeof jezik !== "string" || !jeziciObavijesti.includes(jezik as typeof jeziciObavijesti[number])) {
+    res.status(400).json({ error: "Nepoznat jezik obavijesti" }); return;
+  }
+  try {
+    await db.insert(roditeljProfiliTable).values({ userId: req.user!.userId, jezikObavijesti: jezik })
+      .onConflictDoUpdate({ target: roditeljProfiliTable.userId, set: { jezikObavijesti: jezik } });
+    res.json({ jezik });
+  } catch {
+    res.status(500).json({ error: "Nije moguće sačuvati jezik obavijesti" });
+  }
+});
 const ukupneOcjeneFilter = or(
   sql`${ocjeneTable.napametStavkaId} IS NULL`,
   eq(ocjeneTable.predmet, "Napamet"),

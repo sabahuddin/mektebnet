@@ -858,7 +858,7 @@ function DijeteContent({
 
 export default function RoditeljPage() {
   const { user, token } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [djeca, setDjeca] = useState<Dijete[]>([]);
@@ -878,7 +878,47 @@ export default function RoditeljPage() {
   const [isChangingPw, setIsChangingPw] = useState(false);
   const [obavjestenja, setObavjestenja] = useState<RoditeljObavjestenje[]>([]);
   const [subscription, setSubscription] = useState<SubscriptionProfile | null>(null);
+  const [notificationLang, setNotificationLang] = useState<"bs" | "en" | "de" | "sq" | null>(null);
+  const [savedNotificationLang, setSavedNotificationLang] = useState<"bs" | "en" | "de" | "sq" | null>(null);
+  const [notificationLangError, setNotificationLangError] = useState(false);
+  const [savingNotificationLang, setSavingNotificationLang] = useState(false);
   const [activeTab, setActiveTab] = useState<TopTab>("obavjestenja");
+  const notificationCopy = ({
+    bs: { heading: "Jezik obavijesti", detail: "Automatske poruke o ocjenama i zadaćama stižu na jeziku koji ovdje odaberete. Poruke koje muallim napiše ostaju na izvornom jeziku.", save: "Sačuvaj jezik", saved: "Jezik obavijesti je sačuvan", error: "Nije moguće učitati jezik obavijesti.", retry: "Pokušaj ponovo", help: "Kako uključiti obavijesti: ispod uključite prekidač „Push obavijesti“ i u pregledniku pritisnite „Dozvoli“. To treba uraditi na svakom uređaju. Ako su blokirane, otvorite lokot uz adresu stranice i dozvolite obavijesti za mekteb.net. Crveni broj uz Poruke označava nepročitane poruke, ne status dozvole." },
+    en: { heading: "Notification language", detail: "Automatic grade and homework messages use the language you select here. Messages written by the teacher remain in their original language.", save: "Save language", saved: "Notification language saved", error: "Could not load notification language.", retry: "Try again", help: "To enable notifications, turn on “Push notifications” below and select “Allow” in your browser. Do this on each device. If blocked, open the lock icon next to the website address and allow notifications for mekteb.net. The red number next to Messages shows unread messages, not permission status." },
+    de: { heading: "Sprache der Benachrichtigungen", detail: "Automatische Nachrichten zu Bewertungen und Hausaufgaben erscheinen in der hier gewählten Sprache. Persönliche Nachrichten der Lehrkraft bleiben in der Originalsprache.", save: "Sprache speichern", saved: "Sprache gespeichert", error: "Die Sprache konnte nicht geladen werden.", retry: "Erneut versuchen", help: "Aktivieren Sie unten „Push-Benachrichtigungen“ und wählen Sie im Browser „Zulassen“. Dies ist auf jedem Gerät nötig. Falls blockiert, öffnen Sie das Schloss neben der Webadresse und erlauben Sie Benachrichtigungen für mekteb.net. Die rote Zahl bei Nachrichten zeigt ungelesene Nachrichten an, nicht den Berechtigungsstatus." },
+    sq: { heading: "Gjuha e njoftimeve", detail: "Mesazhet automatike për vlerësimet dhe detyrat vijnë në gjuhën që zgjidhni këtu. Mesazhet e shkruara nga mësuesi mbeten në gjuhën origjinale.", save: "Ruaj gjuhën", saved: "Gjuha u ruajt", error: "Gjuha e njoftimeve nuk mund të ngarkohet.", retry: "Provo përsëri", help: "Për të aktivizuar njoftimet, ndizni “Push notifications” më poshtë dhe zgjidhni “Allow” në shfletues. Bëjeni këtë në çdo pajisje. Nëse janë bllokuar, hapni ikonën e drynit pranë adresës dhe lejoni njoftimet për mekteb.net. Numri i kuq pranë Mesazheve tregon mesazhe të palexuara, jo lejen e njoftimeve." },
+  } as const)[lang as "bs" | "en" | "de" | "sq"] ?? ({
+    heading: "Jezik obavijesti", detail: "", save: "Sačuvaj jezik", saved: "Sačuvano", error: "Nije moguće učitati jezik obavijesti.", retry: "Pokušaj ponovo", help: "",
+  });
+  const loadNotificationLang = () => {
+    if (!token) return;
+    setNotificationLangError(false);
+    apiRequest<{ jezik: "bs" | "en" | "de" | "sq" }>("GET", "/roditelj/jezik-obavijesti", undefined, token)
+      .then(({ jezik }) => { setNotificationLang(jezik); setSavedNotificationLang(jezik); })
+      .catch(() => setNotificationLangError(true));
+  };
+  useEffect(() => {
+    setNotificationLang(null);
+    setSavedNotificationLang(null);
+    loadNotificationLang();
+  }, [token]);
+
+  async function saveNotificationLang() {
+    if (!token || !notificationLang || savingNotificationLang) return;
+    setSavingNotificationLang(true);
+    try {
+      const { jezik } = await apiRequest<{ jezik: "bs" | "en" | "de" | "sq" }>(
+        "PUT", "/roditelj/jezik-obavijesti", { jezik: notificationLang }, token
+      );
+      setSavedNotificationLang(jezik);
+      toast({ title: notificationCopy.saved });
+    } catch (err: any) {
+      toast({ title: t("Greška"), description: err?.message || notificationCopy.error, variant: "destructive" });
+    } finally {
+      setSavingNotificationLang(false);
+    }
+  }
   const loadDjeca = () => {
     if (!token) return;
     setIsLoading(true);
@@ -1197,7 +1237,29 @@ export default function RoditeljPage() {
               <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                 <Settings className="w-5 h-5 text-primary" /> {t("Postavke")}
               </h3>
+              <div className="mb-4 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <label htmlFor="notification-language" className="block font-extrabold text-foreground">{notificationCopy.heading}</label>
+                <p className="mt-1 text-xs text-muted-foreground">{notificationCopy.detail}</p>
+                {notificationLangError && (
+                  <p className="mt-3 text-sm text-destructive" role="alert">
+                    {notificationCopy.error} <button type="button" onClick={loadNotificationLang} className="underline font-bold">{notificationCopy.retry}</button>
+                  </p>
+                )}
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <select id="notification-language" value={notificationLang ?? ""} disabled={notificationLang === null || notificationLangError || savingNotificationLang}
+                    onChange={e => setNotificationLang(e.target.value as "bs" | "en" | "de" | "sq")}
+                    className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                    {notificationLang === null && <option value="">…</option>}
+                    <option value="bs">Bosanski</option><option value="en">English</option>
+                    <option value="de">Deutsch</option><option value="sq">Shqip</option>
+                  </select>
+                  <Button type="button" onClick={saveNotificationLang}
+                    disabled={!notificationLang || notificationLangError || notificationLang === savedNotificationLang || savingNotificationLang}
+                    className="rounded-xl">{savingNotificationLang ? <Loader2 className="w-4 h-4 animate-spin" /> : notificationCopy.save}</Button>
+                </div>
+              </div>
               <PushToggle />
+              <p className="px-2 pt-3 pb-4 text-xs leading-relaxed text-muted-foreground">{notificationCopy.help}</p>
               <SelamSetting />
             </div>
           </motion.div>
