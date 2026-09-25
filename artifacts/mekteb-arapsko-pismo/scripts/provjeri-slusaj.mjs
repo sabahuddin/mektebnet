@@ -139,7 +139,13 @@ ok("nema grešaka u konzoli", greske.length === 0, greske.join(" | "));
 
 await page.evaluate(() => { document.getElementById("gotovo").classList.add("sakrij"); document.getElementById("ponovo").click(); });
 await page.waitForSelector(".ponuda");
-await page.screenshot({ path: path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../../docs/vjezba-slusaj.png"), fullPage: true });
+// Slika se snima samo na zahtjev: inače svako pokretanje provjere ostavi
+// izmijenjenu datoteku u repozitoriju, pa radna kopija nikad nije čista.
+if (process.argv.includes("--slika")) {
+  const put = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../../docs/vjezba-slusaj.png");
+  await page.screenshot({ path: put, fullPage: true });
+  console.log(`\nslika: ${put}`);
+}
 
 await browser.close(); server.close();
 const palo = provjere.filter((p) => !p.u);

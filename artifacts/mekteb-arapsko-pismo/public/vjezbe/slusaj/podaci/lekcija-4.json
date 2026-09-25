@@ -67,7 +67,8 @@
     },
     {
       "zapis": "لا",
-      "citanje": "la"
+      "citanje": "la",
+      "zvuk": "/audio/opismenjavanje/rijec-d984d8a7.mp3"
     },
     {
       "zapis": "با",
@@ -111,13 +112,13 @@
       "zapis": "باب",
       "citanje": "bab",
       "znacenje": "vrata",
-      "zvuk": "/audio/opismenjavanje/rijec-door.mp3"
+      "zvuk": "/audio/opismenjavanje/rijec-d8a8d8a7d8a8.mp3"
     },
     {
       "zapis": "ماء",
       "citanje": "maa'",
       "znacenje": "voda",
-      "zvuk": "/audio/opismenjavanje/rijec-water.mp3"
+      "zvuk": "/audio/opismenjavanje/rijec-d985d8a7d8a1.mp3"
     },
     {
       "zapis": "لَبَن",
@@ -128,7 +129,8 @@
     {
       "zapis": "نار",
       "citanje": "nar",
-      "znacenje": "vatra"
+      "znacenje": "vatra",
+      "zvuk": "/audio/opismenjavanje/rijec-d986d8a7d8b1.mp3"
     },
     {
       "zapis": "مال",
@@ -163,7 +165,9 @@
     {
       "zapis": "أَمام",
       "citanje": "emam",
-      "znacenje": "ispred"
+      "znacenje": "ispred",
+      "zvuk": "/audio/opismenjavanje/rijec-d8a3d98ed985d8a7.mp3"
     }
-  ]
+  ],
+  "izvorZvukaCommons": "Nhaily Mustapha, Vion Nicolas (CC BY 3.0 us); Zannane Mohamed, Heulin Frederic (CC BY 3.0 us)"
 }

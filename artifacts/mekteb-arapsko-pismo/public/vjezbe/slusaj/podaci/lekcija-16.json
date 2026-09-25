@@ -113,7 +113,8 @@
     {
       "zapis": "لا",
       "citanje": "la",
-      "znacenje": "dužina"
+      "znacenje": "dužina",
+      "zvuk": "/audio/opismenjavanje/rijec-d984d8a7.mp3"
     }
   ],
   "rijeci": [
@@ -135,17 +136,20 @@
     {
       "zapis": "يَوْم",
       "citanje": "jevm",
-      "znacenje": "dan"
+      "znacenje": "dan",
+      "zvuk": "/audio/opismenjavanje/rijec-d98ad98ed988d992.mp3"
     },
     {
       "zapis": "بَيْت",
       "citanje": "bejt",
-      "znacenje": "kuća"
+      "znacenje": "kuća",
+      "zvuk": "/audio/opismenjavanje/rijec-d8a8d98ed98ad992.mp3"
     },
     {
       "zapis": "شَيْء",
       "citanje": "šej'",
-      "znacenje": "stvar"
+      "znacenje": "stvar",
+      "zvuk": "/audio/opismenjavanje/rijec-d8b4d98ed98ad992.mp3"
     },
     {
       "zapis": "عِنْد",
@@ -155,22 +159,26 @@
     {
       "zapis": "ماء",
       "citanje": "maa'",
-      "znacenje": "voda"
+      "znacenje": "voda",
+      "zvuk": "/audio/opismenjavanje/rijec-d985d8a7d8a1.mp3"
     },
     {
       "zapis": "باب",
       "citanje": "bab",
-      "znacenje": "vrata"
+      "znacenje": "vrata",
+      "zvuk": "/audio/opismenjavanje/rijec-d8a8d8a7d8a8.mp3"
     },
     {
       "zapis": "كان",
       "citanje": "kane",
-      "znacenje": "bio je"
+      "znacenje": "bio je",
+      "zvuk": "/audio/opismenjavanje/rijec-d983d8a7d986.mp3"
     },
     {
       "zapis": "قال",
       "citanje": "kale",
-      "znacenje": "rekao je"
+      "znacenje": "rekao je",
+      "zvuk": "/audio/opismenjavanje/rijec-d982d8a7d984.mp3"
     },
     {
       "zapis": "عِلْمٌ",
@@ -192,5 +200,6 @@
       "citanje": "edžran",
       "znacenje": "nagradu"
     }
-  ]
+  ],
+  "izvorZvukaCommons": "Nhaily Mustapha, Vion Nicolas (CC BY 3.0 us); Zannane Mohamed, Heulin Frederic (CC BY 3.0 us)"
 }
