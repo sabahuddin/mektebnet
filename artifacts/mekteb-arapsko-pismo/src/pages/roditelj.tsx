@@ -182,7 +182,7 @@ const TIP_COLORS: Record<string, { bg: string; border: string; text: string; lab
 const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 const MJESEC_NAZIVI = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
 
-type TopTab = "obavjestenja" | "poruke" | "profil" | number;
+type TopTab = "obavjestenja" | "vrijeme" | "profil" | number;
 type ChildSubTab = "kalendar" | "zadaca" | "ocjene" | "napamet" | "prisustvo" | "dokumenti";
 interface NapametResponse { katalog: NapametStavka[]; ocjene: NapametOcjena[]; }
 
@@ -932,8 +932,6 @@ export default function RoditeljPage() {
         setDjeca(rows.map(r => r.dijete));
         setSummaryMap(new Map(rows.map(r => [r.dijete.id, r.summary])));
         setGameStatsMap(new Map(rows.map(r => [r.dijete.id, r.gameStats])));
-        if (rows.length > 0 && activeTab === "obavjestenja") {
-        }
       })
       .catch(async () => {
         try {
@@ -957,13 +955,6 @@ export default function RoditeljPage() {
       .then(setSubscription)
       .catch(() => {});
   }, [token]);
-
-  useEffect(() => {
-    if (activeTab === "poruke") {
-      setLocation("/poruke");
-      setActiveTab("obavjestenja");
-    }
-  }, [activeTab, setLocation]);
 
   if (!user || user.role !== "roditelj") {
     return (
@@ -1030,31 +1021,62 @@ export default function RoditeljPage() {
 
   const topTabs: { id: TopTab; label: string; icon: any }[] = [
     { id: "obavjestenja", label: t("Obavještenja"), icon: Megaphone },
-    ...djeca.map(d => ({ id: d.id as TopTab, label: d.displayName, icon: UserIcon })),
-    { id: "poruke", label: t("Poruke"), icon: MessageSquare },
-    { id: "profil", label: t("Profil"), icon: Settings },
+    { id: "vrijeme", label: t("Vrijeme na platformi"), icon: Clock },
+    { id: "profil", label: t("Podešavanja"), icon: Settings },
   ];
 
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
-        <MyScreentimeBadgeRoditelj />
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 border-b border-border/40">
+        <nav aria-label={t("Roditeljski panel")} className="grid grid-cols-3 gap-2 mb-5">
           {topTabs.map(tab => (
-            <button key={String(tab.id)} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-t-xl text-sm font-bold transition-all whitespace-nowrap border-b-2 ${
+            <button key={String(tab.id)} type="button" onClick={() => setActiveTab(tab.id)}
+              aria-current={activeTab === tab.id ? "page" : undefined}
+              className={`min-w-0 min-h-16 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-2xl border px-2 sm:px-4 py-2 text-center text-[11px] sm:text-sm font-bold leading-tight transition-all ${
                 activeTab === tab.id
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "border-primary bg-primary/10 text-primary shadow-sm"
+                  : "border-border/60 bg-white text-muted-foreground hover:border-primary/40 hover:text-foreground"
               }`}>
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
+              <tab.icon className="w-4 h-4 shrink-0" />
+              <span>{tab.label}</span>
             </button>
           ))}
-        </div>
+        </nav>
+
+        {isLoading && djeca.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+            {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
+          </div>
+        ) : djeca.length > 0 && (
+          <div className={`grid gap-3 mb-6 ${djeca.length === 1 ? "max-w-sm mx-auto" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`} aria-label={t("Djeca")}>
+            {djeca.map((dijete, index) => (
+              <button key={dijete.id} type="button" onClick={() => setActiveTab(dijete.id)}
+                aria-pressed={activeTab === dijete.id}
+                className={`min-w-0 w-full flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
+                  activeTab === dijete.id
+                    ? "border-primary bg-primary/10 shadow-sm"
+                    : "border-border/60 bg-white hover:border-primary/40 hover:bg-primary/5"
+                }`}>
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${activeTab === dijete.id ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                  <UserIcon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-muted-foreground">{t("Dijete")} {index + 1}</span>
+                  <span className="block truncate font-extrabold text-foreground" title={dijete.displayName}>{dijete.displayName}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {activeTab === "obavjestenja" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="flex justify-end mb-3">
+              <button type="button" onClick={() => setLocation("/poruke")}
+                className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">
+                <MessageSquare className="h-4 w-4" /> {t("Poruke")}
+              </button>
+            </div>
             {obavjestenja.length === 0 ? (
               <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
                 <Megaphone className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
@@ -1093,6 +1115,21 @@ export default function RoditeljPage() {
                 ))}
               </div>
             )}
+          </motion.div>
+        )}
+
+        {activeTab === "vrijeme" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+            <MyScreentimeBadgeRoditelj />
+            {djeca.map((dijete, index) => (
+              <div key={dijete.id} className="flex items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-white p-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-muted-foreground">{t("Dijete")} {index + 1}</p>
+                  <p className="truncate font-extrabold text-foreground">{dijete.displayName}</p>
+                </div>
+                <span className="shrink-0 font-extrabold text-teal-800">{formatScreentime(dijete.totalScreentimeSec)}</span>
+              </div>
+            ))}
           </motion.div>
         )}
 
