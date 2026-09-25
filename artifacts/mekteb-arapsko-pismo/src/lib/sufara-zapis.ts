@@ -74,9 +74,43 @@ function imaMedd(zapis: string): boolean {
   return false;
 }
 
+/**
+ * Sukun na zadnjem harfu nije znak koji se uči, nego pravopis: svaka arapska
+ * riječ izgovorena zasebno završava bez vokala, pa se tako i piše. Znak koji
+ * dijete uči jeste sukun usred riječi — onaj koji zatvara slog, kao vav u
+ * „يَوْمْ". Da se završni broji, svaka bi riječ tražila šestu lekciju i prve
+ * četiri bi ostale bez ijedne riječi.
+ *
+ * Tešdid se ovdje ne dira: tešdid na kraju već znači pauzalni izgovor i nikad
+ * ne nosi sukun uz sebe.
+ */
+function bezZavrsnogSukuna(zapis: string): string {
+  return zapis.endsWith(SUKUN) ? zapis.slice(0, -1) : zapis;
+}
+
+/**
+ * Zadnji harf mora nositi vokal, tenvin, sukun ili tešdid — inače Google ne
+ * zna šta da izgovori, pa pogađa: imenici doda padežni nastavak („مال" čita
+ * kao „malun"), glagolu odsiječe zadnji vokal („كان" čita kao „kan"). Harf
+ * produženja na kraju („مَا") znak ne nosi, nego ga nosi harf ispred njega.
+ */
+export function zavrsetakOznacen(zapis: string): boolean {
+  const z = Array.from(normalizirajZapis(zapis));
+  const zadnji = z[z.length - 1];
+  if (zadnji === undefined) return false;
+  if (OZNAKA.test(zadnji) || zadnji === TESDID) return true;
+  if (zadnji !== ELIF && zadnji !== VAV && zadnji !== JA && zadnji !== ELIF_MEDDA) return false;
+  if (zadnji === ELIF_MEDDA) return true;
+  // Harf produženja: vokal stoji na harfu ispred, preskačući tešdid.
+  let i = z.length - 2;
+  while (i >= 0 && (z[i] === TESDID || z[i] === ELIF_HANDŽER)) i -= 1;
+  const prethodni = z[i];
+  return prethodni !== undefined && (OZNAKA.test(prethodni) && prethodni !== SUKUN);
+}
+
 /** Svi znakovi koje zapis traži. */
 export function znakoviZapisa(zapis: string): Znak[] {
-  const z = normalizirajZapis(zapis);
+  const z = bezZavrsnogSukuna(normalizirajZapis(zapis));
   const znakovi: Znak[] = [];
   if (z.includes(FETHA)) znakovi.push("fetha");
   if (z.includes(KESRA)) znakovi.push("kesra");

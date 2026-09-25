@@ -27,3 +27,10 @@ GitHub `POST /git/trees` za ugniježđene putanje u odgovoru daje direktorije, n
 
 ## Coolify
 Push triggeruje deploy preko Coolify-ja, ali Coolify uvijek treba RUČNI redeploy nakon push-a (self-hosted, mekteb.net). Napomeni korisniku da uradi redeploy.
+
+## Velike udaljene promjene tokom vlastitog rada
+Ako ista grana dobije mnogo novih commitova dok se lokalno radi, puni privremeni worktree može dugo trajati ili isteći; za nekoliko izmijenjenih tekstualnih putanja koristi tri verzije svakog fajla (stari roditelj, lokalni commit, najnovija udaljena grana) i trostrano spajanje u privremenom prostoru. Pregledaj svaki konflikt, naročito susjedne ALTER izraze. Velike GitHub blobove šalji zasebnim API pozivima, a ref pomjeri tek nakon provjere konačnog treeja.
+
+**Why:** Puni checkout hiljada fajlova može isteći, dok jedna velika serija API poziva može prekinuti izvršavanje; udaljena grana se u međuvremenu može promijeniti.
+
+**How to apply:** Ne prepisuj udaljeni fajl lokalnim cijelim sadržajem. Spajaj samo putanje koje su zaista izmijenjene, čuvaj udaljeni `base_tree`, prije pomjeranja refa ponovo uporedi udaljeni SHA i koristi isključivo fast-forward.

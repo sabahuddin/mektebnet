@@ -87,6 +87,7 @@ export const ucenikProfiliTable = pgTable("ucenik_profili", {
 // Parent profile
 export const roditeljProfiliTable = pgTable("roditelj_profili", {
   userId: integer("user_id").notNull().unique(),
+  jezikObavijesti: varchar("jezik_obavijesti", { length: 5 }).notNull().default("bs"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
