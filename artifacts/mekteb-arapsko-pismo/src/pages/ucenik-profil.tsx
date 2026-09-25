@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
+import { calendarLabel } from "@/lib/calendar-label";
 import { apiRequest, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -1293,7 +1294,7 @@ export default function UcenikProfilPage() {
                       </div>
 
                       <div className="mt-4 flex gap-4 text-xs text-muted-foreground flex-wrap">
-                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {t("Mekteb")}</span>
+                        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {calendarLabel("Mekteb", t)}</span>
                         <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-200 border border-red-400" /> {t("Ferije")}</span>
                         <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-200 border border-blue-400" /> {t("Važan datum")}</span>
                         <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-purple-200 border border-purple-400" /> {t("Ramazan")}</span>
@@ -1315,7 +1316,7 @@ export default function UcenikProfilPage() {
                             <div className="space-y-3">
                               {entry && (
                                 <div className={`${TIP_COLORS[entry.tip]?.bg} rounded-lg px-3 py-2`}>
-                                  <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{t(TIP_COLORS[entry.tip]?.label ?? "")}</span>
+                                  <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{calendarLabel(TIP_COLORS[entry.tip]?.label ?? "", t)}</span>
                                   {entry.opis && <p className="text-sm text-foreground mt-1">{entry.opis}</p>}
                                 </div>
                               )}

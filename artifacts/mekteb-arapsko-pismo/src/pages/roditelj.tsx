@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
+import { calendarLabel } from "@/lib/calendar-label";
 import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
@@ -737,7 +738,7 @@ function DijeteContent({
                 {Object.entries(TIP_COLORS).map(([key, val]) => (
                   <div key={key} className="flex items-center gap-1.5">
                     <div className={`w-3 h-3 rounded ${val.bg} border-2 ${val.border}`} />
-                    <span className="text-xs text-muted-foreground font-medium">{t(val.label)}</span>
+                    <span className="text-xs text-muted-foreground font-medium">{calendarLabel(val.label, t)}</span>
                   </div>
                 ))}
               </div>
@@ -749,7 +750,7 @@ function DijeteContent({
                   {selectedEntries.map(entry => (
                     <div key={entry.id} className={`${TIP_COLORS[entry.tip]?.bg} rounded-lg px-3 py-2 border ${TIP_COLORS[entry.tip]?.border}`}>
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{t(TIP_COLORS[entry.tip]?.label ?? "")}</span>
+                        <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{calendarLabel(TIP_COLORS[entry.tip]?.label ?? "", t)}</span>
                         {entry.grupaNaziv && <span className="text-xs text-muted-foreground bg-white/60 rounded px-2 py-0.5 font-medium">{entry.grupaNaziv}</span>}
                       </div>
                       {entry.opis && <p className={`text-sm ${TIP_COLORS[entry.tip]?.text} mt-1`}>{entry.opis}</p>}

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { PlanLekcijaModul, MAX_CASOVA, nazivVrste } from "@/components/plan-lekcija-modul";
 import { goBackOr } from "@/lib/back-navigation";
+import { calendarLabel } from "@/lib/calendar-label";
 import { lessonHref } from "@/lib/quran-assignment";
 import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -846,7 +847,7 @@ export default function MuallimPanel() {
       const updated = await apiRequest<KalendarEntry[]>("GET", `/muallim/kalendar?grupaId=${selectedGrupaId}`, undefined, token);
       setKalendar(updated);
       setBatchDatumi([]);
-      toast({ title: t("{n} dana označeno kao {tip}!", { n: String(batchDatumi.length), tip: activeTip === "mekteb" ? t("Mekteb") : activeTip === "ferije" ? t("Ferije") : activeTip === "ramazan" ? t("Ramazan") : t("Važan datum") }) });
+      toast({ title: t("{n} dana označeno kao {tip}!", { n: String(batchDatumi.length), tip: activeTip === "mekteb" ? calendarLabel("Mekteb", t) : activeTip === "ferije" ? t("Ferije") : activeTip === "ramazan" ? t("Ramazan") : t("Važan datum") }) });
     } catch { toast({ title: t("Greška"), variant: "destructive" }); }
     finally { setBatchSaving(false); }
   }
@@ -4227,7 +4228,7 @@ export default function MuallimPanel() {
                           </div>
 
                           <div className="mt-4 flex gap-4 text-xs text-muted-foreground flex-wrap">
-                            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {t("Mekteb")}</span>
+                            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {calendarLabel("Mekteb", t)}</span>
                             <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-200 border border-red-400" /> {t("Ferije")}</span>
                             <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-200 border border-blue-400" /> {t("Važan datum")}</span>
                             <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> {t("Plan lekcija")}</span>
@@ -4252,7 +4253,7 @@ export default function MuallimPanel() {
                                     return (
                                       <div key={e.id} className={`rounded-lg px-3 py-2 border ${ts.bg} ${ts.border}`}>
                                         <div className="flex items-center justify-between gap-2">
-                                          <span className={`text-xs font-extrabold ${ts.text}`}>{t(ts.label)}</span>
+                                          <span className={`text-xs font-extrabold ${ts.text}`}>{calendarLabel(ts.label, t)}</span>
                                           <button
                                             onClick={() => { setKalendarMode("grupa"); setSelectedGrupaId(e.grupaId); }}
                                             className="text-xs font-bold text-primary hover:underline">
@@ -4342,7 +4343,7 @@ export default function MuallimPanel() {
                           {Object.entries(TIP_COLORS).map(([key, val]) => (
                             <button key={key} onClick={() => setActiveTip(key as any)}
                               className={`text-xs sm:text-sm font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border-2 transition-all ${activeTip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
-                              {t(val.label)}
+                              {calendarLabel(val.label, t)}
                             </button>
                           ))}
                           <button onClick={() => { setBatchMode(!batchMode); setBatchDatumi([]); }}
@@ -4485,7 +4486,7 @@ export default function MuallimPanel() {
                         </div>
 
                         <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {t("Mekteb")}</span>
+                          <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-200 border border-emerald-400" /> {calendarLabel("Mekteb", t)}</span>
                           <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-200 border border-red-400" /> {t("Ferije")}</span>
                           <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-200 border border-blue-400" /> {t("Važan datum")}</span>
                           <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-purple-200 border border-purple-400" /> {t("Ramazan")}</span>
@@ -4525,7 +4526,7 @@ export default function MuallimPanel() {
                                         <div className={`text-[10px] leading-tight ${ts?.text} opacity-70`}>{monthNames[parseInt(entry.datum.slice(5,7))-1]?.slice(0,3)}</div>
                                       </div>
                                       <div className="flex-1 min-w-0">
-                                        <span className={`text-xs font-bold ${ts?.text}`}>{t(ts?.label ?? "")}</span>
+                                        <span className={`text-xs font-bold ${ts?.text}`}>{calendarLabel(ts?.label ?? "", t)}</span>
                                         {entry.opis && <p className={`text-xs ${ts?.text} opacity-80 truncate mt-0.5`}>{entry.opis}</p>}
                                       </div>
                                       <button onClick={e => { e.stopPropagation(); deleteKalendarEntry(entry.id); }}
@@ -4572,7 +4573,7 @@ export default function MuallimPanel() {
                                         }
                                       }}
                                         className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${entry?.tip === key ? `${val.bg} ${val.border} ${val.text}` : "border-border/50 text-muted-foreground hover:bg-muted"}`}>
-                                        {t(val.label)}
+                                        {calendarLabel(val.label, t)}
                                       </button>
                                     ))}
                                     {entry && (
