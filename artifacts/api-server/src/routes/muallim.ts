@@ -46,6 +46,7 @@ import {
 import { eq, and, or, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
+import { notificationLang, parentNotification, type NotificationLang } from "../lib/parent-notifications.js";
 import { getRasporedPositions, resolveEffectiveRedoslijed } from "../lib/raspored.js";
 import { mektebDokumentiDir, streamDokument, deleteDokumentFajl, optimizePdfFile } from "../lib/dokumenti.js";
 import { normalizeUploadedFilename } from "../lib/file-names.js";
@@ -261,13 +262,12 @@ async function insertWithUniqueUsername(
 async function notifyApprovedRoditelji(opts: {
   ucenikId: number;
   posiljateljId: number;
-  naslov: string;
-  sadrzaj: string;
+  tekst: (lang: NotificationLang) => { naslov: string; sadrzaj: string };
   logTag: string;
   pushUrl?: string;
   pushData?: Record<string, unknown>;
 }) {
-  const { ucenikId, posiljateljId, naslov, sadrzaj, logTag, pushUrl, pushData } = opts;
+  const { ucenikId, posiljateljId, tekst, logTag, pushUrl, pushData } = opts;
 
   try {
     const veze = await db
@@ -281,8 +281,14 @@ async function notifyApprovedRoditelji(opts: {
     if (veze.length === 0) return;
 
     const roditeljIds = veze.map(v => v.roditeljId);
+    const profili = await db.select({
+      userId: roditeljProfiliTable.userId,
+      jezik: roditeljProfiliTable.jezikObavijesti,
+    }).from(roditeljProfiliTable).where(inArray(roditeljProfiliTable.userId, roditeljIds));
+    const jezici = new Map(profili.map(p => [p.userId, notificationLang(p.jezik)]));
 
     for (const roditeljId of roditeljIds) {
+      const { naslov, sadrzaj } = tekst(jezici.get(roditeljId) ?? "bs");
       const logCtx = { logTag, ucenikId, roditeljId };
       try {
         await db.insert(porukeTable).values({
@@ -294,19 +300,17 @@ async function notifyApprovedRoditelji(opts: {
       } catch (err) {
         console.error(`[${logTag}] In-app poruka insert failed`, logCtx, err);
       }
-    }
-
-    // Push notifikacija svim roditeljima (best-effort, ne propagira grešku).
-    try {
-      await sendPushNotification({
-        userIds: roditeljIds,
-        title: naslov,
-        body: sadrzaj.length > 120 ? sadrzaj.slice(0, 120) + "…" : sadrzaj,
-        url: pushUrl ?? "/poruke",
-        data: pushData,
-      });
-    } catch (pushErr) {
-      console.error(`[${logTag}] push notifikacija nije uspjela`, { ucenikId }, pushErr);
+      try {
+        await sendPushNotification({
+          userIds: [roditeljId],
+          title: naslov,
+          body: sadrzaj.length > 120 ? sadrzaj.slice(0, 120) + "…" : sadrzaj,
+          url: pushUrl ?? "/poruke",
+          data: pushData,
+        });
+      } catch (pushErr) {
+        console.error(`[${logTag}] push notifikacija nije uspjela`, logCtx, pushErr);
+      }
     }
   } catch (err) {
     console.error(`[${logTag}] notifyApprovedRoditelji failed`, { ucenikId, posiljateljId }, err);
@@ -2981,16 +2985,13 @@ router.post("/ocjene", async (req, res) => {
         .from(usersTable)
         .where(eq(usersTable.id, ucenikId));
       const ime = ucenik?.displayName || "vaše dijete";
-      const naslov = `Nova ocjena za ${ime}`;
       const ocjenaPrikaz = ocjenaOpisna === "uradjeno" ? "Urađeno"
         : ocjenaOpisna === "neuradjeno" ? "Neurađeno"
         : String(ocjenaBroj);
-      const sadrzaj = `Vaše dijete ${ime} je dobilo novu ocjenu (${ocjenaPrikaz}) iz predmeta ${isNapamet ? "Napamet" : (predmet || "Ostali sadržaji")}.`;
       await notifyApprovedRoditelji({
         ucenikId,
         posiljateljId: req.user!.userId,
-        naslov,
-        sadrzaj,
+        tekst: lang => parentNotification({ type: "grade", child: ime, grade: ocjenaPrikaz, subject: isNapamet ? "Napamet" : (predmet || "Ostali sadržaji") }, lang),
         logTag: "ocjene-notify",
         pushData: { type: "ocjena" },
       });
@@ -6351,8 +6352,7 @@ router.post("/zadace", async (req, res) => {
           await notifyApprovedRoditelji({
             ucenikId: uid,
             posiljateljId: req.user!.userId,
-            naslov: `Nova zadaća za ${ime}`,
-            sadrzaj: `Vaše dijete ${ime} je dobilo novu zadaću: "${naslovFinal}".`,
+            tekst: lang => parentNotification({ type: "homework", child: ime, title: naslovFinal }, lang),
             logTag: "zadaca-notify-roditelj",
             pushData: { type: "zadaca", zadacaId: nova.id },
           });
@@ -6935,10 +6935,7 @@ router.put("/zadace/:id/status/:ucenikId", async (req, res) => {
         await notifyApprovedRoditelji({
           ucenikId,
           posiljateljId: req.user!.userId,
-          naslov: `Nova ocjena za ${ime}`,
-          sadrzaj: lekcija
-            ? `Vaše dijete ${ime} je dobilo ocjenu ${ocjenaPrikaz} iz zadaće "${lekcija}".`
-            : `Vaše dijete ${ime} je dobilo ocjenu ${ocjenaPrikaz} iz zadaće.`,
+          tekst: lang => parentNotification({ type: "homeworkGrade", child: ime, grade: ocjenaPrikaz, title: lekcija }, lang),
           logTag: "zadaca-ocjena-notify",
           pushData: { type: "ocjena", zadacaId: id },
         });

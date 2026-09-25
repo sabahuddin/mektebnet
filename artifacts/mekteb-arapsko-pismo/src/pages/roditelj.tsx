@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
+import { calendarLabel } from "@/lib/calendar-label";
 import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLocation } from "wouter";
@@ -181,7 +182,7 @@ const TIP_COLORS: Record<string, { bg: string; border: string; text: string; lab
 const DAYS_BS = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 const MJESEC_NAZIVI = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
 
-type TopTab = "obavjestenja" | "poruke" | "profil" | number;
+type TopTab = "obavjestenja" | "vrijeme" | "profil" | number;
 type ChildSubTab = "kalendar" | "zadaca" | "ocjene" | "napamet" | "prisustvo" | "dokumenti";
 interface NapametResponse { katalog: NapametStavka[]; ocjene: NapametOcjena[]; }
 
@@ -710,7 +711,7 @@ function DijeteContent({
               </div>
               <div className="grid grid-cols-7 gap-1 mb-2">
                 {DAYS_BS.map(d => (
-                  <div key={d} className="text-center text-xs font-bold text-muted-foreground py-1">{d}</div>
+                  <div key={d} className="text-center text-xs font-bold text-muted-foreground py-1">{t(d)}</div>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
@@ -737,7 +738,7 @@ function DijeteContent({
                 {Object.entries(TIP_COLORS).map(([key, val]) => (
                   <div key={key} className="flex items-center gap-1.5">
                     <div className={`w-3 h-3 rounded ${val.bg} border-2 ${val.border}`} />
-                    <span className="text-xs text-muted-foreground font-medium">{val.label}</span>
+                    <span className="text-xs text-muted-foreground font-medium">{calendarLabel(val.label, t)}</span>
                   </div>
                 ))}
               </div>
@@ -749,7 +750,7 @@ function DijeteContent({
                   {selectedEntries.map(entry => (
                     <div key={entry.id} className={`${TIP_COLORS[entry.tip]?.bg} rounded-lg px-3 py-2 border ${TIP_COLORS[entry.tip]?.border}`}>
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{TIP_COLORS[entry.tip]?.label}</span>
+                        <span className={`font-bold text-sm ${TIP_COLORS[entry.tip]?.text}`}>{calendarLabel(TIP_COLORS[entry.tip]?.label ?? "", t)}</span>
                         {entry.grupaNaziv && <span className="text-xs text-muted-foreground bg-white/60 rounded px-2 py-0.5 font-medium">{entry.grupaNaziv}</span>}
                       </div>
                       {entry.opis && <p className={`text-sm ${TIP_COLORS[entry.tip]?.text} mt-1`}>{entry.opis}</p>}
@@ -858,7 +859,7 @@ function DijeteContent({
 
 export default function RoditeljPage() {
   const { user, token } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [djeca, setDjeca] = useState<Dijete[]>([]);
@@ -878,7 +879,47 @@ export default function RoditeljPage() {
   const [isChangingPw, setIsChangingPw] = useState(false);
   const [obavjestenja, setObavjestenja] = useState<RoditeljObavjestenje[]>([]);
   const [subscription, setSubscription] = useState<SubscriptionProfile | null>(null);
+  const [notificationLang, setNotificationLang] = useState<"bs" | "en" | "de" | "sq" | null>(null);
+  const [savedNotificationLang, setSavedNotificationLang] = useState<"bs" | "en" | "de" | "sq" | null>(null);
+  const [notificationLangError, setNotificationLangError] = useState(false);
+  const [savingNotificationLang, setSavingNotificationLang] = useState(false);
   const [activeTab, setActiveTab] = useState<TopTab>("obavjestenja");
+  const notificationCopy = ({
+    bs: { heading: "Jezik obavijesti", detail: "Automatske poruke o ocjenama i zadaćama stižu na jeziku koji ovdje odaberete. Poruke koje muallim napiše ostaju na izvornom jeziku.", save: "Sačuvaj jezik", saved: "Jezik obavijesti je sačuvan", error: "Nije moguće učitati jezik obavijesti.", retry: "Pokušaj ponovo", help: "Kako uključiti obavijesti: ispod uključite prekidač „Push obavijesti“ i u pregledniku pritisnite „Dozvoli“. To treba uraditi na svakom uređaju. Ako su blokirane, otvorite lokot uz adresu stranice i dozvolite obavijesti za mekteb.net. Crveni broj uz Poruke označava nepročitane poruke, ne status dozvole." },
+    en: { heading: "Notification language", detail: "Automatic grade and homework messages use the language you select here. Messages written by the teacher remain in their original language.", save: "Save language", saved: "Notification language saved", error: "Could not load notification language.", retry: "Try again", help: "To enable notifications, turn on “Push notifications” below and select “Allow” in your browser. Do this on each device. If blocked, open the lock icon next to the website address and allow notifications for mekteb.net. The red number next to Messages shows unread messages, not permission status." },
+    de: { heading: "Sprache der Benachrichtigungen", detail: "Automatische Nachrichten zu Bewertungen und Hausaufgaben erscheinen in der hier gewählten Sprache. Persönliche Nachrichten der Lehrkraft bleiben in der Originalsprache.", save: "Sprache speichern", saved: "Sprache gespeichert", error: "Die Sprache konnte nicht geladen werden.", retry: "Erneut versuchen", help: "Aktivieren Sie unten „Push-Benachrichtigungen“ und wählen Sie im Browser „Zulassen“. Dies ist auf jedem Gerät nötig. Falls blockiert, öffnen Sie das Schloss neben der Webadresse und erlauben Sie Benachrichtigungen für mekteb.net. Die rote Zahl bei Nachrichten zeigt ungelesene Nachrichten an, nicht den Berechtigungsstatus." },
+    sq: { heading: "Gjuha e njoftimeve", detail: "Mesazhet automatike për vlerësimet dhe detyrat vijnë në gjuhën që zgjidhni këtu. Mesazhet e shkruara nga mësuesi mbeten në gjuhën origjinale.", save: "Ruaj gjuhën", saved: "Gjuha u ruajt", error: "Gjuha e njoftimeve nuk mund të ngarkohet.", retry: "Provo përsëri", help: "Për të aktivizuar njoftimet, ndizni “Push notifications” më poshtë dhe zgjidhni “Allow” në shfletues. Bëjeni këtë në çdo pajisje. Nëse janë bllokuar, hapni ikonën e drynit pranë adresës dhe lejoni njoftimet për mekteb.net. Numri i kuq pranë Mesazheve tregon mesazhe të palexuara, jo lejen e njoftimeve." },
+  } as const)[lang as "bs" | "en" | "de" | "sq"] ?? ({
+    heading: "Jezik obavijesti", detail: "", save: "Sačuvaj jezik", saved: "Sačuvano", error: "Nije moguće učitati jezik obavijesti.", retry: "Pokušaj ponovo", help: "",
+  });
+  const loadNotificationLang = () => {
+    if (!token) return;
+    setNotificationLangError(false);
+    apiRequest<{ jezik: "bs" | "en" | "de" | "sq" }>("GET", "/roditelj/jezik-obavijesti", undefined, token)
+      .then(({ jezik }) => { setNotificationLang(jezik); setSavedNotificationLang(jezik); })
+      .catch(() => setNotificationLangError(true));
+  };
+  useEffect(() => {
+    setNotificationLang(null);
+    setSavedNotificationLang(null);
+    loadNotificationLang();
+  }, [token]);
+
+  async function saveNotificationLang() {
+    if (!token || !notificationLang || savingNotificationLang) return;
+    setSavingNotificationLang(true);
+    try {
+      const { jezik } = await apiRequest<{ jezik: "bs" | "en" | "de" | "sq" }>(
+        "PUT", "/roditelj/jezik-obavijesti", { jezik: notificationLang }, token
+      );
+      setSavedNotificationLang(jezik);
+      toast({ title: notificationCopy.saved });
+    } catch (err: any) {
+      toast({ title: t("Greška"), description: err?.message || notificationCopy.error, variant: "destructive" });
+    } finally {
+      setSavingNotificationLang(false);
+    }
+  }
   const loadDjeca = () => {
     if (!token) return;
     setIsLoading(true);
@@ -891,8 +932,6 @@ export default function RoditeljPage() {
         setDjeca(rows.map(r => r.dijete));
         setSummaryMap(new Map(rows.map(r => [r.dijete.id, r.summary])));
         setGameStatsMap(new Map(rows.map(r => [r.dijete.id, r.gameStats])));
-        if (rows.length > 0 && activeTab === "obavjestenja") {
-        }
       })
       .catch(async () => {
         try {
@@ -916,13 +955,6 @@ export default function RoditeljPage() {
       .then(setSubscription)
       .catch(() => {});
   }, [token]);
-
-  useEffect(() => {
-    if (activeTab === "poruke") {
-      setLocation("/poruke");
-      setActiveTab("obavjestenja");
-    }
-  }, [activeTab, setLocation]);
 
   if (!user || user.role !== "roditelj") {
     return (
@@ -989,31 +1021,62 @@ export default function RoditeljPage() {
 
   const topTabs: { id: TopTab; label: string; icon: any }[] = [
     { id: "obavjestenja", label: t("Obavještenja"), icon: Megaphone },
-    ...djeca.map(d => ({ id: d.id as TopTab, label: d.displayName, icon: UserIcon })),
-    { id: "poruke", label: t("Poruke"), icon: MessageSquare },
-    { id: "profil", label: t("Profil"), icon: Settings },
+    { id: "vrijeme", label: t("Vrijeme na platformi"), icon: Clock },
+    { id: "profil", label: t("Podešavanja"), icon: Settings },
   ];
 
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
-        <MyScreentimeBadgeRoditelj />
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 border-b border-border/40">
+        <nav aria-label={t("Roditeljski panel")} className="grid grid-cols-3 gap-2 mb-5">
           {topTabs.map(tab => (
-            <button key={String(tab.id)} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-t-xl text-sm font-bold transition-all whitespace-nowrap border-b-2 ${
+            <button key={String(tab.id)} type="button" onClick={() => setActiveTab(tab.id)}
+              aria-current={activeTab === tab.id ? "page" : undefined}
+              className={`min-w-0 min-h-16 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-2xl border px-2 sm:px-4 py-2 text-center text-[11px] sm:text-sm font-bold leading-tight transition-all ${
                 activeTab === tab.id
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  ? "border-primary bg-primary/10 text-primary shadow-sm"
+                  : "border-border/60 bg-white text-muted-foreground hover:border-primary/40 hover:text-foreground"
               }`}>
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
+              <tab.icon className="w-4 h-4 shrink-0" />
+              <span>{tab.label}</span>
             </button>
           ))}
-        </div>
+        </nav>
+
+        {isLoading && djeca.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+            {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
+          </div>
+        ) : djeca.length > 0 && (
+          <div className={`grid gap-3 mb-6 ${djeca.length === 1 ? "max-w-sm mx-auto" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`} aria-label={t("Djeca")}>
+            {djeca.map((dijete, index) => (
+              <button key={dijete.id} type="button" onClick={() => setActiveTab(dijete.id)}
+                aria-pressed={activeTab === dijete.id}
+                className={`min-w-0 w-full flex items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
+                  activeTab === dijete.id
+                    ? "border-primary bg-primary/10 shadow-sm"
+                    : "border-border/60 bg-white hover:border-primary/40 hover:bg-primary/5"
+                }`}>
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${activeTab === dijete.id ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                  <UserIcon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-muted-foreground">{t("Dijete")} {index + 1}</span>
+                  <span className="block truncate font-extrabold text-foreground" title={dijete.displayName}>{dijete.displayName}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {activeTab === "obavjestenja" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="flex justify-end mb-3">
+              <button type="button" onClick={() => setLocation("/poruke")}
+                className="inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline">
+                <MessageSquare className="h-4 w-4" /> {t("Poruke")}
+              </button>
+            </div>
             {obavjestenja.length === 0 ? (
               <div className="bg-white border border-border/50 rounded-2xl p-8 text-center">
                 <Megaphone className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
@@ -1052,6 +1115,21 @@ export default function RoditeljPage() {
                 ))}
               </div>
             )}
+          </motion.div>
+        )}
+
+        {activeTab === "vrijeme" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+            <MyScreentimeBadgeRoditelj />
+            {djeca.map((dijete, index) => (
+              <div key={dijete.id} className="flex items-center justify-between gap-3 rounded-2xl border border-teal-200 bg-white p-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-muted-foreground">{t("Dijete")} {index + 1}</p>
+                  <p className="truncate font-extrabold text-foreground">{dijete.displayName}</p>
+                </div>
+                <span className="shrink-0 font-extrabold text-teal-800">{formatScreentime(dijete.totalScreentimeSec)}</span>
+              </div>
+            ))}
           </motion.div>
         )}
 
@@ -1197,7 +1275,29 @@ export default function RoditeljPage() {
               <h3 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                 <Settings className="w-5 h-5 text-primary" /> {t("Postavke")}
               </h3>
+              <div className="mb-4 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <label htmlFor="notification-language" className="block font-extrabold text-foreground">{notificationCopy.heading}</label>
+                <p className="mt-1 text-xs text-muted-foreground">{notificationCopy.detail}</p>
+                {notificationLangError && (
+                  <p className="mt-3 text-sm text-destructive" role="alert">
+                    {notificationCopy.error} <button type="button" onClick={loadNotificationLang} className="underline font-bold">{notificationCopy.retry}</button>
+                  </p>
+                )}
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <select id="notification-language" value={notificationLang ?? ""} disabled={notificationLang === null || notificationLangError || savingNotificationLang}
+                    onChange={e => setNotificationLang(e.target.value as "bs" | "en" | "de" | "sq")}
+                    className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                    {notificationLang === null && <option value="">…</option>}
+                    <option value="bs">Bosanski</option><option value="en">English</option>
+                    <option value="de">Deutsch</option><option value="sq">Shqip</option>
+                  </select>
+                  <Button type="button" onClick={saveNotificationLang}
+                    disabled={!notificationLang || notificationLangError || notificationLang === savedNotificationLang || savingNotificationLang}
+                    className="rounded-xl">{savingNotificationLang ? <Loader2 className="w-4 h-4 animate-spin" /> : notificationCopy.save}</Button>
+                </div>
+              </div>
               <PushToggle />
+              <p className="px-2 pt-3 pb-4 text-xs leading-relaxed text-muted-foreground">{notificationCopy.help}</p>
               <SelamSetting />
             </div>
           </motion.div>

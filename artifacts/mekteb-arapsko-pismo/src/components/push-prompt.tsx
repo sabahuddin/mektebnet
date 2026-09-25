@@ -4,10 +4,10 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import {
   requestPushPermission,
-  hasBeenPrompted,
   markPrompted,
   isCapacitorNative,
   isAppIdResolved,
+  isPushEnabledLocally,
 } from "@/lib/push";
 
 const DISMISS_KEY = "mekteb-push-dismissed";
@@ -34,14 +34,15 @@ function isPushSupported(): boolean {
  *
  * Logika:
  * - Sakriven ako: nije logiran / nije podržano / origin ≠ mekteb.net /
- *   permission je već granted ili denied / korisnik već dismissao / već promptan
- * - Dvije akcije: "Uključi" (poziva native permission prompt) i "Ne sad" (dismiss)
+ *   permission je već granted ili denied / korisnik je odgodio u ovoj sesiji
+ * - Dvije akcije: "Prihvati" (traži dozvolu) i "Ne sada" (odgodi do sljedeće sesije)
  */
 export function PushPrompt() {
   const { isAuthenticated } = useAuth();
   const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [appIdReady, setAppIdReady] = useState(isAppIdResolved);
 
   // Build-time App ID je obavezan za native bundle. Fallback na backend ostaje
@@ -65,9 +66,8 @@ export function PushPrompt() {
     if (!isPushSupported()) return;
     if (!isAllowedOrigin()) return;
 
-    const dismissed = localStorage.getItem(DISMISS_KEY) === "true";
-    if (dismissed) return;
-    if (hasBeenPrompted()) return;
+    if (sessionStorage.getItem(DISMISS_KEY) === "true") return;
+    if (isCapacitorNative() && isPushEnabledLocally()) return;
 
     // Na native shell-u Notification API ne postoji u Cordova webview-u na isti
     // način — preskačemo provjeru i prepuštamo native plugin-u da odbije ako
@@ -92,26 +92,29 @@ export function PushPrompt() {
       setVisible(true);
     }, 4000);
     return () => clearTimeout(t);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, appIdReady]);
 
   const onEnable = async () => {
     setBusy(true);
+    setError(null);
     try {
       const ok = await requestPushPermission();
       if (ok) {
         setVisible(false);
+      } else if (!isCapacitorNative() && Notification.permission === "denied") {
+        setError(t("Obavijesti su blokirane u postavkama preglednika. Otvori ikonu ključa/lokota u adresnoj traci i dozvoli obavijesti za mekteb.net."));
       } else {
-        localStorage.setItem(DISMISS_KEY, "true");
-        setVisible(false);
+        setError(t("Obavijesti nisu uključene. Pokušaj ponovo u podešavanjima."));
       }
+    } catch {
+      setError(t("Obavijesti nisu uključene. Pokušaj ponovo u podešavanjima."));
     } finally {
       setBusy(false);
     }
   };
 
   const onDismiss = () => {
-    markPrompted();
-    localStorage.setItem(DISMISS_KEY, "true");
+    sessionStorage.setItem(DISMISS_KEY, "true");
     setVisible(false);
   };
 
@@ -140,19 +143,23 @@ export function PushPrompt() {
           <p className="text-xs text-gray-600 mt-1 leading-relaxed">
             {t("Primaj obavijesti o novim porukama, zadaćama i podsjetnicima — i kad mekteb nije otvoren u browseru.")}
           </p>
+          {error && <p role="alert" className="mt-2 text-xs text-red-700">{error}</p>}
           <div className="flex gap-2 mt-3">
             <button
+              type="button"
               onClick={onEnable}
               disabled={busy}
               className="flex-1 px-3 py-1.5 rounded-full bg-mekteb-teal text-white text-xs font-medium hover:bg-mekteb-teal/90 disabled:opacity-50 transition-colors"
             >
-              {busy ? t("Učitavanje...") : t("Uključi")}
+              {busy ? t("Učitavanje...") : t("Prihvati")}
             </button>
             <button
+              type="button"
               onClick={onDismiss}
+              disabled={busy}
               className="px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 text-xs hover:bg-gray-50 transition-colors"
             >
-              {t("Ne sad")}
+              {t("Ne sada")}
             </button>
           </div>
         </div>

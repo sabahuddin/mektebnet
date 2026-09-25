@@ -761,7 +761,7 @@ export default function UcenikPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <span className="max-w-full truncate text-muted-foreground font-mono bg-muted/50 px-2 py-0.5 rounded-md text-sm">{ucenik.username}</span>
-                  {ucenik.role && <span className="text-muted-foreground text-xs uppercase tracking-wide font-bold">{ucenik.role}</span>}
+                  {ucenik.role && <span className="text-muted-foreground text-xs tracking-wide font-bold">{ucenik.role === "ucenik" ? t("Učenik") : ucenik.role}</span>}
                 </div>
               </div>
               <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
@@ -878,7 +878,7 @@ export default function UcenikPage() {
                         <div className="text-2xl font-extrabold text-amber-500">{zvjezdice?.pozitivne ?? "—"}</div>
                         <div className="text-sm text-muted-foreground font-medium">{t("Zvjezdice")}</div>
                         {zvjezdice && zvjezdice.negativne > 0 && (
-                          <div className="text-xs text-gray-500 mt-1">★ {zvjezdice.negativne} {t("negativnih")}</div>
+                          <div className="text-xs text-gray-500 mt-1">★ {t("{n} negativnih", { n: String(zvjezdice.negativne) })}</div>
                         )}
                       </div>
                       {/* Vježbe — naše, H5P i etapne */}
@@ -946,7 +946,7 @@ export default function UcenikPage() {
                             <div key={e.id} className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 rounded-lg px-3 py-2">
                               <span className="text-base">{e.tip === "pozitivna" ? "⭐" : "★"}</span>
                               <span className="font-bold text-foreground">
-                                {e.kategorija_naziv || (e.tip === "pozitivna" ? t("Pozitivna") : t("Negativna"))}
+                                {e.kategorija_naziv ? t(e.kategorija_naziv) : (e.tip === "pozitivna" ? t("Pozitivna") : t("Negativna"))}
                               </span>
                               {e.razlog && <span className="text-muted-foreground truncate">— {e.razlog}</span>}
                               <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/80">{new Date(e.created_at).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>

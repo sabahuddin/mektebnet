@@ -426,10 +426,10 @@ export default function GrupaPage() {
         return next;
       });
       setPonasanjeOpenId(null);
-      toast({ title: tip === "pozitivna" ? "⭐ Zvjezdica dodijeljena!" : "★ Negativna zvjezdica dodijeljena" });
+      toast({ title: tip === "pozitivna" ? t("Zvjezdica dodijeljena!") : t("Negativna zvjezdica dodijeljena") });
     } catch (err: any) {
       console.error("addZvjezdica greška:", err);
-      toast({ title: `Greška: ${err?.message || "Server nije odgovorio"}`, variant: "destructive" });
+      toast({ title: t("Greška"), description: err?.message || t("Server nije odgovorio"), variant: "destructive" });
     }
   }
 
@@ -1193,7 +1193,7 @@ export default function GrupaPage() {
                                           onClick={() => { addZvjezdica(u.id, "pozitivna", k.id); setPozDropOpen(null); }}
                                           className="mt-2 w-full rounded-xl border border-border/50 px-3 py-3 text-left text-sm text-amber-700 hover:bg-amber-50"
                                         >
-                                          ⭐ {k.naziv}
+                                          ⭐ {t(k.naziv)}
                                         </button>
                                       ))}
                                     </div>
@@ -1253,7 +1253,7 @@ export default function GrupaPage() {
                                           onClick={() => { addZvjezdica(u.id, "negativna", k.id); setNegDropOpen(null); }}
                                           className="mt-2 w-full rounded-xl border border-border/50 px-3 py-3 text-left text-sm text-gray-700 hover:bg-gray-50"
                                         >
-                                          ★ {k.naziv}
+                                          ★ {t(k.naziv)}
                                         </button>
                                       ))}
                                     </div>
