@@ -1,8 +1,9 @@
 // Preuzimanje ljudskih snimaka arapskih riječi s Wikimedia Commonsa (Shtooka).
 //
 // Pokretanje (iz korijena repozitorija, treba ffmpeg i pristup internetu):
-//   node artifacts/mekteb-arapsko-pismo/scripts/preuzmi-shtooka.mjs --pregled
+//   node artifacts/mekteb-arapsko-pismo/scripts/preuzmi-shtooka.mjs
 //   node artifacts/mekteb-arapsko-pismo/scripts/preuzmi-shtooka.mjs --primijeni
+//   node artifacts/mekteb-arapsko-pismo/scripts/preuzmi-shtooka.mjs --proba باب
 //
 // Bez zastavice ništa ne mijenja: samo ispiše šta je našao, s licencom i
 // autorom. S --primijeni preuzme, provjeri, pretvori u MP3 i upiše polje
@@ -31,6 +32,21 @@ const PODACI = path.join(KORIJEN, "public/vjezbe/slusaj/podaci");
 const ZVUK = path.join(KORIJEN, "public/audio/opismenjavanje");
 const API = "https://commons.wikimedia.org/w/api.php";
 const PRIMIJENI = process.argv.includes("--primijeni");
+const iProba = process.argv.indexOf("--proba");
+const PROBA = iProba === -1 ? null : process.argv[iProba + 1];
+
+// Commons odbija navalu. Zahtjevi idu jedan po jedan, s razmakom, i sa
+// zastojem kad server kaže 429. Uz to se imena traže u jednom upitu za sve
+// riječi odjednom, pa ih treba svega nekoliko.
+const RAZMAK = 400;
+const pauza = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Shtooka imenuje datoteke golom riječju, bez hareka: „Ar-باب.ogg". Zato se
+ * traži oblik bez ijedne oznake — inače se ne nađe ništa, što je prva verzija
+ * ovog alata i pokazala.
+ */
+const bezOznaka = (t) => t.normalize("NFC").replace(/[\u064B-\u0652\u0670]/g, "");
 
 const DOZVOLJENE = [/^cc0/i, /^cc[- ]by[- ]?\d/i, /^public domain/i, /^pd/i];
 const ZABRANJENE = [/sa/i, /nc/i, /nd/i];
@@ -47,19 +63,62 @@ function pokreni(naredba, argumenti) {
   });
 }
 
-async function api(parametri) {
+async function api(parametri, pokusaj = 0) {
   const u = new URL(API);
-  for (const [k, v] of Object.entries({ format: "json", formatversion: "2", origin: "*", ...parametri })) u.searchParams.set(k, String(v));
-  const o = await fetch(u, { headers: { "User-Agent": "mekteb.net/1.0 (obrazovni projekat)" } });
-  if (!o.ok) throw new Error(`Commons API ${o.status} za ${u.searchParams.get("titles") ?? u.searchParams.get("gsrsearch")}`);
+  for (const [k, v] of Object.entries({ format: "json", formatversion: "2", ...parametri })) u.searchParams.set(k, String(v));
+  const o = await fetch(u, { headers: { "User-Agent": "mekteb.net-ucenje/1.0 (https://mekteb.net; obrazovni projekat)" } });
+  if (o.status === 429 || o.status === 503) {
+    if (pokusaj >= 4) throw new Error(`Commons API ${o.status} i poslije ${pokusaj} pokušaja`);
+    const cekaj = Number(o.headers.get("retry-after")) * 1000 || Math.min(30000, 2000 * 2 ** pokusaj);
+    console.log(`    server traži predah (${o.status}), čekam ${Math.round(cekaj / 1000)} s…`);
+    await pauza(cekaj);
+    return api(parametri, pokusaj + 1);
+  }
+  if (!o.ok) throw new Error(`Commons API ${o.status}`);
+  await pauza(RAZMAK);
   return o.json();
 }
 
-/** Nađi snimak izgovora za jednu arapsku riječ. */
+/**
+ * Nađi snimke za više riječi odjednom, po imenu datoteke. Commons prima do
+ * pedeset naslova u jednom upitu, pa ovo za cijelu vježbu treba dva-tri
+ * zahtjeva umjesto šezdeset pet.
+ */
+async function nadjiPoImenu(rijeci) {
+  const nadjeno = new Map();
+  const kandidati = [];
+  for (const r of rijeci) {
+    const golo = bezOznaka(r);
+    if (!golo) continue;
+    for (const nastavak of ["ogg", "wav", "flac"]) kandidati.push([`File:Ar-${golo}.${nastavak}`, r]);
+  }
+  for (let i = 0; i < kandidati.length; i += 50) {
+    const grupa = kandidati.slice(i, i + 50);
+    const odgovor = await api({
+      action: "query", titles: grupa.map(([t]) => t).join("|"),
+      prop: "imageinfo", iiprop: "url|extmetadata", iiextmetadatafilter: "LicenseShortName|Artist",
+    });
+    for (const str of odgovor?.query?.pages ?? []) {
+      if (str.missing || !str.imageinfo?.[0]) continue;
+      const info = str.imageinfo[0];
+      const meta = info.extmetadata ?? {};
+      const par = grupa.find(([t]) => t === str.title);
+      if (!par) continue;
+      if (!nadjeno.has(par[1])) nadjeno.set(par[1], {
+        naslov: str.title, url: info.url,
+        licenca: (meta.LicenseShortName?.value ?? "").replace(/<[^>]+>/g, "").trim(),
+        autor: (meta.Artist?.value ?? "").replace(/<[^>]+>/g, "").trim(),
+      });
+    }
+  }
+  return nadjeno;
+}
+
+/** Nađi snimak izgovora za jednu arapsku riječ (pretraga, kad ime ne pogodi). */
 async function nadji(rijec) {
   const upit = await api({
     action: "query", generator: "search", gsrnamespace: 6,
-    gsrsearch: `intitle:"${rijec}" filetype:audio`, gsrlimit: 10,
+    gsrsearch: `intitle:${bezOznaka(rijec)} filetype:audio`, gsrlimit: 10,
     prop: "imageinfo", iiprop: "url|extmetadata|size", iiextmetadatafilter: "LicenseShortName|Artist|UsageTerms",
   });
   const stranice = upit?.query?.pages ?? [];
@@ -111,17 +170,50 @@ for (const naziv of (await readdir(PODACI)).filter((n) => n.endsWith(".json"))) 
     }
   }
 }
-console.log(`Traži se snimak za ${trazene.size} zapisa iz ${(await readdir(PODACI)).filter((n) => n.endsWith(".json")).length} vježbi.\n`);
+console.log(`Traži se snimak za ${trazene.size} zapisa iz ${(await readdir(PODACI)).filter((n) => n.endsWith(".json")).length} vježbi.`);
+
+// Proba: jedan upit za jednu riječ, da se odmah vidi šta Commons vraća.
+if (PROBA) {
+  console.log(`\nProba za „${PROBA}" (golo: „${bezOznaka(PROBA)}")\n`);
+  try {
+    const poImenu = await nadjiPoImenu([PROBA]);
+    console.log("  po imenu datoteke:", poImenu.get(PROBA) ?? "nema");
+  } catch (g) { console.log("  po imenu datoteke: greška —", g.message); }
+  try {
+    const pretragom = await nadji(PROBA);
+    console.log("  pretragom:", pretragom.length ? pretragom : "nema");
+  } catch (g) { console.log("  pretragom: greška —", g.message); }
+  process.exit(0);
+}
+
+// Prvo jedan upit po imenima za sve riječi — Commons prima pedeset naslova
+// odjednom, pa ovo košta nekoliko zahtjeva umjesto šezdeset pet.
+console.log("Tražim po imenima datoteka…");
+let poImenu = new Map();
+try { poImenu = await nadjiPoImenu([...trazene.keys()]); }
+catch (g) { console.log(`  upit po imenima nije uspio: ${g.message}`); }
+console.log(`  nađeno po imenu: ${poImenu.size}\n`);
 
 await mkdir(ZVUK, { recursive: true });
 const prihvaceni = new Map();
 const odbijeni = [];
 
+const HARFOVA = (t) => (t.match(HARF) ?? []).length;
+
 for (const [zapis, gdje] of trazene) {
   let nadjene = [];
-  try { nadjene = await nadji(zapis); }
-  catch (g) { odbijeni.push({ zapis, razlog: `pretraga nije uspjela: ${g.message}` }); continue; }
-  if (!nadjene.length) { odbijeni.push({ zapis, razlog: "nema snimka na Commonsu" }); continue; }
+  const izImena = poImenu.get(zapis);
+  if (izImena) nadjene = [izImena];
+  else if (HARFOVA(zapis) >= 2) {
+    // Pretraga se pokreće samo za riječi. Jedan harf s harekom nije riječ i
+    // Shtooka ga nema, pa nema svrhe trošiti zahtjev.
+    try { nadjene = await nadji(zapis); }
+    catch (g) { odbijeni.push({ zapis, razlog: `pretraga nije uspjela: ${g.message}` }); continue; }
+  }
+  if (!nadjene.length) {
+    odbijeni.push({ zapis, razlog: HARFOVA(zapis) < 2 ? "slog, a Shtooka ima samo riječi" : "nema snimka na Commonsu" });
+    continue;
+  }
 
   const sLicencom = nadjene.filter((n) => licencaValja(n.licenca));
   if (!sLicencom.length) {
