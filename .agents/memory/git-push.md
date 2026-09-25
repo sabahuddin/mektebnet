@@ -25,6 +25,12 @@ Kad Git Data API stvori commit s drugim SHA-om za isti prethodni posao, remote S
 
 GitHub `POST /git/trees` za ugniježđene putanje u odgovoru daje direktorije, ne sve fajlove na dubini. Za potvrdu blob SHA-ova prije commita pročitaj nastali tree sa `GET /git/trees/{sha}?recursive=1`; pri poređenju izlaza shell komande SHA-ove razdvajaj whitespaceom (`\r\n` se može pojaviti).
 
+Pri čitanju `git ls-tree` kroz CodeExecution `shellExec`, tab separator može nestati iz `output`, a redovi su `\r\n`. Za spisak blobova koristi `git ls-tree --format='%(objectname) %(path)'` i redove razdvajaj sa `/\r?\n/`.
+
+**Why:** Parser koji očekuje `\t` ili samo `\n` može pogrešno očitati blobove i zaustaviti siguran GitHub push.
+
+**How to apply:** Kada u CodeExecution porediš lokalni i udaljeni tree, upotrijebi eksplicitan format sa razmakom i tolerantan separator redova; ne oslanjaj se na podrazumijevani tab izlaz `ls-tree`.
+
 ## Coolify
 Push triggeruje deploy preko Coolify-ja, ali Coolify uvijek treba RUČNI redeploy nakon push-a (self-hosted, mekteb.net). Napomeni korisniku da uradi redeploy.
 
