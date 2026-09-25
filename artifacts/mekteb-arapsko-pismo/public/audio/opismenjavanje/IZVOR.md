@@ -1,5 +1,11 @@
 # Odakle su ovi snimci
 
+Većina snimaka u ovom folderu dolazi s Wikimedia Commonsa — vidi
+IZVOR-COMMONS.md. Ispod je opis za ono što je preostalo iz Anture: „لَبَن".
+Snimci za „باب" i „ماء" su bili iz Anture, ali su zamijenjeni boljim s
+Commonsa, pa su uklonjeni.
+
+
 Snimci u ovom folderu potječu iz projekta **Antura and the Letters (Arabic)**,
 pobjednika međunarodnog natječaja EduApp4Syria.
 
