@@ -13,6 +13,14 @@
 // Wikimediju, pa se snimci ne mogu preuzeti odatle gdje se piše kod. Ovdje se
 // isti posao radi tamo gdje mreža radi.
 //
+// ODAKLE SE UZIMA — samo dva imenska obrasca, oba arapska:
+//   „Ar-<riječ>.ogg"                     Shtooka, arapski
+//   „LL-Q13955 (ara)-<ko>-<riječ>.wav"   Lingua Libre, književni arapski
+// Slobodna pretraga je namjerno izbačena. Kad je bila uključena, vratila je
+// urdu, perzijski, egipatski i levantski izgovor, frazu „إلى حد ما" umjesto
+// riječi „ما", pa i naslov pjesme „اسلمي يا مصر" umjesto „يا". Naslov koji
+// sadrži traženu riječ nije isto što i snimak te riječi.
+//
 // PROVJERE — nijedan snimak ne ulazi dok ne prođe sve četiri:
 //   1. licenca mora biti samo-navođenje (CC BY, CC0, javna domena). CC BY-SA
 //      se odbija, jer traži da i naša zbirka izađe pod istom licencom.
@@ -114,26 +122,6 @@ async function nadjiPoImenu(rijeci) {
   return nadjeno;
 }
 
-/** Nađi snimak izgovora za jednu arapsku riječ (pretraga, kad ime ne pogodi). */
-async function nadji(rijec) {
-  const upit = await api({
-    action: "query", generator: "search", gsrnamespace: 6,
-    gsrsearch: `intitle:${bezOznaka(rijec)} filetype:audio`, gsrlimit: 10,
-    prop: "imageinfo", iiprop: "url|extmetadata|size", iiextmetadatafilter: "LicenseShortName|Artist|UsageTerms",
-  });
-  const stranice = upit?.query?.pages ?? [];
-  const nadjene = [];
-  for (const s of stranice) {
-    const info = s.imageinfo?.[0];
-    if (!info) continue;
-    const meta = info.extmetadata ?? {};
-    const licenca = (meta.LicenseShortName?.value ?? "").replace(/<[^>]+>/g, "").trim();
-    const autor = (meta.Artist?.value ?? "").replace(/<[^>]+>/g, "").trim();
-    nadjene.push({ naslov: s.title, url: info.url, licenca, autor });
-  }
-  return nadjene;
-}
-
 function licencaValja(licenca) {
   const l = (licenca || "").trim();
   if (!l) return false;
@@ -179,10 +167,6 @@ if (PROBA) {
     const poImenu = await nadjiPoImenu([PROBA]);
     console.log("  po imenu datoteke:", poImenu.get(PROBA) ?? "nema");
   } catch (g) { console.log("  po imenu datoteke: greška —", g.message); }
-  try {
-    const pretragom = await nadji(PROBA);
-    console.log("  pretragom:", pretragom.length ? pretragom : "nema");
-  } catch (g) { console.log("  pretragom: greška —", g.message); }
   process.exit(0);
 }
 
@@ -204,14 +188,8 @@ for (const [zapis, gdje] of trazene) {
   let nadjene = [];
   const izImena = poImenu.get(zapis);
   if (izImena) nadjene = [izImena];
-  else if (HARFOVA(zapis) >= 2) {
-    // Pretraga se pokreće samo za riječi. Jedan harf s harekom nije riječ i
-    // Shtooka ga nema, pa nema svrhe trošiti zahtjev.
-    try { nadjene = await nadji(zapis); }
-    catch (g) { odbijeni.push({ zapis, razlog: `pretraga nije uspjela: ${g.message}` }); continue; }
-  }
   if (!nadjene.length) {
-    odbijeni.push({ zapis, razlog: HARFOVA(zapis) < 2 ? "slog, a Shtooka ima samo riječi" : "nema snimka na Commonsu" });
+    odbijeni.push({ zapis, razlog: HARFOVA(zapis) < 2 ? "slog, a Shtooka ima samo riječi" : "nema snimka pod arapskim imenom" });
     continue;
   }
 
@@ -223,7 +201,9 @@ for (const [zapis, gdje] of trazene) {
 
   const kandidat = sLicencom[0];
   if (!PRIMIJENI) {
-    console.log(`  ${zapis.padEnd(10)} ${kandidat.licenca.padEnd(12)} ${kandidat.naslov}`);
+    const stranica = `https://commons.wikimedia.org/wiki/${encodeURIComponent(kandidat.naslov.replace(/ /g, "_"))}`;
+    console.log(`  ${zapis.padEnd(10)} ${kandidat.licenca.padEnd(14)} ${kandidat.naslov}`);
+    console.log(`  ${" ".repeat(10)} poslušaj: ${stranica}`);
     prihvaceni.set(zapis, { ...kandidat, gdje });
     continue;
   }
