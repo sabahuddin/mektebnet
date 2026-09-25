@@ -67,7 +67,8 @@
     },
     {
       "zapis": "لا",
-      "citanje": "la"
+      "citanje": "la",
+      "zvuk": "/audio/opismenjavanje/rijec-d984d8a7.mp3"
     },
     {
       "zapis": "با",
@@ -165,5 +166,6 @@
       "citanje": "emam",
       "znacenje": "ispred"
     }
-  ]
+  ],
+  "izvorZvukaCommons": "Nhaily Mustapha, Vion Nicolas (CC BY 3.0 us)"
 }

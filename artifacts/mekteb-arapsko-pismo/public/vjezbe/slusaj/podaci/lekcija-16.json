@@ -113,7 +113,8 @@
     {
       "zapis": "لا",
       "citanje": "la",
-      "znacenje": "dužina"
+      "znacenje": "dužina",
+      "zvuk": "/audio/opismenjavanje/rijec-d984d8a7.mp3"
     }
   ],
   "rijeci": [
@@ -135,7 +136,8 @@
     {
       "zapis": "يَوْم",
       "citanje": "jevm",
-      "znacenje": "dan"
+      "znacenje": "dan",
+      "zvuk": "/audio/opismenjavanje/rijec-d98ad98ed988d992.mp3"
     },
     {
       "zapis": "بَيْت",
@@ -192,5 +194,6 @@
       "citanje": "edžran",
       "znacenje": "nagradu"
     }
-  ]
+  ],
+  "izvorZvukaCommons": "Nhaily Mustapha, Vion Nicolas (CC BY 3.0 us)"
 }
