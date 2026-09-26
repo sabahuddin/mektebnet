@@ -638,6 +638,7 @@ export default function MuallimPanel() {
   const [zadDodjela, setZadDodjela] = useState<"svi" | "pojedinacno" | "podgrupa">("svi");
   const [zadPodgrupaId, setZadPodgrupaId] = useState<number | null>(null);
   const [zadOpis, setZadOpis] = useState("");
+  const [zadRokDo, setZadRokDo] = useState("");
   const [zadLekcija, setZadLekcija] = useState("");
   const [zadLekcijaSlug, setZadLekcijaSlug] = useState("");
   const [zadUcenikIds, setZadUcenikIds] = useState<Set<number>>(new Set());
@@ -1052,7 +1053,7 @@ export default function MuallimPanel() {
         grupaId: zadGrupaId,
         naslov: izvorniNaslov.trim() || zadOpis.trim().slice(0, 80),
         opis: zadOpis.trim() || null,
-        rokDo: null,
+        rokDo: zadRokDo || null,
         lekcijaNaslov: izvorniNaslov || null,
         lekcijaSlug: zadLekcijaSlug || null,
         lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
@@ -1069,7 +1070,7 @@ export default function MuallimPanel() {
       setZadace(prev => editingZadaca
         ? prev.map(z => z.id === saved.id ? saved : z)
         : [saved, ...prev]);
-      setZadOpis(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set()); setZadPodgrupaId(null);
+      setZadOpis(""); setZadRokDo(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set()); setZadPodgrupaId(null);
       setZadDodjela("svi");
       setEditingZadaca(null);
       setShowZadForm(false);
@@ -1085,6 +1086,7 @@ export default function MuallimPanel() {
     setZadLekcija(zadaca.lekcijaNaslov || "");
     setZadLekcijaSlug(zadaca.lekcijaSlug || "");
     setZadOpis(zadaca.opis || "");
+    setZadRokDo(zadaca.rokDo?.slice(0, 10) || "");
     setZadUcenikIds(new Set(zadaca.ucenikIds || []));
     setZadPodgrupaId(zadaca.podgrupaId ?? null);
     setZadDodjela(zadaca.podgrupaId ? "podgrupa" : zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
@@ -3689,6 +3691,7 @@ export default function MuallimPanel() {
                           const opening = zadSubTab !== "nova";
                           if (opening) {
                             setEditingZadaca(null);
+                            setZadRokDo("");
                             setZadDodjela("svi");
                             setZadPodgrupaId(null);
                             setZadUcenikIds(new Set());
@@ -3799,6 +3802,12 @@ export default function MuallimPanel() {
                               placeholder={t("Detalji zadaće...")}
                               className="w-full border border-border rounded-xl px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
                           </div>
+                           <div className="sm:col-span-2">
+                             <label htmlFor="zadaca-rok-do" className="text-sm font-bold text-muted-foreground block mb-1">{t("Rok zadaće")}</label>
+                             <input id="zadaca-rok-do" type="date" value={zadRokDo} onChange={e => setZadRokDo(e.target.value)}
+                               className="w-full sm:max-w-xs border border-border rounded-xl px-3 py-2 text-base bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                               data-testid="input-zadaca-rok-do" />
+                           </div>
                           <div className={`sm:col-span-2 ${zadDodjela !== "pojedinacno" ? "hidden" : ""}`}>
                             <label className="text-sm font-bold text-muted-foreground block mb-1">
                                {t("Učenici")} {t("({n} odabrano)", { n: String(zadUcenikIds.size) })}
@@ -3858,7 +3867,7 @@ export default function MuallimPanel() {
                           </div>
                         </div>
                         <div className="flex flex-col-reverse gap-2 mt-4 sm:flex-row sm:justify-end">
-                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadPodgrupaId(null); setZadOpis(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="w-full text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 sm:w-auto">
+                          <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadPodgrupaId(null); setZadOpis(""); setZadRokDo(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="w-full text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 sm:w-auto">
                             {t("Otkaži")}
                           </button>
                           <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2) || (zadDodjela === "podgrupa" && (zadPodgrupaId == null || zadPodgrupeLoading || !zadPodgrupe.some(podgrupa => podgrupa.id === zadPodgrupaId) || (editingZadaca?.podgrupaId !== zadPodgrupaId && (zadPodgrupe.find(podgrupa => podgrupa.id === zadPodgrupaId)?.ucenikIds.length ?? 0) === 0)))} className="w-full rounded-xl font-bold sm:w-auto">
