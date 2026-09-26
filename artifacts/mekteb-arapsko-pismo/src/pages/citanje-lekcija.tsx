@@ -7,7 +7,7 @@
 // Imena slova se nigdje ne spominju, ni u jednom prikazu.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
-import { ArrowLeft, Volume2, Check, X, Timer, RotateCcw, Play, Square } from "lucide-react";
+import { ArrowLeft, Volume2, VolumeX, Check, X, Timer, RotateCcw, Play, Square } from "lucide-react";
 import { lekcijaPoBroju, type VjezbaCitanja, type StavkaVjezbe } from "@/data/citanje-lekcije";
 import { PROGRAM_CITANJA } from "@/data/citanje-program";
 import { RIJECI_CITANJA } from "@/data/citanje-rijeci";
@@ -301,6 +301,13 @@ export default function CitanjeLekcijaPage() {
 
       {prikaz === "dijete" ? (
         <div className="flex flex-col gap-5">
+          {!lekcija.imaZvuk && (
+            <p className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <VolumeX className="w-5 h-5 shrink-0 mt-0.5" />
+              <span>Snimci za ovu lekciju još nisu napravljeni. Do tada muallim izgovara
+              umjesto zvučnika — sve ostalo u vježbama radi.</span>
+            </p>
+          )}
           {lekcija.vjezbe.map((v) => <Vjezba key={v.naslov} v={v} />)}
         </div>
       ) : (

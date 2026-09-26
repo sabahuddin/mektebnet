@@ -11,6 +11,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { RIJECI_CITANJA } from "../data/citanje-rijeci";
+import { SLOGOVI_CITANJA } from "../data/citanje-slogovi";
 import { PROGRAM_CITANJA, znanjeDoLekcije } from "../data/citanje-program";
 import { zahtjevZapisa, zavrsetakOznacen } from "./sufara-zapis";
 
@@ -50,6 +51,37 @@ test("svaka riječ stoji u lekciji u kojoj se prvi put da pročitati", () => {
     }
   }
   assert.deepEqual(krivo, [], `riječi u pogrešnoj lekciji:\n${krivo.join("\n")}`);
+});
+
+test("svaki slog stoji u lekciji u kojoj se prvi put da pročitati", () => {
+  const krivo: string[] = [];
+  for (const s of SLOGOVI_CITANJA) {
+    const treba = najranijaLekcija(s.zapis);
+    if (treba === null) {
+      const { harfovi, znakovi } = zahtjevZapisa(s.zapis);
+      krivo.push(`${s.zapis} (${s.citanje}) — nijedna lekcija je ne pokriva; traži ${harfovi.join("")} i ${znakovi.join(", ")}`);
+    } else if (treba !== s.lekcija) {
+      krivo.push(`${s.zapis} (${s.citanje}) — stoji u ${s.lekcija}, a čitljiv je od ${treba}`);
+    }
+  }
+  assert.deepEqual(krivo, [], `slogovi u pogrešnoj lekciji:\n${krivo.join("\n")}`);
+});
+
+test("slog stoji na harfu koji sam navodi", () => {
+  const krivo = SLOGOVI_CITANJA
+    .filter((s) => !zahtjevZapisa(s.zapis).harfovi.includes(s.harf))
+    .map((s) => `${s.zapis} — piše da je na ${s.harf}, a nema ga`);
+  assert.deepEqual(krivo, [], krivo.join("\n"));
+});
+
+test("dugi slogovi su označeni, kratki nisu", () => {
+  const krivo: string[] = [];
+  for (const s of SLOGOVI_CITANJA) {
+    const imaMedd = zahtjevZapisa(s.zapis).znakovi.includes("medd");
+    if (imaMedd && !s.dug) krivo.push(`${s.zapis} ima dužinu, a nije označen`);
+    if (!imaMedd && s.dug) krivo.push(`${s.zapis} je označen kao dug, a nema dužinu`);
+  }
+  assert.deepEqual(krivo, [], krivo.join("\n"));
 });
 
 test("svaka riječ ima označen završetak", () => {

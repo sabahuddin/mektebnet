@@ -47,3 +47,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Spisak za snimanje je ispis skripte, ne izvor. Zastari čim se nešto snimi,
+# pa se pravi iznova sa scripts/spisak-za-snimanje.mjs.
+spisak-za-snimanje*.txt

@@ -8,6 +8,8 @@
 
 export interface SlogCitanja {
   zapis: string;
+  /** Dug slog — harf s harekom i slovom produženja. */
+  dug?: boolean;
   /** Kako zvuči — za muallima i za provjeru, nikad se ne pokazuje djetetu. */
   citanje: string;
   /** Slovo na kojem slog stoji, radi grupisanja u vježbama. */
@@ -18,6 +20,8 @@ export interface SlogCitanja {
 export const SLOGOVI_CITANJA: SlogCitanja[] = [
   { zapis: "لَ", citanje: "le", harf: "ل", lekcija: 1 },
   { zapis: "مَ", citanje: "me", harf: "م", lekcija: 1 },
+  { zapis: "لَا", citanje: "la", harf: "ل", lekcija: 1, dug: true },
+  { zapis: "مَا", citanje: "ma", harf: "م", lekcija: 1, dug: true },
 
   { zapis: "نَ", citanje: "ne", harf: "ن", lekcija: 2 },
   { zapis: "وَ", citanje: "ve", harf: "و", lekcija: 2 },
@@ -25,6 +29,8 @@ export const SLOGOVI_CITANJA: SlogCitanja[] = [
   { zapis: "مِ", citanje: "mi", harf: "م", lekcija: 2 },
   { zapis: "نِ", citanje: "ni", harf: "ن", lekcija: 2 },
   { zapis: "وِ", citanje: "vi", harf: "و", lekcija: 2 },
+  { zapis: "نَا", citanje: "na", harf: "ن", lekcija: 2, dug: true },
+  { zapis: "وَا", citanje: "va", harf: "و", lekcija: 2, dug: true },
 
   { zapis: "هَ", citanje: "he", harf: "ه", lekcija: 3 },
   { zapis: "رَ", citanje: "re", harf: "ر", lekcija: 3 },
@@ -36,6 +42,11 @@ export const SLOGOVI_CITANJA: SlogCitanja[] = [
   { zapis: "وُ", citanje: "vu", harf: "و", lekcija: 3 },
   { zapis: "هُ", citanje: "hu", harf: "ه", lekcija: 3 },
   { zapis: "رُ", citanje: "ru", harf: "ر", lekcija: 3 },
+  { zapis: "هَا", citanje: "ha", harf: "ه", lekcija: 3, dug: true },
+  { zapis: "رَا", citanje: "ra", harf: "ر", lekcija: 3, dug: true },
+  { zapis: "لُو", citanje: "lu", harf: "ل", lekcija: 3, dug: true },
+  { zapis: "مُو", citanje: "mu", harf: "م", lekcija: 3, dug: true },
+  { zapis: "نُو", citanje: "nu", harf: "ن", lekcija: 3, dug: true },
 
   { zapis: "يَ", citanje: "je", harf: "ي", lekcija: 4 },
   { zapis: "يِ", citanje: "ji", harf: "ي", lekcija: 4 },
@@ -43,6 +54,11 @@ export const SLOGOVI_CITANJA: SlogCitanja[] = [
   { zapis: "كَ", citanje: "ke", harf: "ك", lekcija: 4 },
   { zapis: "كِ", citanje: "ki", harf: "ك", lekcija: 4 },
   { zapis: "كُ", citanje: "ku", harf: "ك", lekcija: 4 },
+  { zapis: "يَا", citanje: "ja", harf: "ي", lekcija: 4, dug: true },
+  { zapis: "كَا", citanje: "ka", harf: "ك", lekcija: 4, dug: true },
+  { zapis: "لِي", citanje: "li", harf: "ل", lekcija: 4, dug: true },
+  { zapis: "مِي", citanje: "mi", harf: "م", lekcija: 4, dug: true },
+  { zapis: "كِي", citanje: "ki", harf: "ك", lekcija: 4, dug: true },
 
   { zapis: "عَ", citanje: "a",  harf: "ع", lekcija: 5 },
   { zapis: "عِ", citanje: "i",  harf: "ع", lekcija: 5 },
@@ -50,6 +66,13 @@ export const SLOGOVI_CITANJA: SlogCitanja[] = [
   { zapis: "بَ", citanje: "be", harf: "ب", lekcija: 5 },
   { zapis: "بِ", citanje: "bi", harf: "ب", lekcija: 5 },
   { zapis: "بُ", citanje: "bu", harf: "ب", lekcija: 5 },
+  { zapis: "بَا", citanje: "ba", harf: "ب", lekcija: 5, dug: true },
+  { zapis: "عَا", citanje: "a",  harf: "ع", lekcija: 5, dug: true },
+  { zapis: "بِي", citanje: "bi", harf: "ب", lekcija: 5, dug: true },
+
+  { zapis: "أَ", citanje: "e",  harf: "أ", lekcija: 6 },
+  { zapis: "إِ", citanje: "i",  harf: "إ", lekcija: 6 },
+  { zapis: "أُ", citanje: "u",  harf: "أ", lekcija: 6 },
 
   { zapis: "فَ", citanje: "fe", harf: "ف", lekcija: 7 },
   { zapis: "فِ", citanje: "fi", harf: "ف", lekcija: 7 },
@@ -57,6 +80,10 @@ export const SLOGOVI_CITANJA: SlogCitanja[] = [
   { zapis: "سَ", citanje: "se", harf: "س", lekcija: 7 },
   { zapis: "سِ", citanje: "si", harf: "س", lekcija: 7 },
   { zapis: "سُ", citanje: "su", harf: "س", lekcija: 7 },
+  { zapis: "فَا", citanje: "fa", harf: "ف", lekcija: 7, dug: true },
+  { zapis: "سَا", citanje: "sa", harf: "س", lekcija: 7, dug: true },
+  { zapis: "فِي", citanje: "fi", harf: "ف", lekcija: 7, dug: true },
+  { zapis: "سُو", citanje: "su", harf: "س", lekcija: 7, dug: true },
 ];
 
 /** Slogovi koje dijete zna zaključno s datom lekcijom. */
