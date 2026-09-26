@@ -27,6 +27,11 @@ const POZE: Record<string, string> = {
   leti: "/images/maskota/poses/pcela-leti.webp",
   pokazuje: "/images/maskota/poses/pcela-pokazuje-lijevo.webp",
   pokazujeDesno: "/images/maskota/poses/pcela-pokazuje-desno.webp",
+  boka: "/images/maskota/poses/pcela-boka.webp",
+  skace: "/images/maskota/poses/pcela-skace.webp",
+  razmislja2: "/images/maskota/poses/pcela-razmislja2.webp",
+  iznenadjena: "/images/maskota/poses/pcela-iznenadjena.webp",
+  spava: "/images/maskota/poses/pcela-spava.webp",
 };
 
 const LIKOVI: Record<ReplikaPrice["ko"], { ime: string; okvir: string; mjehur: string }> = {

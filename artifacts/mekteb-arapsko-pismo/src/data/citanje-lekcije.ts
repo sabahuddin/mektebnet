@@ -14,7 +14,10 @@ export interface ReplikaPrice {
   ko: "rumejsa" | "bilal" | "narator";
   tekst: string;
   /** Slika uz repliku. Rumejsa ima poze; za Bilala slike još nisu stigle. */
-  slika?: "hoda" | "razmislja" | "cita" | "mase" | "palac" | "leti" | "pokazuje" | "pokazujeDesno";
+  slika?:
+    | "hoda" | "razmislja" | "cita" | "mase" | "palac" | "leti"
+    | "pokazuje" | "pokazujeDesno" | "boka" | "skace" | "razmislja2"
+    | "iznenadjena" | "spava";
 }
 
 /** Naš tekst o harfu — ono što muallim objašnjava, zapisano da se može čitati. */
@@ -61,7 +64,7 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       { ko: "narator", tekst: "Pčela Rumejsa sletjela je na granu. Ispod nje, u travi, radio je mrav Bilal." },
       { ko: "rumejsa", slika: "mase", tekst: "Bilale, vidiš li ovu malu crticu iznad? Gledaj, kosa je i stoji na vrhu." },
       { ko: "bilal", tekst: "Vidim je. Šta radi tu gore?" },
-      { ko: "rumejsa", slika: "razmislja", tekst: "Ona je fetha. Kad fetha sjedne iznad, slovo kaže E. Slušaj: LE." },
+      { ko: "rumejsa", slika: "razmislja2", tekst: "Ona je fetha. Kad fetha sjedne iznad, slovo kaže E. Slušaj: LE." },
       { ko: "bilal", tekst: "LE! Kratko je, kao kad pljesnem rukama." },
       { ko: "rumejsa", tekst: "Tako je. A sad gledaj šta se desi kad iza dođe uspravna crta. Ona ne pravi svoj glas, nego razvlači onaj prije sebe." },
       { ko: "bilal", tekst: "LEEE? Kao kad se protegnem ujutru?" },
@@ -112,7 +115,7 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       { ko: "narator", tekst: "Rumejsa je tog jutra donijela tri sličice i poredala ih na kamen." },
       { ko: "rumejsa", slika: "mase", tekst: "Bilale, znaš dvije. Crtica gore, crtica dolje. Ostaje još jedna." },
       { ko: "bilal", tekst: "Ova mala? Liči na zavrnutu vlas." },
-      { ko: "rumejsa", slika: "razmislja", tekst: "Ona je damma. Stoji gore, ali ne kaže E nego U. Slušaj: HU." },
+      { ko: "rumejsa", slika: "razmislja2", tekst: "Ona je damma. Stoji gore, ali ne kaže E nego U. Slušaj: HU." },
       { ko: "bilal", tekst: "HU. Usne mi se same skupile." },
       { ko: "rumejsa", tekst: "Baš po tome ćeš je znati. Kad vidiš dammu, skupi usne u krug prije nego izgovoriš." },
       { ko: "narator", tekst: "Bilal je skupio usne i rekao HU, pa RU, pa MU, i svaki put su mu se usne skupile prije glasa." },
@@ -138,9 +141,9 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       { ko: "bilal", tekst: "Na vučenje uzbrdo?" },
       { ko: "rumejsa", tekst: "Na stajanje. Gledaj ovaj mali kružić iznad slova. On ne daje nikakav glas." },
       { ko: "bilal", tekst: "Kako ne daje? Pa svaki znak nešto kaže." },
-      { ko: "rumejsa", slika: "razmislja", tekst: "Ovaj kaže: stani. Slovo ispod njega se izgovori i odmah zatvori. Slušaj: MI, pa MIN." },
+      { ko: "rumejsa", slika: "boka", tekst: "Ovaj kaže: stani. Slovo ispod njega se izgovori i odmah zatvori. Slušaj: MI, pa MIN." },
       { ko: "bilal", tekst: "MIN. Kao da sam zakočio na kraju." },
-      { ko: "rumejsa", tekst: "Tako je. Zove se sukun. Kad ga vidiš, pljesni rukama i stani." },
+      { ko: "rumejsa", slika: "palac", tekst: "Tako je. Zove se sukun. Kad ga vidiš, pljesni rukama i stani." },
       { ko: "narator", tekst: "Bilal je pljesnuo i stao. Pa opet. Pa je rekao MIN, LEM, MEN, i na svakom kraju pljesnuo." },
     ],
     provjera: [
@@ -160,12 +163,12 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
     prica: [
       { ko: "narator", tekst: "Bilal je pokušavao izgovoriti novi glas i svaki put ispalo bi nešto drugo." },
       { ko: "bilal", tekst: "A... e... ne ide mi. Šta radim krivo?" },
-      { ko: "rumejsa", slika: "razmislja", tekst: "Ne radiš krivo, nego na krivom mjestu. Ovaj glas ne nastaje u ustima nego dublje, u grlu." },
+      { ko: "rumejsa", slika: "boka", tekst: "Ne radiš krivo, nego na krivom mjestu. Ovaj glas ne nastaje u ustima nego dublje, u grlu." },
       { ko: "bilal", tekst: "U grlu?" },
       { ko: "rumejsa", tekst: "Stavi ruku na grlo. Sad reci onaj obični, pa ovaj novi. Osjetit ćeš razliku prstima." },
       { ko: "narator", tekst: "Bilal je stavio šapicu na grlo. Prvi glas jedva se osjetio. Drugi je zatreperio dublje." },
       { ko: "bilal", tekst: "Osjećam! Ovaj drugi dolazi odozdo." },
-      { ko: "rumejsa", tekst: "Sad ga možeš prepoznati i kad ga ne vidiš. Ruka zna prije uha." },
+      { ko: "rumejsa", slika: "palac", tekst: "Sad ga možeš prepoznati i kad ga ne vidiš. Ruka zna prije uha." },
     ],
     provjera: [
       "Ruka na grlu; dijete izgovara dva glasa i kazuje koji dolazi dublje.",
@@ -184,12 +187,12 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
     prica: [
       { ko: "narator", tekst: "Na travi je ležao mali znak. Nije imao svoje slovo." },
       { ko: "bilal", tekst: "Rumejsa, ovaj ovdje je sam. Nema na čemu da stoji." },
-      { ko: "rumejsa", slika: "razmislja", tekst: "To je hemze. On i jeste takav — sjedne na tuđe slovo kao na stolicu, a kad nema stolice, stane na liniju." },
+      { ko: "rumejsa", slika: "razmislja2", tekst: "To je hemze. On i jeste takav — sjedne na tuđe slovo kao na stolicu, a kad nema stolice, stane na liniju." },
       { ko: "bilal", tekst: "A kako zvuči?" },
       { ko: "rumejsa", tekst: "Kao kratak prekid u grlu. Reci A, pa stani naglo, pa opet A. Taj prekid između — to je hemze." },
       { ko: "narator", tekst: "Bilal je pokušao. Prvi put je ispalo dugo, drugi put prekratko, treći put baš kako treba." },
       { ko: "bilal", tekst: "Znači on nije glas nego zastoj?" },
-      { ko: "rumejsa", tekst: "Zastoj koji se čuje. Bez njega bi mnoge riječi zvučale rastegnuto i pogrešno." },
+      { ko: "rumejsa", slika: "razmislja2", tekst: "Zastoj koji se čuje. Bez njega bi mnoge riječi zvučale rastegnuto i pogrešno." },
     ],
     provjera: [
       "Pokazati hemze na tri različita nosača i pitati je li to isti znak.",
@@ -213,7 +216,7 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       { ko: "bilal", tekst: "Dva ista slova jedno do drugog?" },
       { ko: "rumejsa", tekst: "Čuju se kao dva, a piše se jedno sa znakom iznad. Slušaj: KU, pa KULL." },
       { ko: "bilal", tekst: "KULL. Zadržao si se na kraju." },
-      { ko: "rumejsa", tekst: "I to je sve. Osloniti se, pa pustiti." },
+      { ko: "rumejsa", slika: "palac", tekst: "I to je sve. Osloniti se, pa pustiti." },
       { ko: "narator", tekst: "Bilal je vježbao naslanjanje na list dok se list nije povio isto onoliko koliko i pod Rumejsom." },
     ],
     provjera: [
