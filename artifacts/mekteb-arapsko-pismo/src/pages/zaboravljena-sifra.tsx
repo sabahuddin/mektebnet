@@ -60,8 +60,11 @@ export default function ZaboravljenaSifraPage() {
             <KeyRound className="w-5 h-5 text-primary" />
             {t("Postavi novu šifru")}
           </h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            {t("Unesite email adresu sa kojom ste se registrovali — poslat ćemo vam link za postavljanje nove šifre.")}
+          <p className="text-sm text-muted-foreground mb-3">
+            {t("Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.")}
+          </p>
+          <p className="text-xs text-muted-foreground mb-5">
+            {t("Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.")}
           </p>
 
           {done ? (

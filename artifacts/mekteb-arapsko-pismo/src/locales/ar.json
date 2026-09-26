@@ -2500,5 +2500,9 @@
   "1 učenik + 1 roditelj = 2 KM godišnje.": "طالب واحد + ولي أمر واحد = 2 مارك سنوياً.",
   "1 učenik + 1 roditelj = 2 € godišnje.": "طالب واحد + ولي أمر واحد = 2 يورو سنوياً.",
   "Dodatni muallim: 30 KM godišnje.": "معلّم إضافي: 30 مارك سنوياً.",
-  "Dodatni muallim: 30 € godišnje.": "معلّم إضافي: 30 يورو سنوياً."
+  "Dodatni muallim: 30 € godišnje.": "معلّم إضافي: 30 يورو سنوياً.",
+  "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "أدخل البريد الإلكتروني المرتبط بحسابك. سنرسل إليك رابطًا لتعيين كلمة مرور جديدة.",
+  "Email (za reset šifre)": "البريد الإلكتروني (لاستعادة كلمة المرور)",
+  "Nema emaila za reset šifre": "لا يوجد بريد إلكتروني لاستعادة كلمة المرور",
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "إذا لم يكن لحساب المعلم بريد إلكتروني، فاطلب إعادة تعيين كلمة المرور من المعلم الرئيسي أو المسؤول."
 }

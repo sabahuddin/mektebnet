@@ -3519,5 +3519,9 @@
   "1 učenik + 1 roditelj = 2 KM godišnje.": "1 nxënës + 1 prind = 2 KM në vit.",
   "1 učenik + 1 roditelj = 2 € godišnje.": "1 nxënës + 1 prind = 2 € në vit.",
   "Dodatni muallim: 30 KM godišnje.": "Mësues shtesë: 30 KM në vit.",
-  "Dodatni muallim: 30 € godišnje.": "Mësues shtesë: 30 € në vit."
+  "Dodatni muallim: 30 € godišnje.": "Mësues shtesë: 30 € në vit.",
+  "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "Shkruani emailin e lidhur me llogarinë tuaj. Do t'ju dërgojmë një lidhje për të vendosur një fjalëkalim të ri.",
+  "Email (za reset šifre)": "Email (për rivendosjen e fjalëkalimit)",
+  "Nema emaila za reset šifre": "Nuk ka email për rivendosjen e fjalëkalimit",
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Nëse llogaria juaj si mësues nuk ka email, kërkojini mësuesit kryesor ose administratorit t'jua rivendosë fjalëkalimin."
 }

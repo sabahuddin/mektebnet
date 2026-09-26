@@ -2500,5 +2500,9 @@
   "1 učenik + 1 roditelj = 2 KM godišnje.": "1 öğrenci + 1 veli = yıllık 2 KM.",
   "1 učenik + 1 roditelj = 2 € godišnje.": "1 öğrenci + 1 veli = yıllık 2 €.",
   "Dodatni muallim: 30 KM godišnje.": "Ek öğretmen: yıllık 30 KM.",
-  "Dodatni muallim: 30 € godišnje.": "Ek öğretmen: yıllık 30 €."
+  "Dodatni muallim: 30 € godišnje.": "Ek öğretmen: yıllık 30 €.",
+  "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "Hesabınıza bağlı e-posta adresini girin. Yeni şifre belirlemeniz için bir bağlantı göndereceğiz.",
+  "Email (za reset šifre)": "E-posta (şifre sıfırlama için)",
+  "Nema emaila za reset šifre": "Şifre sıfırlama için e-posta adresi yok",
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Öğretmen hesabınızda e-posta adresi yoksa başöğretmenden veya yöneticiden şifrenizi sıfırlamasını isteyin."
 }

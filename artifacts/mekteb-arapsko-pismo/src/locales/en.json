@@ -4132,5 +4132,9 @@
   "Ikindija-namaz": "Asr prayer",
   "Jacija-namaz": "Isha prayer",
   "Sabah-namaz": "Fajr prayer",
-  "Podne-namaz": "Dhuhr prayer"
+  "Podne-namaz": "Dhuhr prayer",
+  "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "Enter the email linked to your account. We will send you a link to set a new password.",
+  "Email (za reset šifre)": "Email (for password recovery)",
+  "Nema emaila za reset šifre": "No email set for password recovery",
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "If your teacher account has no email, ask your head teacher or administrator to reset your password."
 }

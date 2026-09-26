@@ -4071,5 +4071,9 @@
   "El-Humaza": "Al-Humaza",
   "El-Kurejš": "Quraisch",
   "{m} muallima · do {u} učenika": "{m} Muallime · bis zu {u} Schüler",
-  "Za odabrani broj muallima nema jedinstvenog proizvoda za uplatu. Obratite se administratoru.": "Für die gewählte Anzahl von Muallimen gibt es kein einzelnes Zahlungsprodukt. Bitte wende dich an die Administration."
+  "Za odabrani broj muallima nema jedinstvenog proizvoda za uplatu. Obratite se administratoru.": "Für die gewählte Anzahl von Muallimen gibt es kein einzelnes Zahlungsprodukt. Bitte wende dich an die Administration.",
+  "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "Gib die mit deinem Konto verknüpfte E-Mail-Adresse ein. Wir senden dir einen Link zum Festlegen eines neuen Passworts.",
+  "Email (za reset šifre)": "E-Mail (zur Passwortwiederherstellung)",
+  "Nema emaila za reset šifre": "Keine E-Mail zur Passwortwiederherstellung hinterlegt",
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Wenn für dein Muallim-Konto keine E-Mail hinterlegt ist, bitte den Hauptmuallim oder die Administration, dein Passwort zurückzusetzen."
 }
