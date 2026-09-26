@@ -2679,7 +2679,7 @@ function PriloziSection({
                       variant="outline"
                       className="rounded-xl border-amber-300 text-amber-700 hover:bg-amber-100 font-bold"
                     >
-                      <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? t("Odustani") : t("Dodaj embed vježbu")}
+                       <Sparkles className="w-4 h-4 mr-2" /> {showEmbedForm ? t("Odustani") : t("Dodaj vanjsku vježbu")}
                     </Button>
                     {canDelete && <Button
                       onClick={() => setShowNasaVjezbaForm(v => !v)}
@@ -2692,15 +2692,15 @@ function PriloziSection({
                   </div>
                   <p className="text-sm text-blue-400 mt-1">
                     {canDelete
-                      ? t(".h5p arhiva (max 50MB) ili embed vježba (LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter)")
-                      : t("Embed vježba: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet ili Mentimeter.")}
+                       ? t(".h5p arhiva (max 50MB) ili vanjska vježba (LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter)")
+                       : t("Vanjska vježba: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet ili Mentimeter.")}
                   </p>
                   {showEmbedForm && (
                     <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 flex flex-col gap-2">
                       <p className="text-xs text-amber-700 font-semibold">
                         {canDelete
-                          ? t("Zalijepi embed kod (iframe) ili URL vježbe sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni.")
-                          : t("Zalijepi embed kod (iframe) ili URL sa LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet ili Mentimeter. H5P može dodati samo admin.")}
+                           ? t("Zalijepi iframe kod ili URL vježbe sa LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni.")
+                           : t("Zalijepi iframe kod ili URL sa LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet ili Mentimeter. H5P može dodati samo admin.")}
                       </p>
                       <textarea
                         placeholder='&lt;iframe src="https://learningapps.org/watch?app=..."&gt;&lt;/iframe&gt; ili samo URL'
@@ -2738,7 +2738,7 @@ function PriloziSection({
                         disabled={savingEmbed || !embedValue.trim()}
                         className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold self-start"
                       >
-                        {savingEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi embed vježbu")}
+                         {savingEmbed ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t("Spašavam...")}</> : t("Spasi vanjsku vježbu")}
                       </Button>
                     </div>
                   )}
@@ -3046,6 +3046,17 @@ function PriloziSection({
                             allow="fullscreen"
                           />
                         )}
+                         {openEmbed && !nasa && (openEmbed.externalUrl || openEmbed.url) && (
+                           <a
+                             href={openEmbed.externalUrl || openEmbed.url}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-amber-800 underline underline-offset-2 bg-amber-50 border-t border-amber-200"
+                           >
+                             <ExternalLink className="h-4 w-4" />
+                             {t("Ako se vježba ne prikaže, otvori je na stranici izvora")}
+                           </a>
+                         )}
                         {showClaim && openEmbed && (
                           <div className="flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border-t border-amber-200 flex-shrink-0">
                             <p className="text-xs sm:text-sm text-amber-800 font-semibold">

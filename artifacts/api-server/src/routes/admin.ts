@@ -587,7 +587,7 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
 });
 
 // POST /api/admin/prilozi/:lekcijaId/embed — dodaj embed vježbu (LearningApps,
-// Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter). Prihvata ili
+// Wordwall, Genially, Wayground (ranije Quizizz), Kahoot, Padlet, Mentimeter). Prihvata ili
 // puni iframe HTML (iz "embed code" dugmeta na tim sajtovima) ili direktan
 // URL. Whitelist domena je obavezan zbog sigurnosti — proizvoljan iframe se
 // odbija. Embed vježbe NE donose kapi meda (frontend prikazuje napomenu).
@@ -596,7 +596,7 @@ const EMBED_WHITELIST = [
   "wordwall.net",
   "view.genial.ly",
   "genial.ly",
-  "quizizz.com",
+  "quizizz.com", // stariji linkovi ostaju valjani nakon prelaska na Wayground
   "wayground.com",
   "kahoot.it",
   "kahoot.com",
@@ -697,7 +697,7 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
     }
     if (!isWhitelistedHost(src)) {
       return res.status(400).json({
-        error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Quizizz/Wayground, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni."
+        error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni."
       });
     }
     const embedHost = new URL(src).hostname.toLowerCase();
@@ -713,7 +713,7 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
       if (host.includes("learningapps")) provider = "LearningApps";
       else if (host.includes("wordwall")) provider = "Wordwall";
       else if (host.includes("genial")) provider = "Genially";
-      else if (host.includes("quizizz")) provider = "Quizizz";
+      else if (host.includes("quizizz")) provider = "Wayground";
       else if (host === "wayground.com" || host.endsWith(".wayground.com")) provider = "Wayground";
       else if (host.includes("kahoot")) provider = "Kahoot";
       else if (host.includes("padlet")) provider = "Padlet";
@@ -939,7 +939,7 @@ router.put("/prilozi/:id", async (req, res) => {
       if (!src) return res.status(400).json({ error: "Ne mogu da pronađem URL u embed kodu" });
       if (!isWhitelistedHost(src)) {
         return res.status(400).json({
-          error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter ili H5P.org."
+          error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter ili H5P.org."
         });
       }
       updates.externalUrl = src;
@@ -2937,7 +2937,7 @@ router.post("/ilmihal", async (req, res) => {
       const badEmbeds = findDisallowedIframeSrcs(submittedHtml);
       if (badEmbeds.length > 0) {
         return res.status(400).json({
-          error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
+          error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
           detail: badEmbeds.slice(0, 3),
         });
       }
@@ -3165,7 +3165,7 @@ router.put("/ilmihal/:id", async (req, res) => {
       const badEmbeds = findDisallowedIframeSrcs(submittedHtml);
       if (badEmbeds.length > 0) {
         return res.status(400).json({
-          error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Quizizz, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
+          error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
           detail: badEmbeds.slice(0, 3),
         });
       }
