@@ -18,6 +18,8 @@ import { SLOGOVI_CITANJA } from "./citanje-slogovi";
 import { RIJECI_CITANJA } from "./citanje-rijeci";
 import { obliciHarfa, type Polozaj } from "./citanje-oblici";
 import { ASOCIJACIJE, porodicaHarfa } from "./citanje-asocijacije";
+import { nosiSamostalanSlog, smijeOtvoritiRijec, samoNaKrajuRijeci, harekDozvoljen } from "./citanje-pravopis";
+import { grozdovi, osnova } from "../lib/citanje-grozd";
 
 const FETHA = "َ", KESRA = "ِ", DAMMA = "ُ";
 const HAREKA: Record<string, Znak> = { [FETHA]: "fetha", [KESRA]: "kesra", [DAMMA]: "damma" };
@@ -87,6 +89,12 @@ export interface VjezbaCitanja {
   trebaZvuk?: boolean;
 }
 
+/** Harfovi zapisa, bez znakova na njima. */
+const harfoviZapisa = (zapis: string): string[] => grozdovi(zapis).map(osnova);
+
+/** Prvi harf zapisa. */
+const prviHarf = (zapis: string): string => harfoviZapisa(zapis)[0] ?? "";
+
 /** Slogovi koje dijete zna, po lekciji. */
 const slogoviDo = (lekcija: number) => SLOGOVI_CITANJA.filter((s) => s.lekcija <= lekcija);
 const rijeciDo = (lekcija: number) => RIJECI_CITANJA.filter((r) => r.lekcija <= lekcija);
@@ -97,9 +105,11 @@ function sviSlogovi(lekcija: number): string[] {
   const hareke = [FETHA, KESRA, DAMMA].filter((h) => znakovi.has(HAREKA[h]));
   const izl: string[] = [];
   for (const h of harfovi) {
-    // Elif i hemze na liniji ne nose harek kao obični suglasnik.
-    if (h === "ا" || h === "ء") continue;
-    for (const k of hareke) izl.push(h + k);
+    // Goli elif, hemze na liniji, vezano ta i skraćeni elif ne stoje sami kao
+    // slog — vidjeti citanje-pravopis.ts. Vezano ta i skraćeni elif dolaze
+    // djetetu pred oči jedino kroz riječi, gdje im je i mjesto: na kraju.
+    if (!nosiSamostalanSlog(h)) continue;
+    for (const k of hareke) if (harekDozvoljen(h, k)) izl.push(h + k);
   }
   return izl;
 }
@@ -114,9 +124,18 @@ function sviSlogovi(lekcija: number): string[] {
 function dvoslozi(lekcija: number, koliko: number): { spoj: string; a: string; b: string }[] {
   const s = [...sviSlogovi(lekcija), ...slogoviDo(lekcija).filter((x) => x.dug).map((x) => x.zapis)];
   const parovi: { spoj: string; a: string; b: string }[] = [];
-  for (const a of s) for (const b of s) {
-    const spoj = a + b;
-    if (!IZUZETI.has(spoj)) parovi.push({ spoj, a, b });
+  for (const a of s) {
+    // Spoj je riječ, pa prvi vagon mora smjeti otvoriti riječ. Hemze na vavu
+    // i na jau to ne smiju nikada: na početku hemze sjedi samo na elifu.
+    if (!smijeOtvoritiRijec(prviHarf(a))) continue;
+    // Ono što stoji samo na kraju ne može biti prvi vagon.
+    if (harfoviZapisa(a).some(samoNaKrajuRijeci)) continue;
+    for (const b of s) {
+      // U drugom vagonu takvo slovo smije stajati, ali samo kao zadnje.
+      if (harfoviZapisa(b).slice(0, -1).some(samoNaKrajuRijeci)) continue;
+      const spoj = a + b;
+      if (!IZUZETI.has(spoj)) parovi.push({ spoj, a, b });
+    }
   }
   return promijesaj(parovi, lekcija).slice(0, koliko);
 }
@@ -127,12 +146,14 @@ export function vjezbeZaLekciju(lekcija: number): VjezbaCitanja[] {
   if (!program) return [];
   const { znakovi } = znanjeDoLekcije(lekcija);
   const hareke = [FETHA, KESRA, DAMMA].filter((h) => znakovi.has(HAREKA[h]));
-  const novi = program.harfovi.filter((h) => h !== "ا" && h !== "ء");
+  // Za glas i spajanje idu samo slova koja stoje kao slog; za lov na slova
+  // idu sva, jer se i vezano ta traži okom kao i svako drugo.
+  const novi = program.harfovi.filter(nosiSamostalanSlog);
   const stari = slogoviDo(lekcija - 1);
   const vjezbe: VjezbaCitanja[] = [];
 
   // ── Novi glas, sam ─────────────────────────────────────────────────────
-  const noviSlogovi = novi.flatMap((h) => hareke.map((k) => h + k));
+  const noviSlogovi = novi.flatMap((h) => hareke.filter((k) => harekDozvoljen(h, k)).map((k) => h + k));
   if (noviSlogovi.length) {
     vjezbe.push({
       vrsta: "glas", naslov: "Novi glas", trebaZvuk: true,

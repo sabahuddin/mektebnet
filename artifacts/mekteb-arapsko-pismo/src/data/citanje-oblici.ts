@@ -8,10 +8,17 @@
 // spaja, pa imaju samo dva oblika; sva ostala imaju četiri. Prikaz koristi
 // tatvil (U+0640), crtu koja stoji umjesto susjednog slova.
 
+import { BEZ_POCETNOG_OBLIKA } from "./citanje-pravopis";
+
 const TATVIL = "ـ";
 
-/** Slova koja se ne spajaju s onim što slijedi — imaju samo dva oblika. */
-const NE_SPAJA_ULIJEVO = new Set(["ا", "أ", "إ", "آ", "د", "ذ", "ر", "ز", "و", "ؤ", "ة"]);
+/**
+ * Slova koja se ne spajaju s onim što slijedi — imaju samo dva oblika.
+ *
+ * Skraćeni elif „ى" stoji ovdje iz drugog razloga nego ostali: njemu ništa ne
+ * slijedi zato što se piše samo na kraju riječi. Ishod je isti — dva oblika.
+ */
+const NE_SPAJA_ULIJEVO = new Set(["ا", "أ", "إ", "آ", "د", "ذ", "ر", "ز", "و", "ؤ", "ة", "ى"]);
 
 /** Hemze na liniji stoji samo, bez ijednog spoja. */
 const UVIJEK_SAM = new Set(["ء"]);
@@ -47,9 +54,11 @@ export function obliciHarfa(harf: string): OblikHarfa[] {
   if (NE_SPAJA_ULIJEVO.has(harf)) {
     return [napravi("sam", harf), napravi("krajnji", TATVIL + harf)];
   }
+  // Hemze na jau ima sredinu i kraj, ali ne i početak: riječ njime ne počinje.
+  const pocetak = BEZ_POCETNOG_OBLIKA.has(harf) ? [] : [napravi("pocetni", harf + TATVIL)];
   return [
     napravi("sam", harf),
-    napravi("pocetni", harf + TATVIL),
+    ...pocetak,
     napravi("srednji", TATVIL + harf + TATVIL),
     napravi("krajnji", TATVIL + harf),
   ];

@@ -112,6 +112,18 @@ fethom je suglasnik, vav iza damme je dužina (`jeDuzina()`).
 se uzimaju. Dok ih je vježba prepisivala, tabela oblika izgubila je kolonu
 „na kraju" jer je u njoj stajao izmišljen ključ.
 
+**Hemze na početku riječi uvijek sjedi na elifu.** Nikad na vavu ni na jau:
+`أَخَذَ`, `إِنَّ` — da; `ؤَ…`, `ئَ…` — nikad. Vav i ja su nosači samo u sredini i
+na kraju, pa hemze na njima djetetu dolazi jedino kroz riječi. Isto vrijedi za
+vezano ta i skraćeni elif: oni stoje samo na kraju riječi, pa ne otvaraju
+zapis niti stoje u sredini. Hemze na elifu se uz fethu i dammu piše iznad, a
+uz kesru ispod — `أِ` i `إَ` nisu druga mogućnost nego pogrešan zapis.
+
+Sve to stoji u `citanje-pravopis.ts`, a `citanje-pravopis.test.ts` pada ako
+ijedan zapis koji dijete čita kao riječ prekrši pravilo. Slagalica koja
+slogove spaja u riječi ne zna arapski: prije tog testa sastavljala je 113
+nemogućih zapisa kroz šesnaest lekcija — `ئَبَا`, `ؤُحَ`, `ةُلُ`, `ىُظُ`.
+
 **Svaki arapski red mora imati `dir="rtl"`.** Bez toga dijelovi riječi idu
 slijeva nadesno, pa dijete uči obrnut redoslijed čitanja.
 
