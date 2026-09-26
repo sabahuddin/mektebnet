@@ -224,9 +224,6 @@ function DijeteContent({
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
   const [napamet, setNapamet] = useState<NapametResponse | null>(null);
-  const [godine, setGodine] = useState<string[]>([]);
-  const [tekucaGodina, setTekucaGodina] = useState<string | null>(null);
-  const [selectedGodina, setSelectedGodina] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<BedzInfo | null>(null);
   const [kalendarEntries, setKalendarEntries] = useState<KalendarEntry[]>([]);
@@ -241,25 +238,16 @@ function DijeteContent({
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [dijeteZvjezdice, setDijeteZvjezdice] = useState<{ pozitivne: number; negativne: number } | null>(null);
 
-  // Reset odabira godine kad se promijeni dijete (svako dijete ima svoje godine).
-  useEffect(() => {
-    setSelectedGodina(null);
-    apiRequest<{ godine: string[]; tekuca: string | null }>("GET", `/roditelj/godine/${dijete.id}`, undefined, token)
-      .then((d) => { setGodine(d.godine || []); setTekucaGodina(d.tekuca ?? null); })
-      .catch(() => { setGodine([]); setTekucaGodina(null); });
-  }, [dijete.id, token]);
-
   useEffect(() => {
     setDetailLoading(true);
-    const q = selectedGodina ? `?mektebskaGodina=${encodeURIComponent(selectedGodina)}` : "";
     Promise.all([
-      apiRequest<Prisustvo[]>("GET", `/roditelj/prisustvo/${dijete.id}${q}`, undefined, token),
-      apiRequest<Ocjena[]>("GET", `/roditelj/ocjene/${dijete.id}${q}`, undefined, token),
+      apiRequest<Prisustvo[]>("GET", `/roditelj/prisustvo/${dijete.id}`, undefined, token),
+      apiRequest<Ocjena[]>("GET", `/roditelj/ocjene/${dijete.id}`, undefined, token),
     ])
       .then(([prs, oc]) => { setPrisustvo(prs); setOcjene(oc); })
       .catch(() => {})
       .finally(() => setDetailLoading(false));
-  }, [dijete.id, token, selectedGodina]);
+  }, [dijete.id, token]);
 
   useEffect(() => {
     setNapamet(null);
@@ -277,12 +265,11 @@ function DijeteContent({
 
   useEffect(() => {
     setZadaceLoading(true);
-    const q = selectedGodina ? `?mektebskaGodina=${encodeURIComponent(selectedGodina)}` : "";
-    apiRequest<ZadacaRoditelj[]>("GET", `/roditelj/zadace/${dijete.id}${q}`, undefined, token)
+    apiRequest<ZadacaRoditelj[]>("GET", `/roditelj/zadace/${dijete.id}`, undefined, token)
       .then(setZadace)
       .catch(() => setZadace([]))
       .finally(() => setZadaceLoading(false));
-  }, [token, dijete.id, selectedGodina]);
+  }, [token, dijete.id]);
 
   useEffect(() => {
     setDokumenti(null);
@@ -382,19 +369,6 @@ function DijeteContent({
         >
           <KeyRound className="w-3.5 h-3.5" /> {t("Promijeni lozinku")}
         </button>
-        {godine.length > 0 && (
-          <select
-            data-testid="select-mektebska-godina-dijete"
-            value={selectedGodina ?? tekucaGodina ?? godine[0] ?? ""}
-            onChange={(e) => setSelectedGodina(e.target.value)}
-            className="rounded-xl border border-border/60 bg-white px-3 py-2 text-sm font-bold text-foreground shrink-0"
-            title={t("Mektebska godina")}
-          >
-            {godine.map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-        )}
       </div>
 
       {showPwForm && (
