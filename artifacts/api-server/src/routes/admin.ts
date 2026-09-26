@@ -6222,6 +6222,20 @@ router.put("/prijevodi/content/:id", async (req, res) => {
     if (!Number.isFinite(id)) return res.status(400).json({ error: "Neispravan ID" });
     const prijevod = String(req.body?.prijevod ?? "");
     if (!prijevod.trim()) return res.status(400).json({ error: "Prijevod ne smije biti prazan" });
+    const existingTranslation = await db.execute(sql`
+      SELECT tabela, polje, prijevod FROM content_prijevodi WHERE id = ${id}
+    `);
+    const current = existingTranslation.rows[0];
+    if (!current) return res.status(404).json({ error: "Nije pronađeno" });
+    if (current.tabela === "ilmihal_lekcije" && current.polje === "content_html") {
+      const badEmbeds = findDisallowedIframeSrcs(prijevod, String(current.prijevod ?? ""));
+      if (badEmbeds.length > 0) {
+        return res.status(400).json({
+          error: "Novi izvori vježbi su: LearningApps, Wordwall, Wayground i Kahoot.",
+          detail: badEmbeds.slice(0, 3),
+        });
+      }
+    }
     const upd = (await db.execute(
       sql`UPDATE content_prijevodi SET prijevod = ${prijevod}, updated_at = NOW() WHERE id = ${id} RETURNING id`,
     )) as unknown as { rows: { id: number }[] };
