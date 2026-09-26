@@ -3523,5 +3523,18 @@
   "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "Shkruani emailin e lidhur me llogarinë tuaj. Do t'ju dërgojmë një lidhje për të vendosur një fjalëkalim të ri.",
   "Email (za reset šifre)": "Email (për rivendosjen e fjalëkalimit)",
   "Nema emaila za reset šifre": "Nuk ka email për rivendosjen e fjalëkalimit",
-  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Nëse llogaria juaj si mësues nuk ka email, kërkojini mësuesit kryesor ose administratorit t'jua rivendosë fjalëkalimin."
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Nëse llogaria juaj si mësues nuk ka email, kërkojini mësuesit kryesor ose administratorit t'jua rivendosë fjalëkalimin.",
+  "Pitanja i prijedlozi": "Pyetje dhe sugjerime",
+  "Vaše poruke vidi samo administrator. Odgovor ćete vidjeti ovdje.": "Mesazhet tuaja i sheh vetëm administratori. Përgjigjja do të shfaqet këtu.",
+  "Nije moguće učitati administratore.": "Administratorët nuk mund të ngarkohen.",
+  "Administrator nije dostupan.": "Nuk ka administrator të disponueshëm.",
+  "Odaberite administratora": "Zgjidhni administratorin",
+  "Vrsta poruke": "Lloji i mesazhit",
+  "Prijedlog": "Sugjerim",
+  "Problem": "Problem",
+  "Napišite pitanje ili prijedlog...": "Shkruani pyetjen ose sugjerimin tuaj...",
+  "Razgovor s administratorom": "Bisedë me administratorin",
+  "Automatsko osvježavanje": "Përditësohet automatikisht",
+  "Nema poruka. Pošaljite prvo pitanje ili prijedlog.": "Ende nuk ka mesazhe. Dërgoni pyetjen ose sugjerimin tuaj të parë.",
+  "Odgovor administratora": "Përgjigjja e administratorit"
 }

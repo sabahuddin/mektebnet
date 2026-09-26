@@ -2504,5 +2504,18 @@
   "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "Hesabınıza bağlı e-posta adresini girin. Yeni şifre belirlemeniz için bir bağlantı göndereceğiz.",
   "Email (za reset šifre)": "E-posta (şifre sıfırlama için)",
   "Nema emaila za reset šifre": "Şifre sıfırlama için e-posta adresi yok",
-  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Öğretmen hesabınızda e-posta adresi yoksa başöğretmenden veya yöneticiden şifrenizi sıfırlamasını isteyin."
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Öğretmen hesabınızda e-posta adresi yoksa başöğretmenden veya yöneticiden şifrenizi sıfırlamasını isteyin.",
+  "Pitanja i prijedlozi": "Sorular ve öneriler",
+  "Vaše poruke vidi samo administrator. Odgovor ćete vidjeti ovdje.": "Mesajlarınızı yalnızca yönetici görür. Yanıtı burada göreceksiniz.",
+  "Nije moguće učitati administratore.": "Yöneticiler yüklenemedi.",
+  "Administrator nije dostupan.": "Kullanılabilir yönetici yok.",
+  "Odaberite administratora": "Yönetici seçin",
+  "Vrsta poruke": "Mesaj türü",
+  "Prijedlog": "Öneri",
+  "Problem": "Sorun",
+  "Napišite pitanje ili prijedlog...": "Sorunuzu veya önerinizi yazın...",
+  "Razgovor s administratorom": "Yöneticiyle görüşme",
+  "Automatsko osvježavanje": "Otomatik yenilenir",
+  "Nema poruka. Pošaljite prvo pitanje ili prijedlog.": "Henüz mesaj yok. İlk sorunuzu veya önerinizi gönderin.",
+  "Odgovor administratora": "Yöneticinin yanıtı"
 }

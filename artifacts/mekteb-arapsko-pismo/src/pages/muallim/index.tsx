@@ -16,6 +16,7 @@ import {
   Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw, Bell, MessageSquare
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
+import PitanjaPrijedloziTab from "./pitanja-prijedlozi-tab";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -473,7 +474,7 @@ export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "profil";
+  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "pitanja" | "profil";
   const [activeTab, setActiveTab] = useState<TabId>("pregled");
   const [panelContext, setPanelContext] = useState<"moje" | "mekteb">("moje");
   const [selectedMuallimId, setSelectedMuallimId] = useState<number | null>(null);
@@ -490,7 +491,7 @@ export default function MuallimPanel() {
   useEffect(() => {
     const params = new URLSearchParams(locationSearch);
     const t = params.get("tab");
-    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","profil"].includes(t)) {
+    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","pitanja","profil"].includes(t)) {
       setActiveTab(t as TabId);
       if (t === "ucenici") setPanelContext("mekteb");
       else setPanelContext("moje");
@@ -1563,12 +1564,13 @@ export default function MuallimPanel() {
     { id: "izvjestaji", label: t("Izvještaji"), icon: FileText },
     { id: "kalendar", label: t("Kalendar"), icon: Calendar },
     { id: "roditelji", label: t("Roditelji"), icon: Heart },
+    { id: "pitanja", label: t("Pitanja i prijedlozi"), icon: MessageSquare },
     { id: "profil", label: t("Profil"), icon: Settings },
   ];
   const visibleTabs = panelContext === "moje" && mektebMeta.isGlavni && !isMuallimPreview
     ? TABS.filter(tab => tab.id !== "ucenici")
     : isMuallimPreview
-      ? TABS.filter(tab => tab.id !== "profil")
+      ? TABS.filter(tab => tab.id !== "profil" && tab.id !== "pitanja")
     : TABS;
 
   const brzaPretragaQ = brzaPretraga.trim().toLocaleLowerCase();
@@ -4836,6 +4838,7 @@ export default function MuallimPanel() {
                 readOnly={isMuallimPreview}
               />
             )}
+            {activeTab === "pitanja" && !isMuallimPreview && <PitanjaPrijedloziTab />}
 
             {/* PROFIL — uređivanje display name-a, premješteno iz inline header dugmeta. */}
             {activeTab === "profil" && (

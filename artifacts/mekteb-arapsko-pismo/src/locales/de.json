@@ -4075,5 +4075,18 @@
   "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "Gib die mit deinem Konto verknüpfte E-Mail-Adresse ein. Wir senden dir einen Link zum Festlegen eines neuen Passworts.",
   "Email (za reset šifre)": "E-Mail (zur Passwortwiederherstellung)",
   "Nema emaila za reset šifre": "Keine E-Mail zur Passwortwiederherstellung hinterlegt",
-  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Wenn für dein Muallim-Konto keine E-Mail hinterlegt ist, bitte den Hauptmuallim oder die Administration, dein Passwort zurückzusetzen."
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "Wenn für dein Muallim-Konto keine E-Mail hinterlegt ist, bitte den Hauptmuallim oder die Administration, dein Passwort zurückzusetzen.",
+  "Pitanja i prijedlozi": "Fragen und Vorschläge",
+  "Vaše poruke vidi samo administrator. Odgovor ćete vidjeti ovdje.": "Nur die Administration sieht deine Nachrichten. Die Antwort erscheint hier.",
+  "Nije moguće učitati administratore.": "Administratoren konnten nicht geladen werden.",
+  "Administrator nije dostupan.": "Kein Administrator verfügbar.",
+  "Odaberite administratora": "Administrator auswählen",
+  "Vrsta poruke": "Art der Nachricht",
+  "Prijedlog": "Vorschlag",
+  "Problem": "Problem",
+  "Napišite pitanje ili prijedlog...": "Schreibe deine Frage oder deinen Vorschlag...",
+  "Razgovor s administratorom": "Gespräch mit der Administration",
+  "Automatsko osvježavanje": "Automatische Aktualisierung",
+  "Nema poruka. Pošaljite prvo pitanje ili prijedlog.": "Noch keine Nachrichten. Sende deine erste Frage oder deinen ersten Vorschlag.",
+  "Odgovor administratora": "Antwort der Administration"
 }

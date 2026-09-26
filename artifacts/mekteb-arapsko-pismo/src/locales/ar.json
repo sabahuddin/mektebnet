@@ -2504,5 +2504,18 @@
   "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "أدخل البريد الإلكتروني المرتبط بحسابك. سنرسل إليك رابطًا لتعيين كلمة مرور جديدة.",
   "Email (za reset šifre)": "البريد الإلكتروني (لاستعادة كلمة المرور)",
   "Nema emaila za reset šifre": "لا يوجد بريد إلكتروني لاستعادة كلمة المرور",
-  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "إذا لم يكن لحساب المعلم بريد إلكتروني، فاطلب إعادة تعيين كلمة المرور من المعلم الرئيسي أو المسؤول."
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "إذا لم يكن لحساب المعلم بريد إلكتروني، فاطلب إعادة تعيين كلمة المرور من المعلم الرئيسي أو المسؤول.",
+  "Pitanja i prijedlozi": "الأسئلة والاقتراحات",
+  "Vaše poruke vidi samo administrator. Odgovor ćete vidjeti ovdje.": "لا يرى رسائلك إلا المسؤول. وستظهر إجابته هنا.",
+  "Nije moguće učitati administratore.": "تعذّر تحميل المسؤولين.",
+  "Administrator nije dostupan.": "لا يوجد مسؤول متاح.",
+  "Odaberite administratora": "اختر المسؤول",
+  "Vrsta poruke": "نوع الرسالة",
+  "Prijedlog": "اقتراح",
+  "Problem": "مشكلة",
+  "Napišite pitanje ili prijedlog...": "اكتب سؤالك أو اقتراحك...",
+  "Razgovor s administratorom": "المحادثة مع المسؤول",
+  "Automatsko osvježavanje": "يتم التحديث تلقائيًا",
+  "Nema poruka. Pošaljite prvo pitanje ili prijedlog.": "لا توجد رسائل بعد. أرسل سؤالك أو اقتراحك الأول.",
+  "Odgovor administratora": "رد المسؤول"
 }

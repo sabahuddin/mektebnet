@@ -130,8 +130,11 @@ router.post("/", async (req, res) => {
     } else if (role === "muallim") {
       if (["roditelj", "ucenik"].includes(target.role)) {
         allowed = true;
-      } else if (target.role === "admin" || target.role === "muallim") {
-        // Samo glavni muallim smije pisati adminima i drugim muallimima.
+      } else if (target.role === "admin") {
+        // Svaki muallim može privatno poslati pitanje ili prijedlog adminu.
+        allowed = true;
+      } else if (target.role === "muallim") {
+        // Međusobna komunikacija muallima ostaje ograničena na glavnog.
         const [mp] = await db.select({ isGlavni: muallimProfiliTable.isGlavni })
           .from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
         allowed = !!mp?.isGlavni;
@@ -212,16 +215,14 @@ async function izracunajKontakte(userId: number, role: string): Promise<Contact[
         .from(usersTable).where(eq(usersTable.role, "muallim"));
       contacts = muallimi;
     } else if (role === "muallim") {
-      // Samo glavni muallim vidi admine i ostale muallime istog mekteba.
+      // Svaki muallim vidi admine; samo glavni vidi ostale muallime istog mekteba.
       const [mprofil] = await db.select({ isGlavni: muallimProfiliTable.isGlavni, mektebId: muallimProfiliTable.mektebId })
         .from(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
 
-      let adminContacts: Contact[] = [];
+      const adminContacts: Contact[] = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
+        .from(usersTable).where(and(eq(usersTable.role, "admin"), eq(usersTable.isActive, true)));
       let muallimiContacts: Contact[] = [];
       if (mprofil?.isGlavni) {
-        adminContacts = await db.select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })
-          .from(usersTable).where(eq(usersTable.role, "admin"));
-
         if (mprofil.mektebId) {
           const ostali = await db
             .select({ id: usersTable.id, displayName: usersTable.displayName, role: usersTable.role })

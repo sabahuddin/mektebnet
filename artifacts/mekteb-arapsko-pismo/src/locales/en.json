@@ -4136,5 +4136,18 @@
   "Unesite email koji je povezan s nalogom. Poslat ćemo vam link za postavljanje nove šifre.": "Enter the email linked to your account. We will send you a link to set a new password.",
   "Email (za reset šifre)": "Email (for password recovery)",
   "Nema emaila za reset šifre": "No email set for password recovery",
-  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "If your teacher account has no email, ask your head teacher or administrator to reset your password."
+  "Ako muallimski nalog nema email, zatražite reset šifre od glavnog muallima ili administratora.": "If your teacher account has no email, ask your head teacher or administrator to reset your password.",
+  "Pitanja i prijedlozi": "Questions and suggestions",
+  "Vaše poruke vidi samo administrator. Odgovor ćete vidjeti ovdje.": "Only the administrator can see your messages. Their reply will appear here.",
+  "Nije moguće učitati administratore.": "Could not load administrators.",
+  "Administrator nije dostupan.": "No administrator is available.",
+  "Odaberite administratora": "Choose an administrator",
+  "Vrsta poruke": "Message type",
+  "Prijedlog": "Suggestion",
+  "Problem": "Problem",
+  "Napišite pitanje ili prijedlog...": "Write your question or suggestion...",
+  "Razgovor s administratorom": "Conversation with administrator",
+  "Automatsko osvježavanje": "Updates automatically",
+  "Nema poruka. Pošaljite prvo pitanje ili prijedlog.": "No messages yet. Send your first question or suggestion.",
+  "Odgovor administratora": "Administrator's reply"
 }
