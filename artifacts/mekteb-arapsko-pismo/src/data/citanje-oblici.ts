@@ -25,16 +25,24 @@ export interface OblikHarfa {
   naziv: string;
 }
 
-const NAZIVI: Record<Polozaj, string> = {
+/**
+ * Ime položaja, onako kako ga muallim izgovara. Izvozi se da ga vježba ne
+ * prepisuje: dok se prepisivalo, tabela oblika izgubila je kolonu „na kraju"
+ * jer je u njoj stajao izmišljen ključ.
+ */
+export const NAZIV_POLOZAJA: Record<Polozaj, string> = {
   sam: "sam",
   pocetni: "na početku",
   srednji: "u sredini",
   krajnji: "na kraju",
 };
 
+/** Položaji onim redom kojim stoje u tabeli oblika. */
+export const REDOSLIJED_POLOZAJA: Polozaj[] = ["sam", "pocetni", "srednji", "krajnji"];
+
 /** Svi oblici jednog slova, onim redom kojim se uče. */
 export function obliciHarfa(harf: string): OblikHarfa[] {
-  const napravi = (polozaj: Polozaj, prikaz: string): OblikHarfa => ({ polozaj, prikaz, naziv: NAZIVI[polozaj] });
+  const napravi = (polozaj: Polozaj, prikaz: string): OblikHarfa => ({ polozaj, prikaz, naziv: NAZIV_POLOZAJA[polozaj] });
   if (UVIJEK_SAM.has(harf)) return [napravi("sam", harf)];
   if (NE_SPAJA_ULIJEVO.has(harf)) {
     return [napravi("sam", harf), napravi("krajnji", TATVIL + harf)];

@@ -145,7 +145,7 @@ export function vjezbeZaLekciju(lekcija: number): VjezbaCitanja[] {
   const oblici = program.harfovi.flatMap((h) => obliciHarfa(h).map((o) => ({ zapis: o.prikaz, polozaj: o.polozaj })));
   if (oblici.length) {
     vjezbe.push({
-      vrsta: "oblici", naslov: "Isto slovo, tri mjesta",
+      vrsta: "oblici", naslov: "Isto slovo, više mjesta",
       uputa: "Pokazati da je to jedno te isto slovo. Dijete prstom prati oblik po zraku prije nego pređe na sljedeći.",
       stavke: oblici,
     });

@@ -11,13 +11,16 @@
 // Imena slova se ne spominju ni u jednom prikazu.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
-import { ArrowLeft, Volume2, VolumeX, Check, X, Timer, RotateCcw, Play, Square, Printer, Hand } from "lucide-react";
+import { ArrowLeft, Volume2, VolumeX, Check, X, Timer, RotateCcw, Play, Square, Printer,
+  Hand, Eye, Search, Ruler, Link2, BookOpen } from "lucide-react";
 import { lekcijaPoBroju, type ReplikaPrice, type Raspolozenje } from "@/data/citanje-lekcije";
-import { vjezbeZaLekciju, radniList, type VjezbaCitanja, type StavkaVjezbe } from "@/data/citanje-vjezbe";
+import { vjezbeZaLekciju, radniList, type VjezbaCitanja, type StavkaVjezbe, type VrstaVjezbe } from "@/data/citanje-vjezbe";
 import { asocijacija, porodicaHarfa } from "@/data/citanje-asocijacije";
+import { NAZIV_POLOZAJA, REDOSLIJED_POLOZAJA } from "@/data/citanje-oblici";
 import { PROGRAM_CITANJA, znanjeDoLekcije } from "@/data/citanje-program";
 import { RIJECI_CITANJA } from "@/data/citanje-rijeci";
 import { pustiZapis, zaustaviZvuk } from "@/lib/citanje-zvuk";
+import { grozdovi, osnova, jeDuzina, TATVIL } from "@/lib/citanje-grozd";
 
 /**
  * Slika po liku i raspoloženju. Rumejsa i Bilal imaju svoju sliku za isto
@@ -46,16 +49,97 @@ const LIKOVI: Record<ReplikaPrice["ko"], { ime: string; okvir: string; mjehur: s
 };
 
 /**
+ * Boje nose značenje, ne ukras. Tri su, i više ih neće biti — četvrta boja na
+ * istom zapisu prestaje biti isticanje i postaje šara.
+ */
+const BOJA = {
+  novi: "text-rose-600",       // ono što lekcija uvodi
+  duzina: "text-sky-600",      // harf produženja
+  tatvil: "text-neutral-300",  // crta koja stoji umjesto susjednog harfa
+};
+
+interface Isticanje {
+  /** Harfovi koje lekcija uvodi — oni se boje. */
+  novi?: string[];
+  /** Bojiti i harfove produženja. */
+  duzine?: boolean;
+}
+
+/**
  * Arapski zapis u lekciji.
  *
  * Prored je 2,0, ne manji: vokalizirani arapski ima harekate iznad i ispod
  * slova, pa se pri manjem proredu naslanjaju na red iznad i dijete ih više ne
  * razlikuje. Font je Scheherazade New — vidjeti --font-citanje u index.css.
+ *
+ * ISTIČE SE GROZD, NE HAREK. Mjereno u pregledniku: span oko samog hareka
+ * preglednik zanemari, a boja harfa povuče harek za sobom. Bojenje hareka u
+ * jednu a harfa u drugu boju — kako rade neki arapski bukvari — ovdje nije
+ * moguće. Spajanje slova, s druge strane, span ne lomi, pa se jedan harf
+ * smije istaknuti i usred riječi. Vidjeti citanje-grozd.ts.
  */
-function Zapis({ tekst, velicina = "text-5xl" }: { tekst: string; velicina?: string }) {
+function Zapis({ tekst, velicina = "text-5xl", isticanje }: {
+  tekst: string; velicina?: string; isticanje?: Isticanje;
+}) {
+  const djelovi = useMemo(() => {
+    const g = grozdovi(tekst);
+    return g.map((grozd, i) => {
+      const o = osnova(grozd);
+      if (o === TATVIL) return { grozd, klasa: BOJA.tatvil };
+      if (isticanje?.novi?.includes(o)) return { grozd, klasa: BOJA.novi };
+      if (isticanje?.duzine && jeDuzina(g, i)) return { grozd, klasa: BOJA.duzina };
+      return { grozd, klasa: "" };
+    });
+  }, [tekst, isticanje]);
+
   return (
     <span dir="rtl" lang="ar" className={`${velicina} font-semibold`}
-      style={{ fontFamily: "var(--font-citanje)", lineHeight: 2 }}>{tekst}</span>
+      style={{ fontFamily: "var(--font-citanje)", lineHeight: 2 }}>
+      {djelovi.map((d, i) => d.klasa
+        ? <span key={i} className={d.klasa}>{d.grozd}</span>
+        : <span key={i}>{d.grozd}</span>)}
+    </span>
+  );
+}
+
+/** Znak sam, na tačkastom kolutu — jedini način da se harek vidi bez harfa. */
+const KOLUT = "\u25CC";
+
+/** Šta koja boja znači. Stoji jednom, iznad vježbi. */
+function Legenda({ novi, duzine }: { novi: string[]; duzine: boolean }) {
+  const stavke = [
+    { klasa: BOJA.novi, tekst: "novo u ovoj lekciji" },
+    ...(duzine ? [{ klasa: BOJA.duzina, tekst: "dužina" }] : []),
+    { klasa: BOJA.tatvil, tekst: "crta umjesto susjednog harfa" },
+  ];
+  if (!novi.length) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-dashed border-border px-4 py-3 text-sm">
+      {stavke.map((s) => (
+        <span key={s.tekst} className="flex items-center gap-2">
+          <span className={`${s.klasa} text-xl font-bold leading-none`} aria-hidden="true">●</span>
+          <span className="text-muted-foreground">{s.tekst}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Broj stavke u uglu okvira. Dijete ga koristi da kaže dokle je stiglo. */
+function Broj({ n }: { n: number }) {
+  return (
+    <span className="absolute top-1.5 right-2 text-[11px] font-bold tabular-nums text-muted-foreground/70">
+      {n}
+    </span>
+  );
+}
+
+/** Zaglavlje tabele — isti izgled u svim vježbama koje tabelu koriste. */
+function Glava({ children }: { children: React.ReactNode }) {
+  return (
+    <th scope="col" className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b-2 border-border">
+      {children}
+    </th>
   );
 }
 
@@ -95,8 +179,14 @@ function DugmeZvuka({ zapis, velicina = "w-14 h-14" }: { zapis: string; velicina
   );
 }
 
-/** Isto slovo na tri mjesta — bez ovoga dijete ga ne prepoznaje u riječi. */
-function Oblici({ stavke }: { stavke: StavkaVjezbe[] }) {
+/**
+ * Isto slovo na više mjesta — bez ovoga dijete ga ne prepoznaje u riječi.
+ *
+ * Tabela, ne niz okvira: dijete gleda odozgo nadolje i vidi da je riječ o
+ * jednom te istom slovu, a ne o četiri različita. Tatvil je prigušen, pa se
+ * vidi šta je harf a šta crta koja stoji umjesto susjeda.
+ */
+function Oblici({ stavke, novi }: { stavke: StavkaVjezbe[]; novi: string[] }) {
   const poHarfu = useMemo(() => {
     const m = new Map<string, StavkaVjezbe[]>();
     for (const s of stavke) {
@@ -106,26 +196,46 @@ function Oblici({ stavke }: { stavke: StavkaVjezbe[] }) {
     return [...m.entries()];
   }, [stavke]);
 
+  const kolone = useMemo(
+    () => REDOSLIJED_POLOZAJA.filter((p) => poHarfu.some(([, o]) => o.some((x) => x.polozaj === p))),
+    [poHarfu],
+  );
+
   return (
-    <div className="flex flex-col gap-4">
-      {poHarfu.map(([harf, oblici]) => (
-        <div key={harf} dir="rtl" className="grid gap-2" style={{ gridTemplateColumns: `repeat(${oblici.length}, minmax(0,1fr))` }}>
-          {oblici.map((o) => (
-            <div key={o.polozaj} className="flex flex-col items-center gap-1 rounded-xl border border-border bg-white py-4">
-              <Zapis tekst={o.zapis} velicina="text-4xl" />
-              <span dir="ltr" className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                {o.polozaj === "sam" ? "sam" : o.polozaj === "pocetni" ? "na početku" : o.polozaj === "srednji" ? "u sredini" : "na kraju"}
-              </span>
-            </div>
+    <div className="overflow-x-auto">
+      <table className="w-full border-separate" style={{ borderSpacing: "0 8px" }}>
+        <thead>
+          <tr>{kolone.map((k) => <Glava key={k}>{NAZIV_POLOZAJA[k]}</Glava>)}</tr>
+        </thead>
+        <tbody>
+          {poHarfu.map(([harf, oblici]) => (
+            <tr key={harf}>
+              {kolone.map((k) => {
+                const o = oblici.find((x) => x.polozaj === k);
+                return (
+                  <td key={k} className="px-1">
+                    {o ? (
+                      <div className="rounded-xl border-2 border-border bg-white py-3 grid place-items-center">
+                        <Zapis tekst={o.zapis} velicina="text-4xl" isticanje={{ novi }} />
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border-2 border-dashed border-border/50 py-3 grid place-items-center text-muted-foreground/50 text-sm">
+                        ne spaja
+                      </div>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
           ))}
-        </div>
-      ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 /** Naći novo slovo među drugima — prepoznavanje prije čitanja. */
-function PronadiHarf({ stavke }: { stavke: StavkaVjezbe[] }) {
+function PronadiHarf({ stavke, novi }: { stavke: StavkaVjezbe[]; novi: string[] }) {
   const [i, setI] = useState(0);
   const [odgovor, setOdgovor] = useState<"tacno" | "netacno" | null>(null);
   const s = stavke[i];
@@ -133,22 +243,36 @@ function PronadiHarf({ stavke }: { stavke: StavkaVjezbe[] }) {
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <p className="text-sm text-muted-foreground">Pitanje {i + 1} od {stavke.length}</p>
-      <div dir="rtl" className="flex flex-wrap justify-center gap-3">
+      <div className="flex items-center gap-4 rounded-2xl border-2 border-rose-200 bg-rose-50 px-6 py-3">
+        <span className="text-xs font-bold uppercase tracking-wider text-rose-700">traži se</span>
+        <Zapis tekst={s.trazeno ?? ""} velicina="text-4xl" isticanje={{ novi }} />
+      </div>
+
+      <div className="flex gap-1.5" aria-hidden="true">
+        {stavke.map((_, j) => (
+          <span key={j} className={`h-1.5 rounded-full transition-all ${
+            j < i ? "w-6 bg-teal-600" : j === i ? "w-10 bg-teal-400" : "w-6 bg-border"}`} />
+        ))}
+      </div>
+
+      <div dir="rtl" className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
         {(s.izbor ?? []).map((iz, j) => {
           const tacno = iz === s.zapis;
           const pokazi = odgovor !== null && tacno;
           return (
             <button key={j} type="button" disabled={odgovor !== null}
               onClick={() => setOdgovor(tacno ? "tacno" : "netacno")}
-              className={`w-24 h-24 rounded-2xl border-2 grid place-items-center transition-colors disabled:cursor-default ${
+              className={`relative h-28 rounded-2xl border-2 grid place-items-center transition-colors disabled:cursor-default ${
                 pokazi ? "border-emerald-500 bg-emerald-50" : "border-border bg-white hover:border-teal-400"
               }`}>
+              <Broj n={j + 1} />
               <Zapis tekst={iz} velicina="text-4xl" />
+              {pokazi && <Check className="absolute bottom-2 left-2 w-5 h-5 text-emerald-600" />}
             </button>
           );
         })}
       </div>
+
       <div className="h-10 flex items-center gap-3">
         {odgovor === "tacno" && <span className="flex items-center gap-2 text-emerald-700 font-bold"><Check className="w-5 h-5" /> Tačno</span>}
         {odgovor === "netacno" && <span className="flex items-center gap-2 text-amber-700 font-bold"><X className="w-5 h-5" /> Pogledaj ponovo</span>}
@@ -165,16 +289,73 @@ function PronadiHarf({ stavke }: { stavke: StavkaVjezbe[] }) {
   );
 }
 
-function Glas({ stavke }: { stavke: StavkaVjezbe[] }) {
+const HAREK = [
+  { znak: "َ", ime: "fetha", glas: "E" },
+  { znak: "ِ", ime: "kesra", glas: "I" },
+  { znak: "ُ", ime: "damma", glas: "U" },
+];
+
+/**
+ * Novi glas sa svakim naučenim harekom.
+ *
+ * Tabela sa harekom u zaglavlju: dijete čita red i čuje isti harf u tri
+ * odjeće, pa mu je razlika u znaku, a ne u slovu. Zaglavlje nosi znak na
+ * tačkastom kolutu, jer se harek drukčije ne može pokazati sam.
+ */
+function Glas({ stavke, novi }: { stavke: StavkaVjezbe[]; novi: string[] }) {
+  const { harfovi, hareke } = useMemo(() => {
+    const h: string[] = [];
+    const k: string[] = [];
+    for (const s of stavke) {
+      const o = s.zapis[0];
+      const z = s.zapis.slice(1);
+      if (!h.includes(o)) h.push(o);
+      if (z && !k.includes(z)) k.push(z);
+    }
+    return { harfovi: h, hareke: HAREK.filter((x) => k.includes(x.znak)) };
+  }, [stavke]);
+
+  const nadji = (harf: string, znak: string) =>
+    stavke.find((s) => s.zapis === harf + znak)?.zapis;
+
   return (
-    <div dir="rtl" className="flex flex-wrap justify-center gap-3">
-      {stavke.map((s) => (
-        <button key={s.zapis} type="button" onClick={() => pustiZapis(s.zapis)}
-          className="flex flex-col items-center gap-2 rounded-2xl border-2 border-border bg-white px-7 py-5 hover:border-teal-400 transition-colors">
-          <Zapis tekst={s.zapis} />
-          <Volume2 className="w-5 h-5 text-teal-700" />
-        </button>
-      ))}
+    <div className="overflow-x-auto">
+      <table className="w-full border-separate" style={{ borderSpacing: "0 8px" }}>
+        <thead>
+          <tr>
+            {hareke.map((h) => (
+              <Glava key={h.znak}>
+                <span className="flex flex-col items-center gap-0.5">
+                  <span dir="rtl" lang="ar" className="text-2xl text-foreground" style={{ fontFamily: "var(--font-citanje)" }}>
+                    {KOLUT + h.znak}
+                  </span>
+                  <span>{h.ime} · {h.glas}</span>
+                </span>
+              </Glava>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {harfovi.map((harf) => (
+            <tr key={harf}>
+              {hareke.map((h) => {
+                const zapis = nadji(harf, h.znak);
+                return (
+                  <td key={h.znak} className="px-1">
+                    {zapis ? (
+                      <button type="button" onClick={() => pustiZapis(zapis)}
+                        className="w-full rounded-xl border-2 border-border bg-white py-4 flex flex-col items-center gap-1.5 hover:border-teal-400 transition-colors">
+                        <Zapis tekst={zapis} isticanje={{ novi }} />
+                        <Volume2 className="w-5 h-5 text-teal-700" />
+                      </button>
+                    ) : <div className="py-4" />}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -192,17 +373,21 @@ function SlusajKlikni({ stavke }: { stavke: StavkaVjezbe[] }) {
   return (
     <div className="flex flex-col items-center gap-5">
       <button type="button" onClick={() => (trazeno ? pustiZapis(trazeno) : novo())}
-        className="w-20 h-20 rounded-full bg-teal-600 hover:bg-teal-700 text-white grid place-items-center transition-colors"
+        className="w-24 h-24 rounded-full bg-teal-600 hover:bg-teal-700 text-white grid place-items-center transition-colors shadow-lg shadow-teal-600/20"
         aria-label={trazeno ? "Poslušaj ponovo" : "Počni"}>
-        <Volume2 className="w-9 h-9" />
+        <Volume2 className="w-11 h-11" />
       </button>
-      <div dir="rtl" className="flex flex-wrap justify-center gap-3">
-        {ponudjeni.map((s) => (
+      <p className="text-sm text-muted-foreground">
+        {trazeno ? "Pokaži šta si čuo" : "Pritisni zvučnik"}
+      </p>
+      <div dir="rtl" className="grid grid-cols-3 gap-3 w-full">
+        {ponudjeni.map((s, j) => (
           <button key={s.zapis} type="button" disabled={!trazeno}
             onClick={() => setOdgovor(s.zapis === trazeno ? "tacno" : "netacno")}
-            className={`w-24 h-24 rounded-2xl border-2 grid place-items-center transition-colors disabled:opacity-40 ${
+            className={`relative h-28 rounded-2xl border-2 grid place-items-center transition-colors disabled:opacity-40 ${
               odgovor !== null && s.zapis === trazeno ? "border-emerald-500 bg-emerald-50" : "border-border bg-white hover:border-teal-400"
             }`}>
+            <Broj n={j + 1} />
             <Zapis tekst={s.zapis} velicina="text-4xl" />
           </button>
         ))}
@@ -216,56 +401,83 @@ function SlusajKlikni({ stavke }: { stavke: StavkaVjezbe[] }) {
   );
 }
 
+/**
+ * Kratko i dugo, jedno uz drugo.
+ *
+ * Tabela sa dvije kolone, jer se dužina ne čuje sama nego u poređenju.
+ * Harf produženja je obojen, pa dijete vidi gdje je razlika prije nego je čuje.
+ */
 function KratkoDugo({ stavke }: { stavke: StavkaVjezbe[] }) {
   return (
-    <div className="flex flex-col gap-3">
-      {stavke.map((s) => (
-        <div key={s.zapis} dir="rtl" className="flex items-center justify-center gap-3 sm:gap-6 flex-wrap">
-          <button type="button" onClick={() => s.parnjak && pustiZapis(s.parnjak)}
-            className="flex items-center gap-3 rounded-2xl border-2 border-border bg-white px-6 py-4 hover:border-teal-400 transition-colors">
-            <Zapis tekst={s.parnjak ?? ""} velicina="text-4xl" />
-            <span dir="ltr" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">kratko</span>
-          </button>
-          <span className="text-muted-foreground" aria-hidden="true">←</span>
-          <button type="button" onClick={() => pustiZapis(s.zapis)}
-            className="flex items-center gap-3 rounded-2xl border-2 border-teal-300 bg-teal-50 px-6 py-4 hover:border-teal-500 transition-colors">
-            <Zapis tekst={s.zapis} velicina="text-4xl" />
-            <span dir="ltr" className="text-xs font-bold uppercase tracking-wider text-teal-700">dugo</span>
-          </button>
-        </div>
-      ))}
+    <div className="overflow-x-auto">
+      <table className="w-full border-separate" style={{ borderSpacing: "0 8px" }}>
+        <thead>
+          <tr>
+            <Glava>kratko — jedan pljesak</Glava>
+            <Glava>dugo — raširi ruke</Glava>
+          </tr>
+        </thead>
+        <tbody>
+          {stavke.map((s) => (
+            <tr key={s.zapis}>
+              <td className="px-1">
+                <button type="button" onClick={() => s.parnjak && pustiZapis(s.parnjak)}
+                  className="w-full rounded-xl border-2 border-border bg-white py-3 flex items-center justify-center gap-3 hover:border-teal-400 transition-colors">
+                  <Zapis tekst={s.parnjak ?? ""} velicina="text-4xl" />
+                  <Volume2 className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </td>
+              <td className="px-1">
+                <button type="button" onClick={() => pustiZapis(s.zapis)}
+                  className="w-full rounded-xl border-2 border-sky-300 bg-sky-50 py-3 flex items-center justify-center gap-3 hover:border-sky-500 transition-colors">
+                  <Zapis tekst={s.zapis} velicina="text-4xl" isticanje={{ duzine: true }} />
+                  <Volume2 className="w-4 h-4 text-sky-700" />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function VozSlogova({ stavke }: { stavke: StavkaVjezbe[] }) {
+/** Spajanje dijelova u cjelinu — vagoni koji se kače jedan za drugi. */
+function VozSlogova({ stavke, novi }: { stavke: StavkaVjezbe[]; novi: string[] }) {
   return (
     <div className="grid sm:grid-cols-2 gap-3">
-      {stavke.map((s) => (
-        <div key={s.zapis} dir="rtl" className="flex items-center justify-center gap-2 flex-wrap rounded-xl border border-border bg-white py-3">
-          {(s.dijelovi ?? []).map((dio, i) => (
-            <span key={i} className="flex items-center gap-2">
-              {i > 0 && <span className="text-xl text-muted-foreground">+</span>}
-              <span className="w-16 h-16 rounded-lg border border-border grid place-items-center"><Zapis tekst={dio} velicina="text-2xl" /></span>
-            </span>
-          ))}
-          <span className="text-xl text-muted-foreground mx-1">=</span>
-          <button type="button" onClick={() => pustiZapis(s.zapis)}
-            className="h-16 px-4 rounded-lg border-2 border-teal-300 bg-teal-50 flex items-center gap-2 hover:border-teal-500 transition-colors">
-            <Zapis tekst={s.zapis} velicina="text-2xl" />
-          </button>
+      {stavke.map((s, i) => (
+        <div key={s.zapis} className="relative rounded-2xl border-2 border-border bg-white px-3 py-3">
+          <Broj n={i + 1} />
+          <div dir="rtl" className="flex items-center justify-center gap-1.5 flex-wrap">
+            {(s.dijelovi ?? []).map((dio, j) => (
+              <span key={j} className="flex items-center gap-1.5">
+                {j > 0 && <span className="text-lg font-bold text-muted-foreground/60">+</span>}
+                <span className="w-14 h-14 rounded-lg border-2 border-dashed border-border grid place-items-center bg-muted/20">
+                  <Zapis tekst={dio} velicina="text-2xl" isticanje={{ novi }} />
+                </span>
+              </span>
+            ))}
+            <span className="text-lg font-bold text-muted-foreground/60 mx-0.5">=</span>
+            <button type="button" onClick={() => pustiZapis(s.zapis)}
+              className="h-14 px-4 rounded-lg border-2 border-teal-300 bg-teal-50 flex items-center gap-2 hover:border-teal-500 transition-colors">
+              <Zapis tekst={s.zapis} velicina="text-2xl" isticanje={{ novi }} />
+            </button>
+          </div>
         </div>
       ))}
     </div>
   );
 }
 
-function CitajRijeci({ stavke }: { stavke: StavkaVjezbe[] }) {
+/** Riječi. Novi harf je obojen i unutar riječi — span ne lomi spajanje. */
+function CitajRijeci({ stavke, novi }: { stavke: StavkaVjezbe[]; novi: string[] }) {
   return (
-    <div dir="rtl" className="flex flex-wrap justify-center gap-3">
-      {stavke.map((s) => (
-        <div key={s.zapis} className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-white px-6 py-5">
-          <Zapis tekst={s.zapis} />
+    <div dir="rtl" className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {stavke.map((s, i) => (
+        <div key={s.zapis} className="relative flex flex-col items-center gap-3 rounded-2xl border-2 border-border bg-white px-4 py-5">
+          <Broj n={i + 1} />
+          <Zapis tekst={s.zapis} isticanje={{ novi, duzine: true }} />
           <DugmeZvuka zapis={s.zapis} velicina="w-11 h-11" />
         </div>
       ))}
@@ -274,7 +486,7 @@ function CitajRijeci({ stavke }: { stavke: StavkaVjezbe[] }) {
 }
 
 /** Štoperica je sprava, ne uputa da se sprava pripremi. */
-function Brzina({ redovi, sekundi = 20 }: { redovi: string[][]; sekundi?: number }) {
+function Brzina({ redovi, sekundi = 20, novi }: { redovi: string[][]; sekundi?: number; novi: string[] }) {
   const [preostalo, setPreostalo] = useState(sekundi);
   const [radi, setRadi] = useState(false);
   const [red, setRed] = useState(0);
@@ -289,33 +501,53 @@ function Brzina({ redovi, sekundi = 20 }: { redovi: string[][]; sekundi?: number
   }, [radi]);
 
   const ponovo = () => { setRadi(false); setPreostalo(sekundi); };
+  const dio = Math.max(0, Math.min(1, preostalo / sekundi));
+
+  // Red se lomi na linije po pet, da stane na uzak ekran a da se i dalje čita
+  // zdesna nalijevo, a ne odozgo nadolje.
+  const podredovi = useMemo(() => {
+    const izvor = redovi[red] ?? [];
+    const izl: string[][] = [];
+    for (let i = 0; i < izvor.length; i += 5) izl.push(izvor.slice(i, i + 5));
+    return izl;
+  }, [redovi, red]);
 
   return (
     <div className="flex flex-col items-center gap-5">
-      <div className="flex items-center gap-3 flex-wrap justify-center">
-        <span className={`flex items-center gap-2 text-3xl font-bold tabular-nums ${preostalo === 0 ? "text-amber-600" : "text-teal-700"}`}>
-          <Timer className="w-7 h-7" />{preostalo}
-        </span>
-        {!radi && preostalo > 0 && (
-          <button type="button" onClick={() => setRadi(true)}
-            className="flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold px-5 py-2.5">
-            <Play className="w-4 h-4" /> Kreni
-          </button>
-        )}
-        {radi && (
-          <button type="button" onClick={() => setRadi(false)}
-            className="flex items-center gap-2 rounded-xl border border-border font-bold px-5 py-2.5 hover:bg-muted">
-            <Square className="w-4 h-4" /> Stani
-          </button>
-        )}
-        {(preostalo === 0 || (!radi && preostalo < sekundi)) && (
-          <button type="button" onClick={ponovo}
-            className="flex items-center gap-2 rounded-xl border border-border font-bold px-5 py-2.5 hover:bg-muted">
-            <RotateCcw className="w-4 h-4" /> Ispočetka
-          </button>
-        )}
+      <div className="w-full rounded-2xl border-2 border-border bg-white px-5 py-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <span className={`flex items-center gap-2 text-3xl font-bold tabular-nums ${preostalo === 0 ? "text-amber-600" : "text-teal-700"}`}>
+            <Timer className="w-7 h-7" />{preostalo}
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {!radi && preostalo > 0 && (
+              <button type="button" onClick={() => setRadi(true)}
+                className="flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold px-5 py-2.5">
+                <Play className="w-4 h-4" /> Kreni
+              </button>
+            )}
+            {radi && (
+              <button type="button" onClick={() => setRadi(false)}
+                className="flex items-center gap-2 rounded-xl border border-border font-bold px-5 py-2.5 hover:bg-muted">
+                <Square className="w-4 h-4" /> Stani
+              </button>
+            )}
+            {(preostalo === 0 || (!radi && preostalo < sekundi)) && (
+              <button type="button" onClick={ponovo}
+                className="flex items-center gap-2 rounded-xl border border-border font-bold px-5 py-2.5 hover:bg-muted">
+                <RotateCcw className="w-4 h-4" /> Ispočetka
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="h-2 rounded-full bg-muted overflow-hidden">
+          <div className={`h-full rounded-full transition-all duration-1000 ease-linear ${preostalo === 0 ? "bg-amber-500" : "bg-teal-500"}`}
+            style={{ width: `${dio * 100}%` }} />
+        </div>
       </div>
-      <div className="flex gap-2">
+
+      <div className="flex items-center gap-2 flex-wrap justify-center">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">red</span>
         {redovi.map((_, i) => (
           <button key={i} type="button" onClick={() => { setRed(i); ponovo(); }}
             className={`w-9 h-9 rounded-lg font-bold text-sm ${i === red ? "bg-teal-600 text-white" : "border border-border hover:bg-muted"}`}>
@@ -323,12 +555,27 @@ function Brzina({ redovi, sekundi = 20 }: { redovi: string[][]; sekundi?: number
           </button>
         ))}
       </div>
-      <div dir="rtl" className="flex flex-wrap justify-center gap-4 rounded-2xl border-2 border-border bg-white px-6 py-5">
-        {(redovi[red] ?? []).map((z, i) => (
-          <button key={`${z}-${i}`} type="button" onClick={() => pustiZapis(z)} className="hover:text-teal-700 transition-colors">
-            <Zapis tekst={z} velicina="text-3xl" />
-          </button>
-        ))}
+
+      {/* Tečnost se vježba vodoravnim prelaskom preko reda, zdesna nalijevo.
+          Okomit stupac bi bio čitljiv, ali bi vježbao pogrešan pokret oka. */}
+      <div dir="rtl" className="w-full rounded-2xl border-2 border-border bg-white p-3">
+        <table className="w-full border-separate" style={{ borderSpacing: "6px" }}>
+          <tbody>
+            {podredovi.map((pod, r) => (
+              <tr key={r}>
+                {pod.map((z, i) => (
+                  <td key={`${z}-${i}`} className="w-1/5">
+                    <button type="button" onClick={() => pustiZapis(z)}
+                      className="w-full rounded-xl border border-border/70 py-2 grid place-items-center hover:border-teal-400 hover:bg-teal-50/40 transition-colors">
+                      <Zapis tekst={z} velicina="text-3xl" isticanje={{ novi, duzine: true }} />
+                    </button>
+                  </td>
+                ))}
+                {pod.length < 5 && Array.from({ length: 5 - pod.length }, (_, k) => <td key={`p${k}`} />)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -379,21 +626,37 @@ function SlikeSlova({ harfovi, naucena }: { harfovi: string[]; naucena: Set<stri
  * prepoznavanje raspada kad slovo stoji u nepoznatoj riječi. Zato ruka dolazi
  * prije lova na slova, a ne poslije čitanja.
  */
-function Pisi({ stavke }: { stavke: StavkaVjezbe[] }) {
+function Pisi({ stavke, novi }: { stavke: StavkaVjezbe[]; novi: string[] }) {
+  const KORACI = ["prstom po zraku", "po pijesku ili grubom papiru", "iz plastelina"];
   return (
-    <div className="flex flex-col gap-3">
-      {stavke.map((s) => (
-        <div key={s.zapis} className="rounded-xl border border-border bg-white px-4 py-4 flex items-center gap-4">
-          <div dir="rtl" className="shrink-0 grid place-items-center w-20">
-            <Zapis tekst={s.zapis} velicina="text-5xl" />
+    <div className="flex flex-col gap-4">
+      {stavke.map((s, i) => (
+        <div key={s.zapis} className="relative rounded-2xl border-2 border-border bg-white p-4 flex flex-col gap-3">
+          <Broj n={i + 1} />
+          <div className="flex items-center gap-4">
+            <div dir="rtl" className="shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-rose-300 bg-rose-50/40 grid place-items-center">
+              <Zapis tekst={s.zapis} velicina="text-5xl" isticanje={{ novi }} />
+            </div>
+            <div className="flex flex-col gap-1.5 min-w-0">
+              {s.slika && (
+                <span className="self-start rounded-lg bg-indigo-100 text-indigo-900 px-2.5 py-1 text-sm font-bold">
+                  {s.slika}
+                </span>
+              )}
+              <p className="text-[15px] leading-relaxed text-muted-foreground flex items-start gap-2">
+                <Hand className="w-4 h-4 shrink-0 mt-1" />
+                <span>{s.potez}</span>
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col gap-1 min-w-0">
-            {s.slika && <span className="font-bold text-sm">{s.slika}</span>}
-            <p className="text-[15px] leading-relaxed text-muted-foreground flex items-start gap-2">
-              <Hand className="w-4 h-4 shrink-0 mt-1" />
-              <span>{s.potez}</span>
-            </p>
-          </div>
+          <ol className="flex flex-wrap gap-2">
+            {KORACI.map((k, j) => (
+              <li key={k} className="flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-1.5 text-sm">
+                <span className="w-5 h-5 rounded-full bg-teal-600 text-white grid place-items-center text-[11px] font-bold">{j + 1}</span>
+                {k}
+              </li>
+            ))}
+          </ol>
         </div>
       ))}
     </div>
@@ -451,22 +714,50 @@ function RadniList({ redovi, domaca }: { redovi: string[][]; domaca: string[] })
   );
 }
 
-function Vjezba({ v, imaZvuk }: { v: VjezbaCitanja; imaZvuk?: boolean }) {
+/** Ikona i boja trake, po vrsti vježbe. Oko traži vježbu po boji, ne po naslovu. */
+const TRAKA: Record<VrstaVjezbe, { ikona: typeof Eye; boja: string }> = {
+  oblici:         { ikona: Eye,     boja: "bg-slate-100 text-slate-700" },
+  pisi:           { ikona: Hand,    boja: "bg-rose-100 text-rose-700" },
+  "pronadi-harf": { ikona: Search,  boja: "bg-amber-100 text-amber-800" },
+  glas:           { ikona: Volume2, boja: "bg-teal-100 text-teal-800" },
+  "slusaj-klikni":{ ikona: Volume2, boja: "bg-teal-100 text-teal-800" },
+  "kratko-dugo":  { ikona: Ruler,   boja: "bg-sky-100 text-sky-800" },
+  "voz-slogova":  { ikona: Link2,   boja: "bg-violet-100 text-violet-800" },
+  "citaj-rijeci": { ikona: BookOpen,boja: "bg-emerald-100 text-emerald-800" },
+  brzina:         { ikona: Timer,   boja: "bg-orange-100 text-orange-800" },
+};
+
+function Vjezba({ v, imaZvuk, novi, redni }: {
+  v: VjezbaCitanja; imaZvuk?: boolean; novi: string[]; redni: number;
+}) {
+  const t = TRAKA[v.vrsta];
+  const Ikona = t.ikona;
+  const koliko = v.redovi ? v.redovi.flat().length : v.stavke.length;
+
   return (
-    <section className="rounded-2xl border border-border/60 bg-muted/20 p-5 flex flex-col gap-5">
-      <div className="flex items-center justify-center gap-2 flex-wrap">
-        <h3 className="font-extrabold text-lg text-center">{v.naslov}</h3>
-        {v.trebaZvuk && !imaZvuk && <VolumeX className="w-4 h-4 text-amber-600" aria-label="bez snimaka" />}
+    <section className="rounded-2xl border-2 border-border/60 bg-white overflow-hidden">
+      <header className={`flex items-center gap-3 px-5 py-3 ${t.boja}`}>
+        <span className="w-9 h-9 rounded-xl bg-white/70 grid place-items-center shrink-0">
+          <Ikona className="w-5 h-5" />
+        </span>
+        <div className="flex flex-col min-w-0">
+          <h3 className="font-extrabold leading-tight">{redni}. {v.naslov}</h3>
+          <span className="text-[11px] font-bold uppercase tracking-wider opacity-70">{koliko} stavki</span>
+        </div>
+        {v.trebaZvuk && !imaZvuk && <VolumeX className="w-5 h-5 ml-auto shrink-0" aria-label="bez snimaka" />}
+      </header>
+
+      <div className="p-5 bg-muted/20">
+        {v.vrsta === "oblici" && <Oblici stavke={v.stavke} novi={novi} />}
+        {v.vrsta === "pisi" && <Pisi stavke={v.stavke} novi={novi} />}
+        {v.vrsta === "pronadi-harf" && <PronadiHarf stavke={v.stavke} novi={novi} />}
+        {v.vrsta === "glas" && <Glas stavke={v.stavke} novi={novi} />}
+        {v.vrsta === "slusaj-klikni" && <SlusajKlikni stavke={v.stavke} />}
+        {v.vrsta === "kratko-dugo" && <KratkoDugo stavke={v.stavke} />}
+        {v.vrsta === "voz-slogova" && <VozSlogova stavke={v.stavke} novi={novi} />}
+        {v.vrsta === "citaj-rijeci" && <CitajRijeci stavke={v.stavke} novi={novi} />}
+        {v.vrsta === "brzina" && <Brzina redovi={v.redovi ?? []} sekundi={v.sekundi} novi={novi} />}
       </div>
-      {v.vrsta === "oblici" && <Oblici stavke={v.stavke} />}
-      {v.vrsta === "pisi" && <Pisi stavke={v.stavke} />}
-      {v.vrsta === "pronadi-harf" && <PronadiHarf stavke={v.stavke} />}
-      {v.vrsta === "glas" && <Glas stavke={v.stavke} />}
-      {v.vrsta === "slusaj-klikni" && <SlusajKlikni stavke={v.stavke} />}
-      {v.vrsta === "kratko-dugo" && <KratkoDugo stavke={v.stavke} />}
-      {v.vrsta === "voz-slogova" && <VozSlogova stavke={v.stavke} />}
-      {v.vrsta === "citaj-rijeci" && <CitajRijeci stavke={v.stavke} />}
-      {v.vrsta === "brzina" && <Brzina redovi={v.redovi ?? []} sekundi={v.sekundi} />}
     </section>
   );
 }
@@ -565,7 +856,11 @@ export default function CitanjeLekcijaPage() {
 
           <SlikeSlova harfovi={program.harfovi} naucena={naucena} />
 
-          {vjezbe.map((v) => <Vjezba key={v.vrsta} v={v} imaZvuk={lekcija.imaZvuk} />)}
+          <Legenda novi={program.harfovi} duzine={znanjeDoLekcije(Number(broj)).znakovi.has("medd")} />
+
+          {vjezbe.map((v, i) => (
+            <Vjezba key={v.vrsta} v={v} imaZvuk={lekcija.imaZvuk} novi={program.harfovi} redni={i + 1} />
+          ))}
         </div>
       ) : (
         <div className="flex flex-col gap-3">

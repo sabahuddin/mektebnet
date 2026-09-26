@@ -95,6 +95,23 @@ prolaza dnevno po dvije minute, ne jedan dug. Pri štampi se ostatak stranice
 sakriva preko `visibility`, ne `display: none`, jer bi `display` na roditelju
 odnio i samu tabelu.
 
+**Boji se grozd, ne harek.** Mjereno u pregledniku: span oko samog hareka
+preglednik zanemari (0 obojenih piksela), a boja harfa povuče i harek uz sebe.
+Bojenje hareka u jednu a harfa u drugu boju — kako rade neki arapski bukvari —
+ovdje nije moguće. Isto mjerenje pokazalo je i drugu stranu: `مَالَ` ima istu
+širinu složen u jednom komadu i razlomljen na tri spana, pa **span ne lomi
+spajanje slova** i jedan harf se smije istaknuti i usred riječi. Razlaganje
+radi `citanje-grozd.ts`.
+
+**Boje su tri i nose značenje**: crvena je ono što lekcija uvodi, plava je
+dužina, siva je tatvil. Četvrta boja na istom zapisu prestaje biti isticanje i
+postaje šara. Dužina se prepoznaje po hareku ispred, ne po harfu — vav sa
+fethom je suglasnik, vav iza damme je dužina (`jeDuzina()`).
+
+**Imena položaja stoje u `citanje-oblici.ts`**, u `NAZIV_POLOZAJA`, i odatle
+se uzimaju. Dok ih je vježba prepisivala, tabela oblika izgubila je kolonu
+„na kraju" jer je u njoj stajao izmišljen ključ.
+
 **Svaki arapski red mora imati `dir="rtl"`.** Bez toga dijelovi riječi idu
 slijeva nadesno, pa dijete uči obrnut redoslijed čitanja.
 
