@@ -20,22 +20,34 @@ const arg = process.argv.slice(2);
 const i = arg.indexOf("--lekcija");
 const SAMO = i >= 0 && arg[i + 1] ? Number(arg[i + 1]) : null;
 
+// SNIMA SE SAMO ONO ŠTO SE SLUŠA. Vježbe u kojima dijete čita — voz slogova i
+// redovi za tečnost — ne traže snimak; njih sluša muallim. Zvuk treba za novi
+// glas, za slušanje, za kratko-dugo i za provjeru riječi, a sve to dolazi iz
+// slogova i riječi. Zato se spisak pravi od njih, a ne od izvedenih vježbi.
+//
 // Podaci žive u TypeScriptu; da skripta ne ovisi o alatu za tipove, čitaju se
 // iz izvora. Polja su zato pisana u jednom redu.
-const izvor = await readFile(path.join(KORIJEN, "src/data/citanje-lekcije.ts"), "utf8");
-
-const lekcije = [];
-for (const dio of izvor.split(/\n  \{\n    broj: /).slice(1)) {
-  const broj = Number(dio.match(/^(\d+)/)?.[1]);
-  const naslov = dio.match(/naslov:\s*"([^"]+)"/)?.[1] ?? "";
-  const zapisi = [];
-  for (const m of dio.matchAll(/zapis:\s*"([^"]+)"/g)) zapisi.push(m[1]);
-  for (const m of dio.matchAll(/parnjak:\s*"([^"]+)"/g)) zapisi.push(m[1]);
-  for (const m of dio.matchAll(/dijelovi:\s*\[([^\]]+)\]/g)) {
-    for (const d of m[1].matchAll(/"([^"]+)"/g)) zapisi.push(d[1]);
+const uzmi = async (datoteka) => {
+  const izvor = await readFile(path.join(KORIJEN, datoteka), "utf8");
+  const izl = [];
+  for (const m of izvor.matchAll(/zapis:\s*"([^"]+)",\s*citanje:\s*"([^"]*)",[^}]*?lekcija:\s*(\d+)/g)) {
+    izl.push({ zapis: m[1], citanje: m[2], lekcija: Number(m[3]) });
   }
-  lekcije.push({ broj, naslov, zapisi: [...new Set(zapisi)] });
+  return izl;
+};
+const stavke = [...await uzmi("src/data/citanje-slogovi.ts"), ...await uzmi("src/data/citanje-rijeci.ts")];
+
+const naslovi = new Map();
+{
+  const prog = await readFile(path.join(KORIJEN, "src/data/citanje-program.ts"), "utf8");
+  for (const m of prog.matchAll(/broj:\s*(\d+),\s*naziv:\s*"([^"]+)"/g)) naslovi.set(Number(m[1]), m[2]);
 }
+
+const lekcije = [...new Set(stavke.map((s) => s.lekcija))].sort((a, b) => a - b).map((broj) => ({
+  broj,
+  naslov: naslovi.get(broj) ?? "",
+  zapisi: [...new Set(stavke.filter((s) => s.lekcija === broj).map((s) => s.zapis))],
+}));
 
 const postoje = new Set(await readdir(ZVUK).catch(() => []));
 const ime = (z) => `rijec-${Buffer.from(z).toString("hex")}.mp3`;
