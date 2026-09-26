@@ -22,6 +22,11 @@ const POZE: Record<string, string> = {
   hoda: "/images/maskota/poses/pcela-hoda.webp",
   razmislja: "/images/maskota/poses/pcela-razmislja.webp",
   cita: "/images/maskota/poses/pcela-cita-kuran.webp",
+  mase: "/images/maskota/poses/pcela-mase.webp",
+  palac: "/images/maskota/poses/pcela-palac.webp",
+  leti: "/images/maskota/poses/pcela-leti.webp",
+  pokazuje: "/images/maskota/poses/pcela-pokazuje-lijevo.webp",
+  pokazujeDesno: "/images/maskota/poses/pcela-pokazuje-desno.webp",
 };
 
 const LIKOVI: Record<ReplikaPrice["ko"], { ime: string; okvir: string; mjehur: string }> = {
@@ -30,8 +35,18 @@ const LIKOVI: Record<ReplikaPrice["ko"], { ime: string; okvir: string; mjehur: s
   narator: { ime: "", okvir: "border-transparent", mjehur: "bg-muted/50 text-muted-foreground italic" },
 };
 
+/**
+ * Arapski zapis u lekciji.
+ *
+ * Prored je 2,0, ne manji: vokalizirani arapski ima harekate iznad i ispod
+ * slova, pa se pri manjem proredu naslanjaju na red iznad i dijete ih više ne
+ * razlikuje. Font je Scheherazade New — vidjeti --font-citanje u index.css.
+ */
 function Zapis({ tekst, velicina = "text-5xl" }: { tekst: string; velicina?: string }) {
-  return <span dir="rtl" lang="ar" className={`${velicina} leading-[1.6] font-semibold`}>{tekst}</span>;
+  return (
+    <span dir="rtl" lang="ar" className={`${velicina} font-semibold`}
+      style={{ fontFamily: "var(--font-citanje)", lineHeight: 2 }}>{tekst}</span>
+  );
 }
 
 function Prica({ replike }: { replike: ReplikaPrice[] }) {
@@ -374,7 +389,7 @@ export default function CitanjeLekcijaPage() {
       <header className="flex flex-col gap-3">
         <h1 className="text-2xl font-extrabold">{lekcija.broj}. {lekcija.naslov}</h1>
         <div className="flex items-center gap-3 flex-wrap text-muted-foreground">
-          <span dir="rtl" lang="ar" className="text-3xl">{program.harfovi.join("  ")}</span>
+          <span dir="rtl" lang="ar" className="text-3xl" style={{ fontFamily: "var(--font-citanje)", lineHeight: 2 }}>{program.harfovi.join("  ")}</span>
           {program.znakovi.length > 0 && <span className="text-sm">+ {program.znakovi.join(", ")}</span>}
         </div>
       </header>
@@ -442,7 +457,7 @@ export default function CitanjeLekcijaPage() {
                 <p className="text-sm text-muted-foreground">Ove riječi dijete već može pročitati, a javljaju se u Kur'anu. Ne prevoditi — cilj je čitanje.</p>
                 <div dir="rtl" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 flex flex-wrap gap-5">
                   {kuranske.map((r) => (
-                    <button key={r.zapis} type="button" onClick={() => pustiZapis(r.zapis)} className="text-3xl">{r.zapis}</button>
+                    <button key={r.zapis} type="button" onClick={() => pustiZapis(r.zapis)} className="text-3xl" style={{ fontFamily: "var(--font-citanje)", lineHeight: 2 }}>{r.zapis}</button>
                   ))}
                 </div>
               </>

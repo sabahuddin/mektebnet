@@ -13,8 +13,8 @@
 export interface ReplikaPrice {
   ko: "rumejsa" | "bilal" | "narator";
   tekst: string;
-  /** Slika uz repliku. Rumejsa ima poze; Bilal ih još nema. */
-  slika?: "hoda" | "razmislja" | "cita";
+  /** Slika uz repliku. Rumejsa ima poze; za Bilala slike još nisu stigle. */
+  slika?: "hoda" | "razmislja" | "cita" | "mase" | "palac" | "leti" | "pokazuje" | "pokazujeDesno";
 }
 
 /** Naš tekst o harfu — ono što muallim objašnjava, zapisano da se može čitati. */
@@ -59,13 +59,13 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
     ],
     prica: [
       { ko: "narator", tekst: "Pčela Rumejsa sletjela je na granu. Ispod nje, u travi, radio je mrav Bilal." },
-      { ko: "rumejsa", slika: "hoda", tekst: "Bilale, vidiš li ovu malu crticu iznad? Gledaj, kosa je i stoji na vrhu." },
+      { ko: "rumejsa", slika: "mase", tekst: "Bilale, vidiš li ovu malu crticu iznad? Gledaj, kosa je i stoji na vrhu." },
       { ko: "bilal", tekst: "Vidim je. Šta radi tu gore?" },
       { ko: "rumejsa", slika: "razmislja", tekst: "Ona je fetha. Kad fetha sjedne iznad, slovo kaže E. Slušaj: LE." },
       { ko: "bilal", tekst: "LE! Kratko je, kao kad pljesnem rukama." },
       { ko: "rumejsa", tekst: "Tako je. A sad gledaj šta se desi kad iza dođe uspravna crta. Ona ne pravi svoj glas, nego razvlači onaj prije sebe." },
       { ko: "bilal", tekst: "LEEE? Kao kad se protegnem ujutru?" },
-      { ko: "rumejsa", slika: "cita", tekst: "Baš tako. LE je kratko, LAA je dugo. Isti glas, samo duži." },
+      { ko: "rumejsa", slika: "palac", tekst: "Baš tako. LE je kratko, LAA je dugo. Isti glas, samo duži." },
       { ko: "narator", tekst: "Bilal je pljesnuo jednom, pa raširio ruke i držao ih dok je Rumejsa brojala do dva." },
       { ko: "bilal", tekst: "LE — LAA. Sad čujem razliku." },
     ],
@@ -110,7 +110,7 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
     ],
     prica: [
       { ko: "narator", tekst: "Rumejsa je tog jutra donijela tri sličice i poredala ih na kamen." },
-      { ko: "rumejsa", slika: "hoda", tekst: "Bilale, znaš dvije. Crtica gore, crtica dolje. Ostaje još jedna." },
+      { ko: "rumejsa", slika: "mase", tekst: "Bilale, znaš dvije. Crtica gore, crtica dolje. Ostaje još jedna." },
       { ko: "bilal", tekst: "Ova mala? Liči na zavrnutu vlas." },
       { ko: "rumejsa", slika: "razmislja", tekst: "Ona je damma. Stoji gore, ali ne kaže E nego U. Slušaj: HU." },
       { ko: "bilal", tekst: "HU. Usne mi se same skupile." },
@@ -134,7 +134,7 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
     ],
     prica: [
       { ko: "narator", tekst: "Bilal je vukao zrno pšenice uz brdo. Rumejsa ga je gledala odozgo." },
-      { ko: "rumejsa", slika: "hoda", tekst: "Bilale, stani malo. Imam nešto što ti liči na ono što upravo radiš." },
+      { ko: "rumejsa", slika: "pokazuje", tekst: "Bilale, stani malo. Imam nešto što ti liči na ono što upravo radiš." },
       { ko: "bilal", tekst: "Na vučenje uzbrdo?" },
       { ko: "rumejsa", tekst: "Na stajanje. Gledaj ovaj mali kružić iznad slova. On ne daje nikakav glas." },
       { ko: "bilal", tekst: "Kako ne daje? Pa svaki znak nešto kaže." },
@@ -207,7 +207,7 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
     ],
     prica: [
       { ko: "narator", tekst: "Rumejsa je sletjela na list koji se povio pod njom." },
-      { ko: "rumejsa", slika: "hoda", tekst: "Vidiš kako se list povio? Jer sam se naslonila. Ima znak koji radi isto to sa slovom." },
+      { ko: "rumejsa", slika: "pokazuje", tekst: "Vidiš kako se list povio? Jer sam se naslonila. Ima znak koji radi isto to sa slovom." },
       { ko: "bilal", tekst: "Naslanja se na slovo?" },
       { ko: "rumejsa", slika: "razmislja", tekst: "Tako je. Zove se tešdid. Kad ga vidiš, slovo se ne izgovara jednom nego se na njemu zadrži, kao da su dva." },
       { ko: "bilal", tekst: "Dva ista slova jedno do drugog?" },
