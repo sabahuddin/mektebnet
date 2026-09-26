@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
 import PitanjaPrijedloziTab from "./pitanja-prijedlozi-tab";
+import BiltenTab from "./bilten-tab";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -474,8 +475,23 @@ export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "pitanja" | "profil";
+  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "pitanja" | "bilten" | "profil";
   const [activeTab, setActiveTab] = useState<TabId>("pregled");
+  const [biltenUnread, setBiltenUnread] = useState(0);
+  const [biltenRefresh, setBiltenRefresh] = useState(0);
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    const refresh = async () => {
+      try {
+        const result = await apiRequest<{ count: number }>("GET", "/bilten-muallimi/neprocitano", undefined, token);
+        if (active) setBiltenUnread(result.count);
+      } catch { /* Archive has its own retry state; keep the last known badge. */ }
+    };
+    void refresh();
+    const timer = window.setInterval(() => { void refresh(); }, 30_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [token, biltenRefresh]);
   const [panelContext, setPanelContext] = useState<"moje" | "mekteb">("moje");
   const [selectedMuallimId, setSelectedMuallimId] = useState<number | null>(null);
 
@@ -491,7 +507,7 @@ export default function MuallimPanel() {
   useEffect(() => {
     const params = new URLSearchParams(locationSearch);
     const t = params.get("tab");
-    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","pitanja","profil"].includes(t)) {
+    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","pitanja","bilten","profil"].includes(t)) {
       setActiveTab(t as TabId);
       if (t === "ucenici") setPanelContext("mekteb");
       else setPanelContext("moje");
@@ -1564,13 +1580,14 @@ export default function MuallimPanel() {
     { id: "izvjestaji", label: t("Izvještaji"), icon: FileText },
     { id: "kalendar", label: t("Kalendar"), icon: Calendar },
     { id: "roditelji", label: t("Roditelji"), icon: Heart },
+    { id: "bilten", label: t("Bilten za muallime"), icon: BookOpen },
     { id: "pitanja", label: t("Pitanja i prijedlozi"), icon: MessageSquare },
     { id: "profil", label: t("Profil"), icon: Settings },
   ];
   const visibleTabs = panelContext === "moje" && mektebMeta.isGlavni && !isMuallimPreview
     ? TABS.filter(tab => tab.id !== "ucenici")
     : isMuallimPreview
-      ? TABS.filter(tab => tab.id !== "profil" && tab.id !== "pitanja")
+      ? TABS.filter(tab => tab.id !== "profil" && tab.id !== "pitanja" && tab.id !== "bilten")
     : TABS;
 
   const brzaPretragaQ = brzaPretraga.trim().toLocaleLowerCase();
@@ -1825,7 +1842,7 @@ export default function MuallimPanel() {
           <p className="px-3 pt-2 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">{t("Moduli")}</p>
         <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 xl:flex xl:flex-col">
           {visibleTabs.map(tab => {
-            const badgeCount = tab.id === "pregled" ? pendingRoditelji.length : 0;
+            const badgeCount = tab.id === "pregled" ? pendingRoditelji.length : tab.id === "bilten" ? biltenUnread : 0;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`relative flex w-full items-center gap-2 px-4 py-3 rounded-xl text-left font-bold text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
@@ -4839,6 +4856,7 @@ export default function MuallimPanel() {
               />
             )}
             {activeTab === "pitanja" && !isMuallimPreview && <PitanjaPrijedloziTab />}
+            {activeTab === "bilten" && !isMuallimPreview && <BiltenTab onRead={() => setBiltenRefresh(n => n + 1)} />}
 
             {/* PROFIL — uređivanje display name-a, premješteno iz inline header dugmeta. */}
             {activeTab === "profil" && (
