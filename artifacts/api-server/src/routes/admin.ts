@@ -72,6 +72,7 @@ import { canAccessAdminRoute, requiresLessonEditingPermission } from "../lib/adm
 import { assertStudentCapacity, LicenceLimitError } from "../lib/district-licences.js";
 import { countStudentsByTeacher } from "../lib/teacher-student-counts.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
+import { CONTENT_IFRAME_WHITELIST, extractEmbedSrc, findDisallowedIframeSrcs, isAllowedNewEmbedUrl } from "../lib/lesson-embed-hosts.js";
 import { validateLessonPauses } from "../lib/lesson-pause-validator.js";
 import { optimizePdfFile } from "../lib/dokumenti.js";
 import { getGlobalNapametKatalog } from "../data/napamet.js";
@@ -586,89 +587,8 @@ router.post("/prilozi/:lekcijaId/url", async (req, res) => {
   return;
 });
 
-// POST /api/admin/prilozi/:lekcijaId/embed — dodaj embed vježbu (LearningApps,
-// Wordwall, Genially, Wayground (ranije Quizizz), Kahoot, Padlet, Mentimeter). Prihvata ili
-// puni iframe HTML (iz "embed code" dugmeta na tim sajtovima) ili direktan
-// URL. Whitelist domena je obavezan zbog sigurnosti — proizvoljan iframe se
-// odbija. Embed vježbe NE donose kapi meda (frontend prikazuje napomenu).
-const EMBED_WHITELIST = [
-  "learningapps.org",
-  "wordwall.net",
-  "view.genial.ly",
-  "genial.ly",
-  "quizizz.com", // stariji linkovi ostaju valjani nakon prelaska na Wayground
-  "wayground.com",
-  "kahoot.it",
-  "kahoot.com",
-  "padlet.com",
-  "mentimeter.com",
-  "embed.mentimeter.com",
-  "h5p.org",
-];
-
-function extractEmbedSrc(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  // Ako je čisti URL, vrati ga
-  if (/^https?:\/\//i.test(trimmed) && !/<iframe/i.test(trimmed)) {
-    return trimmed.length <= 2000 ? trimmed : null;
-  }
-  // Ako je iframe HTML, izvuci src
-  const m = trimmed.match(/<iframe[^>]+src\s*=\s*["']([^"']+)["']/i);
-  if (m && m[1]) {
-    const src = m[1];
-    if (/^https?:\/\//i.test(src) && src.length <= 2000) return src;
-  }
-  return null;
-}
-
-function isWhitelistedHost(url: string): boolean {
-  try {
-    const u = new URL(url);
-    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
-    const host = u.hostname.toLowerCase();
-    return EMBED_WHITELIST.some(d => host === d || host.endsWith("." + d));
-  } catch {
-    return false;
-  }
-}
-
-// Sadržaj lekcije (contentHtml) smije sadržavati <iframe> SAMO sa whitelist-ovanih
-// edukativnih izvora (isti kao embed prilozi) + YouTube. Doc upload vraća čisti
-// tekst (bez iframe-a), pa su to jedini legitimni izvori. Ovo zatvara bypass:
-// admin/muallim bi kroz HTML-mode editora mogao zalijepiti proizvoljan iframe
-// koji se onda prikazuje djeci. Vraća listu nedozvoljenih src-ova (prazna = OK).
-const CONTENT_IFRAME_WHITELIST = [
-  ...EMBED_WHITELIST,
-  "youtube.com",
-  "youtube-nocookie.com",
-];
-
-function findDisallowedIframeSrcs(html: string): string[] {
-  if (!html || typeof html !== "string") return [];
-  const bad: string[] = [];
-  const iframeRe = /<iframe\b[^>]*>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = iframeRe.exec(html)) !== null) {
-    const tag = m[0];
-    const srcM = tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
-    const src = srcM ? srcM[1] : "";
-    let ok = false;
-    if (src) {
-      try {
-        const u = new URL(src);
-        if (u.protocol === "https:" || u.protocol === "http:") {
-          const host = u.hostname.toLowerCase();
-          ok = CONTENT_IFRAME_WHITELIST.some(d => host === d || host.endsWith("." + d));
-        }
-      } catch {
-        ok = false;
-      }
-    }
-    if (!ok) bad.push(src || "(iframe bez src)");
-  }
-  return bad;
-}
+// POST /api/admin/prilozi/:lekcijaId/embed — novi vanjski izvori su samo
+// LearningApps, Wordwall, Wayground i Kahoot. Postojeći prilozi ostaju netaknuti.
 
 // Dozvoljene vrijednosti kapi meda za embed vježbu (admin postavlja).
 // 0 = bez nagrade (samo informativna/dekorativna vježba).
@@ -695,9 +615,9 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
     if (!src) {
       return res.status(400).json({ error: "Ne mogu da pronađem URL u embed kodu. Provjeri da je iframe ispravan." });
     }
-    if (!isWhitelistedHost(src)) {
+    if (!isAllowedNewEmbedUrl(src)) {
       return res.status(400).json({
-        error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni."
+        error: "Vanjska vježba mora biti sa: LearningApps, Wordwall, Wayground ili Kahoot."
       });
     }
     const embedHost = new URL(src).hostname.toLowerCase();
@@ -712,13 +632,8 @@ router.post("/prilozi/:lekcijaId/embed", async (req, res) => {
       const host = embedHost;
       if (host.includes("learningapps")) provider = "LearningApps";
       else if (host.includes("wordwall")) provider = "Wordwall";
-      else if (host.includes("genial")) provider = "Genially";
-      else if (host.includes("quizizz")) provider = "Wayground";
       else if (host === "wayground.com" || host.endsWith(".wayground.com")) provider = "Wayground";
       else if (host.includes("kahoot")) provider = "Kahoot";
-      else if (host.includes("padlet")) provider = "Padlet";
-      else if (host.includes("mentimeter")) provider = "Mentimeter";
-      else if (host.includes("h5p.org")) provider = "H5P";
     } catch {}
 
     const displayName = (label && label.trim()) || `${provider} vježba`;
@@ -937,9 +852,9 @@ router.put("/prilozi/:id", async (req, res) => {
       }
       const src = extractEmbedSrc(embedCode);
       if (!src) return res.status(400).json({ error: "Ne mogu da pronađem URL u embed kodu" });
-      if (!isWhitelistedHost(src)) {
+      if (!isAllowedNewEmbedUrl(src)) {
         return res.status(400).json({
-          error: "Embed mora biti sa: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter ili H5P.org."
+          error: "Vanjska vježba mora biti sa: LearningApps, Wordwall, Wayground ili Kahoot."
         });
       }
       updates.externalUrl = src;
@@ -2937,7 +2852,7 @@ router.post("/ilmihal", async (req, res) => {
       const badEmbeds = findDisallowedIframeSrcs(submittedHtml);
       if (badEmbeds.length > 0) {
         return res.status(400).json({
-          error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
+          error: "Sadržaj sadrži nedozvoljen iframe/embed. Novi izvori: LearningApps, Wordwall, Wayground, Kahoot i YouTube.",
           detail: badEmbeds.slice(0, 3),
         });
       }
@@ -3160,12 +3075,24 @@ router.put("/ilmihal/:id", async (req, res) => {
     const updates: Record<string, any> = {};
     if (contentHtml !== undefined) {
       const submittedHtml = typeof contentHtml === "string" ? contentHtml : "";
-      // Sigurnost: odbij snimanje ako sadržaj ima iframe sa nedozvoljenog izvora
-      // (zatvara HTML-mode bypass — vidi findDisallowedIframeSrcs).
-      const badEmbeds = findDisallowedIframeSrcs(submittedHtml);
+      // Stari izvori ostaju u ranije snimljenom sadržaju, ali se novi ne mogu
+      // ubaciti ni kroz HTML način rada editora. Usporedi isti jezik lekcije.
+      let previousHtml = existing.contentHtml;
+      if (language !== "bs") {
+        const previousOverlay = await db.execute(sql`
+          SELECT prijevod FROM content_prijevodi
+          WHERE tabela = 'ilmihal_lekcije' AND red_id = ${id}
+            AND polje = 'content_html' AND jezik = ${language}
+          LIMIT 1
+        `);
+        if (typeof previousOverlay.rows[0]?.prijevod === "string") {
+          previousHtml = previousOverlay.rows[0].prijevod;
+        }
+      }
+      const badEmbeds = findDisallowedIframeSrcs(submittedHtml, previousHtml);
       if (badEmbeds.length > 0) {
         return res.status(400).json({
-          error: "Sadržaj sadrži nedozvoljen iframe/embed. Dozvoljeni izvori: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter, H5P.org i YouTube.",
+          error: "Sadržaj sadrži nedozvoljen iframe/embed. Novi izvori: LearningApps, Wordwall, Wayground, Kahoot i YouTube.",
           detail: badEmbeds.slice(0, 3),
         });
       }

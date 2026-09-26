@@ -122,8 +122,8 @@ const AudioBlock = Node.create({
   },
 });
 
-// Embed vježba (LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet,
-// Mentimeter, H5P.org) — ubacuje se UNUTAR sadržaja akordiona. Tiptap inače
+// Nova embed vježba (LearningApps, Wordwall, Wayground, Kahoot) — ubacuje se
+// UNUTAR sadržaja akordiona. Tiptap inače
 // izbaci svaki nepoznati <iframe> pri snimanju (preživi samo YouTube); ovaj
 // node ga čini dijelom šeme pa preživi save i renderuje se učeniku.
 // Whitelist i logika izvlačenja URL-a su preslikani sa servera (admin.ts).
@@ -131,15 +131,15 @@ const AudioBlock = Node.create({
 const EMBED_WHITELIST = [
   "learningapps.org",
   "wordwall.net",
-  "view.genial.ly",
-  "genial.ly",
-  "quizizz.com",
   "wayground.com",
   "kahoot.it",
   "kahoot.com",
+];
+const LEGACY_EMBED_WHITELIST = [
+  "genial.ly",
+  "quizizz.com",
   "padlet.com",
   "mentimeter.com",
-  "embed.mentimeter.com",
   "h5p.org",
 ];
 
@@ -157,12 +157,13 @@ function extractEmbedSrc(input: string): string | null {
   return null;
 }
 
-function isWhitelistedEmbedHost(url: string): boolean {
+function isWhitelistedEmbedHost(url: string, existing = false): boolean {
   try {
     const u = new URL(url);
     if (u.protocol !== "https:" && u.protocol !== "http:") return false;
     const host = u.hostname.toLowerCase();
-    return EMBED_WHITELIST.some(d => host === d || host.endsWith("." + d));
+    const domains = existing ? [...EMBED_WHITELIST, ...LEGACY_EMBED_WHITELIST] : EMBED_WHITELIST;
+    return domains.some(d => host === d || host.endsWith("." + d));
   } catch {
     return false;
   }
@@ -185,8 +186,9 @@ const EmbedExercise = Node.create({
       getAttrs: (el) => {
         const iframe = (el as HTMLElement).querySelector("iframe");
         const src = iframe?.getAttribute("src") || null;
-        // Sigurnost: zadrži samo whitelist-ovane izvore (zaobiđe HTML-mode bypass).
-        if (!src || !isWhitelistedEmbedHost(src)) return false;
+        // Stari iframeovi moraju preživjeti uređivanje lekcije; nove iz tih
+        // izvora modal i server više ne prihvataju.
+        if (!src || !isWhitelistedEmbedHost(src, true)) return false;
         return { src };
       },
     }];
@@ -796,7 +798,7 @@ function EmbedExerciseModal({ onClose, onInsert }: EmbedExerciseModalProps) {
   const handleInsert = () => {
     const src = extractEmbedSrc(input);
     if (!src || !isWhitelistedEmbedHost(src)) {
-      setError(t("Unesi dozvoljeni URL ili iframe kod za LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter ili H5P.org."));
+      setError(t("Unesi dozvoljeni URL ili iframe kod za LearningApps, Wordwall, Wayground ili Kahoot."));
       return;
     }
     onInsert(src);
@@ -846,7 +848,7 @@ function EmbedExerciseModal({ onClose, onInsert }: EmbedExerciseModalProps) {
             data-testid="embed-exercise-input"
           />
           <p className="text-xs text-gray-500">
-            {t("Dozvoljeni izvori: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter i H5P.org.")}
+            {t("Dozvoljeni izvori: LearningApps, Wordwall, Wayground i Kahoot.")}
           </p>
           {error && (
             <p className="rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 font-semibold" role="alert">

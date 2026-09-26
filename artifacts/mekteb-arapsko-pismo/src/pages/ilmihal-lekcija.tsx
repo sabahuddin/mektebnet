@@ -2692,15 +2692,15 @@ function PriloziSection({
                   </div>
                   <p className="text-sm text-blue-400 mt-1">
                     {canDelete
-                       ? t(".h5p arhiva (max 50MB) ili vanjska vježba (LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter)")
-                       : t("Vanjska vježba: LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet ili Mentimeter.")}
+                       ? t(".h5p arhiva (max 50MB) ili vanjska vježba: LearningApps, Wordwall, Wayground, Kahoot")
+                       : t("Vanjska vježba: LearningApps, Wordwall, Wayground, Kahoot")}
                   </p>
                   {showEmbedForm && (
                     <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 flex flex-col gap-2">
                       <p className="text-xs text-amber-700 font-semibold">
                         {canDelete
-                           ? t("Zalijepi iframe kod ili URL vježbe sa LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet, Mentimeter ili H5P.org. Drugi izvori nisu dozvoljeni.")
-                           : t("Zalijepi iframe kod ili URL sa LearningApps, Wordwall, Genially, Wayground, Kahoot, Padlet ili Mentimeter. H5P može dodati samo admin.")}
+                           ? t("Zalijepi iframe kod ili URL vježbe sa LearningApps, Wordwall, Wayground ili Kahoot. Drugi izvori nisu dozvoljeni.")
+                           : t("Zalijepi iframe kod ili URL sa LearningApps, Wordwall, Wayground ili Kahoot. H5P datoteku može dodati samo admin.")}
                       </p>
                       <textarea
                         placeholder='&lt;iframe src="https://learningapps.org/watch?app=..."&gt;&lt;/iframe&gt; ili samo URL'
