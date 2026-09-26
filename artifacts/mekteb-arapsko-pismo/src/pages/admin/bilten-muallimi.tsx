@@ -27,17 +27,17 @@ const firstBulletin = {
 
 Pripremili smo nekoliko novosti koje vam olakšavaju nastavu, saradnju s roditeljima i praćenje napretka djece:
 
-• Novi modul Kur’an Časni — sure možete pretraživati i čitati po suri ili po stranici Mushafa. Dostupni su slušanje ajeta, izbor učača, podešavanje brzine i ponavljanje ajeta. U kur’anskoj zadaći i ocjeni možete označiti konkretnu stranicu.
+• Novi modul Kur’an Časni – sure možete pretraživati i čitati po suri ili po stranici Mushafa. Dostupni su slušanje ajeta, izbor učača, podešavanje brzine i ponavljanje ajeta. U kur’anskoj zadaći i ocjeni možete označiti konkretnu stranicu.
 
-• Planiranje nastave — za svaki dan možete upisati prvi i drugi čas. Na svakom času prvo napišite šta radite, a zatim po želji odaberite lekciju. Tako jedan čas možete posvetiti ispitivanju, a drugi obradi novog gradiva. Grupu mogu voditi odgovorni muallim i još do dva dodatna muallima.
+• Planiranje nastave – za svaki dan možete upisati prvi i drugi čas. Na svakom času prvo napišite šta radite, a zatim po želji odaberite lekciju. Tako jedan čas možete posvetiti ispitivanju, a drugi obradi novog gradiva. Grupu mogu voditi odgovorni muallim i još do dva dodatna muallima.
 
-• Učenici i roditelji — pojedinačnog učenika možete dodati iz svog Profila. Pri masovnom unosu u postavkama grupe svakog učenika upišite u novi red; ime roditelja dodajte iza zareza, npr. „Amina Hasić, Senad Hasić”. Učenika možete unijeti i bez roditelja. Roditeljski profil je redizajniran: pregled djece je na karticama, s prečicama za zadaće, ocjene, prisustvo i kalendar.
+• Učenici i roditelji – pojedinačnog učenika možete dodati iz svog Profila. Pri masovnom unosu u postavkama grupe svakog učenika upišite u novi red; ime roditelja dodajte iza zareza, npr. „Amina Hasić, Senad Hasić”. Učenika možete unijeti i bez roditelja. Roditeljski profil je redizajniran: pregled djece je na karticama, s prečicama za zadaće, ocjene, prisustvo i kalendar.
 
-• Zadaće po mjeri učenika — možete formirati podgrupe i zadati zadaću samo odabranoj podgrupi. Rokovi su dostupni, u zadaću možete ugraditi Wayground vježbu, a s kartice učenika možete zadati i zadaću bez povezane lekcije.
+• Zadaće po mjeri učenika – možete formirati podgrupe i zadati zadaću samo odabranoj podgrupi. Rokovi su dostupni, u zadaću možete ugraditi Wayground vježbu, a s kartice učenika možete zadati i zadaću bez povezane lekcije.
 
-• Vlastite lekcije i sadržaji — ako želite dodavati svoje lekcije ili druge nastavne sadržaje, javite se administraciji da dogovorimo način pripreme i objave.
+• Vlastite lekcije i sadržaji – ako želite dodavati svoje lekcije ili druge nastavne sadržaje, javite se administraciji da dogovorimo način pripreme i objave.
 
-• Pitanja i prijedlozi — administraciji možete pisati privatno; vaše pitanje i odgovor nisu vidljivi drugim muallimima. Bilten služi za zajedničke novosti i njihovu arhivu.
+• Pitanja i prijedlozi – administraciji možete pisati privatno; vaše pitanje i odgovor nisu vidljivi drugim muallimima. Bilten služi za zajedničke novosti i njihovu arhivu.
 
 Hvala vam na svakodnevnom radu s djecom i prijedlozima koji nam pomažu da Mekteb bude bolji. Ako imate pitanje ili primijetite problem, pišite nam kroz „Pitanja i prijedlozi” u svom panelu.
 
