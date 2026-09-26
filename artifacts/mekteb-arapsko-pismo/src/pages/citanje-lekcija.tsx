@@ -11,10 +11,11 @@
 // Imena slova se ne spominju ni u jednom prikazu.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
-import { ArrowLeft, Volume2, VolumeX, Check, X, Timer, RotateCcw, Play, Square } from "lucide-react";
+import { ArrowLeft, Volume2, VolumeX, Check, X, Timer, RotateCcw, Play, Square, Printer, Hand } from "lucide-react";
 import { lekcijaPoBroju, type ReplikaPrice, type Raspolozenje } from "@/data/citanje-lekcije";
-import { vjezbeZaLekciju, type VjezbaCitanja, type StavkaVjezbe } from "@/data/citanje-vjezbe";
-import { PROGRAM_CITANJA } from "@/data/citanje-program";
+import { vjezbeZaLekciju, radniList, type VjezbaCitanja, type StavkaVjezbe } from "@/data/citanje-vjezbe";
+import { asocijacija, porodicaHarfa } from "@/data/citanje-asocijacije";
+import { PROGRAM_CITANJA, znanjeDoLekcije } from "@/data/citanje-program";
 import { RIJECI_CITANJA } from "@/data/citanje-rijeci";
 import { pustiZapis, zaustaviZvuk } from "@/lib/citanje-zvuk";
 
@@ -333,6 +334,123 @@ function Brzina({ redovi, sekundi = 20 }: { redovi: string[][]; sekundi?: number
   );
 }
 
+/**
+ * Na šta slovo liči.
+ *
+ * Oblik se ne pamti kao geometrija nego kao slika. „Uspravna linija sa
+ * vodoravnom crticom" je opis za odraslog; dijete pamti čamac, uho i zdjelicu.
+ * Zato svako novo slovo dobije predmet iz svoje okoline prije nego se od njega
+ * zatraži da ga prepozna.
+ */
+function SlikeSlova({ harfovi, naucena }: { harfovi: string[]; naucena: Set<string> }) {
+  const stavke = harfovi.map((h) => ({ harf: h, a: asocijacija(h), rod: porodicaHarfa(h, naucena) }))
+    .filter((x) => x.a);
+  if (!stavke.length) return null;
+
+  return (
+    <section className="flex flex-col gap-3">
+      {stavke.map(({ harf, a, rod }) => (
+        <div key={harf} className="rounded-2xl border border-indigo-200 bg-indigo-50/60 px-5 py-4 flex items-start gap-4">
+          <div dir="rtl" className="shrink-0 rounded-xl bg-white border border-indigo-200 px-5 py-2 grid place-items-center">
+            <Zapis tekst={harf} velicina="text-5xl" />
+          </div>
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <h2 className="font-extrabold text-indigo-900">Ovo je {a!.slika}</h2>
+            <p className="text-[15px] leading-relaxed text-indigo-950">{a!.opis}</p>
+            {rod.length > 0 && (
+              <p dir="ltr" className="text-sm text-indigo-800">
+                Isti oblik već znaš:{" "}
+                <span dir="rtl" lang="ar" className="text-2xl align-middle"
+                  style={{ fontFamily: "var(--font-citanje)" }}>{rod.join("  ")}</span>
+                {" "}— razlika je samo u tačkicama.
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/**
+ * Pisanje prstom i plastelinom.
+ *
+ * Oko prepozna slovo prije nego ga ruka umije napraviti, ali se bez ruke
+ * prepoznavanje raspada kad slovo stoji u nepoznatoj riječi. Zato ruka dolazi
+ * prije lova na slova, a ne poslije čitanja.
+ */
+function Pisi({ stavke }: { stavke: StavkaVjezbe[] }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {stavke.map((s) => (
+        <div key={s.zapis} className="rounded-xl border border-border bg-white px-4 py-4 flex items-center gap-4">
+          <div dir="rtl" className="shrink-0 grid place-items-center w-20">
+            <Zapis tekst={s.zapis} velicina="text-5xl" />
+          </div>
+          <div className="flex flex-col gap-1 min-w-0">
+            {s.slika && <span className="font-bold text-sm">{s.slika}</span>}
+            <p className="text-[15px] leading-relaxed text-muted-foreground flex items-start gap-2">
+              <Hand className="w-4 h-4 shrink-0 mt-1" />
+              <span>{s.potez}</span>
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Radni list za printanje.
+ *
+ * Tečnost se ne stiče na času nego između časova, kratkim svakodnevnim
+ * prolazom. Tabela zato izlazi iz štampača i ostaje kod kuće; dijete je
+ * prelazi kažiprstom i čita red po red.
+ *
+ * Pri štampi se sve ostalo sakriva, a ne uklanja: `visibility` čuva raspored
+ * stranice, dok bi `display: none` na roditeljima odnio i samu tabelu.
+ */
+function RadniList({ redovi, domaca }: { redovi: string[][]; domaca: string[] }) {
+  if (!redovi.length) return null;
+  return (
+    <>
+      <style>{`@media print {
+        body * { visibility: hidden; }
+        #radni-list, #radni-list * { visibility: visible; }
+        #radni-list { position: absolute; inset: 0 auto auto 0; width: 100%; padding: 0; border: 0; }
+        #radni-list .bez-stampe { display: none; }
+      }`}</style>
+      <div id="radni-list" className="flex flex-col gap-4 rounded-2xl border border-border p-5">
+        <div className="bez-stampe flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-sm text-muted-foreground">
+            Isprintati i ostaviti kod kuće. Dijete prelazi kažiprstom i čita red po red.
+          </p>
+          <button type="button" onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2 text-sm font-bold text-white">
+            <Printer className="w-4 h-4" /> Printaj
+          </button>
+        </div>
+        <div dir="rtl" className="flex flex-col gap-2">
+          {redovi.map((red, i) => (
+            <div key={i} className="grid gap-2" style={{ gridTemplateColumns: `repeat(${red.length}, minmax(0,1fr))` }}>
+              {red.map((z, j) => (
+                <div key={`${i}-${j}`} className="rounded-lg border border-border bg-white grid place-items-center py-2">
+                  <Zapis tekst={z} velicina="text-3xl" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        {domaca.length > 0 && (
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {domaca.map((d, i) => <li key={i} className="flex gap-2"><span>•</span><span>{d}</span></li>)}
+          </ul>
+        )}
+      </div>
+    </>
+  );
+}
+
 function Vjezba({ v, imaZvuk }: { v: VjezbaCitanja; imaZvuk?: boolean }) {
   return (
     <section className="rounded-2xl border border-border/60 bg-muted/20 p-5 flex flex-col gap-5">
@@ -341,6 +459,7 @@ function Vjezba({ v, imaZvuk }: { v: VjezbaCitanja; imaZvuk?: boolean }) {
         {v.trebaZvuk && !imaZvuk && <VolumeX className="w-4 h-4 text-amber-600" aria-label="bez snimaka" />}
       </div>
       {v.vrsta === "oblici" && <Oblici stavke={v.stavke} />}
+      {v.vrsta === "pisi" && <Pisi stavke={v.stavke} />}
       {v.vrsta === "pronadi-harf" && <PronadiHarf stavke={v.stavke} />}
       {v.vrsta === "glas" && <Glas stavke={v.stavke} />}
       {v.vrsta === "slusaj-klikni" && <SlusajKlikni stavke={v.stavke} />}
@@ -378,6 +497,11 @@ export default function CitanjeLekcijaPage() {
     () => RIJECI_CITANJA.filter((r) => r.lekcija === Number(broj) && r.kuran),
     [broj],
   );
+
+  // Slova naučena do prethodne lekcije — za uporedbu kostura („isti čamac,
+  // samo sa dvije tačkice"). Današnja slova se u uporedbu ne broje.
+  const naucena = useMemo(() => znanjeDoLekcije(Number(broj) - 1).harfovi, [broj]);
+  const list = useMemo(() => radniList(Number(broj)), [broj]);
 
   if (!lekcija || !program) {
     return (
@@ -439,6 +563,8 @@ export default function CitanjeLekcijaPage() {
             ))}
           </section>
 
+          <SlikeSlova harfovi={program.harfovi} naucena={naucena} />
+
           {vjezbe.map((v) => <Vjezba key={v.vrsta} v={v} imaZvuk={lekcija.imaZvuk} />)}
         </div>
       ) : (
@@ -447,6 +573,11 @@ export default function CitanjeLekcijaPage() {
             <p className="text-sm text-muted-foreground">Pročitati naglas onima koji još ne čitaju. Uz svaki glas napraviti pokret.</p>
             <Prica replike={lekcija.prica} />
             <p className="rounded-xl bg-[#fff9c4] text-neutral-900 px-4 py-3">{lekcija.pokret}</p>
+            <p className="text-sm text-muted-foreground">
+              Slike slova ispod izgovoriti prije prve vježbe. Dijete slovo prvo vidi kao
+              predmet, pa onda kao slovo.
+            </p>
+            <SlikeSlova harfovi={program.harfovi} naucena={naucena} />
           </Akordion>
 
           <Akordion naslov="2 — Vježbamo čitanje">
@@ -472,12 +603,14 @@ export default function CitanjeLekcijaPage() {
             ) : <p className="text-sm text-muted-foreground">U ovoj lekciji još nema kur'anskih riječi.</p>}
           </Akordion>
 
-          <Akordion naslov="4 — Ponavljanje">
+          <Akordion naslov="4 — Ponavljanje i radni list">
+            <p className="text-sm text-muted-foreground">Provjeriti prije kraja časa:</p>
             <ul className="flex flex-col gap-2">
               {lekcija.provjera.map((p, i) => (
                 <li key={i} className="rounded-xl bg-[#fff9c4] text-neutral-900 px-4 py-3">{p}</li>
               ))}
             </ul>
+            <RadniList redovi={list} domaca={lekcija.domaca} />
           </Akordion>
         </div>
       )}

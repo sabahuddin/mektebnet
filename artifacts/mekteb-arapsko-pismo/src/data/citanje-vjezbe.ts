@@ -17,6 +17,7 @@ import { PROGRAM_CITANJA, znanjeDoLekcije, type Znak } from "./citanje-program";
 import { SLOGOVI_CITANJA } from "./citanje-slogovi";
 import { RIJECI_CITANJA } from "./citanje-rijeci";
 import { obliciHarfa, type Polozaj } from "./citanje-oblici";
+import { ASOCIJACIJE, porodicaHarfa } from "./citanje-asocijacije";
 
 const FETHA = "َ", KESRA = "ِ", DAMMA = "ُ";
 const HAREKA: Record<string, Znak> = { [FETHA]: "fetha", [KESRA]: "kesra", [DAMMA]: "damma" };
@@ -43,6 +44,7 @@ function promijesaj<T>(niz: T[], sjeme: number): T[] {
 export type VrstaVjezbe =
   | "glas"           // novi glas sam, sa svakim naučenim harekom
   | "oblici"         // isto slovo na početku, u sredini i na kraju
+  | "pisi"           // po zraku, po pijesku, u plastelinu
   | "pronadi-harf"   // naći novo slovo među drugima
   | "slusaj-klikni"  // čuje slog, klikne ga
   | "kratko-dugo"    // isti harf kratko pa dugo
@@ -62,6 +64,14 @@ export interface StavkaVjezbe {
   trazeno?: string;
   /** Ponuđeni odgovori. */
   izbor?: string[];
+  /** Samo slovo, bez hareka — za pisanje i za sliku. */
+  harf?: string;
+  /** Na šta slovo liči. */
+  slika?: string;
+  /** Kojim redom ruka vuče. */
+  potez?: string;
+  /** Već naučena slova istog kostura, za uporedbu. */
+  rodbina?: string[];
 }
 
 export interface VjezbaCitanja {
@@ -141,6 +151,28 @@ export function vjezbeZaLekciju(lekcija: number): VjezbaCitanja[] {
     });
   }
 
+  // ── Pisanje ────────────────────────────────────────────────────────────
+  //
+  // Ruka pamti ono što oko zaboravi. Dijete najprije vuče slovo prstom po
+  // zraku, pa po pijesku ili grubom papiru, pa ga izvalja iz plastelina. Tek
+  // kad je oblik prošao kroz ruku, prelazi se na prepoznavanje.
+  const naucena = znanjeDoLekcije(lekcija - 1).harfovi;
+  const zaPisanje = program.harfovi
+    .filter((h) => ASOCIJACIJE[h])
+    .map((h) => ({
+      zapis: h, harf: h,
+      slika: ASOCIJACIJE[h].slika,
+      potez: ASOCIJACIJE[h].potez,
+      rodbina: porodicaHarfa(h, naucena),
+    }));
+  if (zaPisanje.length) {
+    vjezbe.push({
+      vrsta: "pisi", naslov: "Napravi slovo",
+      uputa: "Najprije prstom po zraku, pa po pijesku ili grubom papiru, pa iz plastelina. Dok ruka vuče, usta izgovaraju glas.",
+      stavke: zaPisanje,
+    });
+  }
+
   // ── Lov na slova ───────────────────────────────────────────────────────
   const sviHarfovi = [...znanjeDoLekcije(lekcija).harfovi].filter((h) => h !== "ء");
   if (novi.length && sviHarfovi.length >= 3) {
@@ -217,8 +249,35 @@ export function vjezbeZaLekciju(lekcija: number): VjezbaCitanja[] {
   // Redoslijed je pedagoški, ne redoslijed pisanja: dijete najprije vidi
   // slovo, pa ga prepoznaje među drugima, pa ga čuje, i tek onda čita.
   const RED: VrstaVjezbe[] = [
-    "oblici", "pronadi-harf", "glas", "slusaj-klikni",
+    "oblici", "pisi", "pronadi-harf", "glas", "slusaj-klikni",
     "kratko-dugo", "voz-slogova", "citaj-rijeci", "brzina",
   ];
   return vjezbe.sort((a, b) => RED.indexOf(a.vrsta) - RED.indexOf(b.vrsta));
+}
+
+/**
+ * Radni list za printanje.
+ *
+ * Automatizacija ne dolazi od jednog prolaza na času nego od kratkog
+ * svakodnevnog ponavljanja. Zato lekcija ima i tabelu koja izlazi iz
+ * štampača i ostaje kod kuće: dijete je prelazi kažiprstom i čita red po red.
+ *
+ * Miješanje ide iz drugog sjemena nego redovi za brzinu, da radni list ne
+ * bude prepis onoga što je dijete već pročitalo na času.
+ */
+export function radniList(lekcija: number, redova = 6, poRedu = 5): string[][] {
+  const { harfovi } = znanjeDoLekcije(lekcija);
+  if (!harfovi.size) return [];
+  const dugi = slogoviDo(lekcija).filter((s) => s.dug).map((s) => s.zapis);
+  const fond = [...sviSlogovi(lekcija), ...dugi, ...rijeciDo(lekcija).map((r) => r.zapis)];
+  if (!fond.length) return [];
+  const redovi: string[][] = [];
+  for (let i = 0; i < redova; i += 1) {
+    const red = promijesaj(fond, lekcija * 100 + i * 7 + 3).slice(0, poRedu);
+    // Kratka lekcija ima manje građe od jednog reda; tada se red dopuni
+    // ponovo, jer prazna polja na radnom listu dijete preskače kao greškom.
+    while (red.length && red.length < poRedu) red.push(fond[red.length % fond.length]);
+    if (red.length) redovi.push(red);
+  }
+  return redovi;
 }

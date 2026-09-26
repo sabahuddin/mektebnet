@@ -53,6 +53,14 @@ export interface LekcijaCitanjaSadrzaj {
   pokret: string;
   /** Šta muallim provjerava na kraju. */
   provjera: string[];
+  /**
+   * Šta se radi kod kuće do sljedećeg časa.
+   *
+   * Tečnost se ne stiče na času nego između časova. Jedan prolaz kroz radni
+   * list traje dvije minute, i to je sve što se od roditelja traži — kratko
+   * i svaki dan, a ne dugo i jednom.
+   */
+  domaca: string[];
 }
 
 export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
@@ -83,6 +91,11 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       "Izgovoriti LE i LAA nasumično; dijete pokazuje koje je kratko, a koje dugo.",
       "Pročitati \u201eمَالَ\u201c bez zastajkivanja u sredini.",
     ],
+    domaca: [
+      "Radni list prelaziti kažiprstom, red po red, dva puta dnevno — jednom poslije mekteba i jednom prije spavanja.",
+      "Na svaki kratki glas dijete pljesne rukama, a na dugi raširi ruke i drži ih dok glas traje.",
+      "Roditelj ne ispravlja usred reda. Greška se kaže na kraju reda, pa se red ponovi.",
+    ],
   },
   {
     broj: 2,
@@ -108,6 +121,10 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       "Izgovoriti NE i NI nasumično; dijete pokazuje je li znak gore ili dolje.",
       "Pročitati \u201eلَنَا\u201c bez zastajkivanja u sredini.",
     ],
+    domaca: [
+      "Radni list čitati dva puta dnevno, i uz svaki znak dijete pokazuje prstom gore ili dolje.",
+      "Roditelj nasumično izgovori jedan od dva glasa, a dijete pokaže je li znak gore ili dolje. Pet puta, ne više.",
+    ],
   },
   {
     broj: 3,
@@ -131,6 +148,10 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       "Pokazati sva tri znaka na istom slovu i tražiti da ih dijete pročita redom.",
       "Izgovoriti HE, HI, HU nasumično; dijete pokazuje koji je znak čulo.",
       "Pročitati \u201eلَهُمَا\u201c u jednom dahu.",
+    ],
+    domaca: [
+      "Radni list čitati dva puta dnevno. Prije svakog glasa sa dammom dijete skupi usne u krug.",
+      "Roditelj pokaže isto slovo sa sva tri znaka i sluša da li dijete ide redom bez zastajkivanja.",
     ],
   },
   {
@@ -157,6 +178,10 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       "Izgovoriti MI i MIN nasumično; dijete pokazuje koje je zatvoreno.",
       "Pročitati \u201eكَانَ\u201c i \u201eكَمْ\u201c jedno za drugim, bez zamjene.",
     ],
+    domaca: [
+      "Radni list čitati dva puta dnevno, a na svakom sukunu pljesnuti i stati.",
+      "Roditelj traži da dijete pročita otvoren i zatvoren slog jedan za drugim, bez pauze između njih.",
+    ],
   },
   {
     broj: 5,
@@ -180,6 +205,10 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       "Ruka na grlu; dijete izgovara dva glasa i kazuje koji dolazi dublje.",
       "Pročitati \u201eعِنَبْ\u201c bez zastajkivanja između slogova.",
       "Razlikovati \u201eبَيْنَ\u201c i \u201eعَيْنْ\u201c u izgovoru.",
+    ],
+    domaca: [
+      "Radni list čitati dva puta dnevno, sa dlanom na grlu dok se izgovara novi glas.",
+      "Ako dijete ne uspije, ne ponavljati više od tri puta u jednom danu. Grleni glas dolazi sam, ali ne pod pritiskom.",
     ],
   },
   {
@@ -205,6 +234,10 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       "Izgovoriti riječ sa hemzetom i bez njega; dijete kazuje koja je koja.",
       "Pročitati \u201eمَاءْ\u201c bez dodavanja nastavka na kraju.",
     ],
+    domaca: [
+      "Radni list čitati dva puta dnevno. Dijete prstom pokaže gdje hemze sjedi u svakoj riječi.",
+      "Roditelj izgovori riječ sa hemzetom i bez njega, a dijete kaže koja je koja.",
+    ],
   },
   {
     broj: 7,
@@ -229,6 +262,10 @@ export const LEKCIJE_CITANJA: LekcijaCitanjaSadrzaj[] = [
       "Pokazati tešdid i pitati koliko se puta slovo čuje.",
       "Izgovoriti \u201eكُلْ\u201c i \u201eكُلّ\u201c; dijete kazuje koje ima tešdid.",
       "Pročitati \u201eسَلَامْ\u201c u jednom dahu, bez pauze na dužini.",
+    ],
+    domaca: [
+      "Radni list čitati dva puta dnevno, i na svakom tešdidu se zadržati, a ne razvući.",
+      "Roditelj izgovori isti slog sa tešdidom i bez njega, a dijete kaže gdje su se čula dva slova.",
     ],
   },
 ];

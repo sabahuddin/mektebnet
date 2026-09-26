@@ -75,6 +75,26 @@ koju muallim čita naglas. Dijete uči kako slovo zvuči, ne kako se zove. Zato 
 (`ب ت ث ن ي`, `ج ح خ`, `د ذ`, `ر ز`, `س ش`, `ص ض`, `ط ظ`, `ع غ`, `ف ق`) se
 razdvajaju u vremenu. Vidjeti zaglavlje `citanje-program.ts`.
 
+**Svako slovo ima sliku, i slike stoje u porodicama.** Dijete ne pamti
+geometriju („uspravna linija sa crticom pri dnu") nego predmet: `ب` je čamac,
+`ع` uho, `ن` zdjelica. Slova istog kostura dijele sliku i razlikuju se samo
+tačkicama — čamac `ب ت ث`, usta `ح ج خ`, patka `ص ض`. To se slaže s razdvajanjem
+sličnih slova u vremenu: kad drugo slovo porodice dođe, lekcijama kasnije,
+dijete na poznatu sliku samo dodaje tačkicu. Slike stoje u
+`citanje-asocijacije.ts`, a `citanje-asocijacije.test.ts` pada ako slovo iz
+programa ostane bez slike, ako slika ostane za izbačenim slovom, ili ako dva
+slova iste porodice dođu u istu lekciju.
+
+**Ruka ide prije prepoznavanja.** Redoslijed vježbi je oko, pa ruka, pa lov:
+`oblici` → `pisi` → `pronadi-harf`. Oblik koji je prošao samo kroz oko raspada
+se čim slovo stane u nepoznatu riječ. Test čuva taj poredak.
+
+**Tečnost se ne stiče na času nego između časova.** Zato svaka lekcija ima
+radni list za printanje (`radniList()`) i kratku domaću (`domaca`) — dva
+prolaza dnevno po dvije minute, ne jedan dug. Pri štampi se ostatak stranice
+sakriva preko `visibility`, ne `display: none`, jer bi `display` na roditelju
+odnio i samu tabelu.
+
 **Svaki arapski red mora imati `dir="rtl"`.** Bez toga dijelovi riječi idu
 slijeva nadesno, pa dijete uči obrnut redoslijed čitanja.
 
