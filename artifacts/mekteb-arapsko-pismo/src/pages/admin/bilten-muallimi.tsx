@@ -29,9 +29,11 @@ U protekloj sedmici pripremili smo nekoliko novosti koje vam olakšavaju nastavu
 
 • Planiranje nastave — lekcije sada možete planirati po časovima i pratiti statistiku učeničkih vježbi. Na jednoj grupi mogu sarađivati odgovorni muallim i do dva dodatna muallima.
 
-• Zadaće po mjeri učenika — možete formirati podgrupe i zadati zadaću samo odabranoj podgrupi. Rokovi su ponovo dostupni, a u zadaću možete ugraditi i Wayground vježbu. Za kur'anske zadaće i ocjene možete odabrati konkretnu stranicu.
+• Dodavanje učenika i roditelja — pri masovnom unosu svaki učenik ide u novi red, a ime roditelja dopišete iza zareza, npr. „Amina Hasić, Senad Hasić”. Učenika možete unijeti i bez roditelja. Ime i prezime učenika možete naknadno ispraviti bez promjene njegovih podataka za prijavu.
 
-• Napamet i lekcije — program Napamet ima odvojene prikaze za pregled i uređivanje. Stavke možete pripremati za svoj mekteb i dodjeljivati ih učenicima ili grupama; muallimske lekcije možete pripremiti privatno prije dijeljenja.
+• Zadaće po mjeri učenika — možete formirati podgrupe i zadati zadaću samo odabranoj podgrupi. Rokovi su ponovo dostupni, u zadaću možete ugraditi Wayground vježbu, a s kartice učenika možete zadati i zadaću bez povezane lekcije. Za kur'anske zadaće i ocjene možete odabrati konkretnu stranicu.
+
+• Napamet i lekcije — program Napamet ima odvojene prikaze za pregled i uređivanje. Možete odrediti jesu li stavke vidljive grupi ili pojedinom učeniku. Dodatne lekcije preglednije su raspoređene po nivoima, a muallimske lekcije možete pripremiti privatno prije dijeljenja.
 
 • Novo za djecu — zasebna cjelina „Učim čitati” sada ima sedam lekcija i audio-primjere. Naše interaktivne vježbe i etapni ispiti prikazuju se na jeziku koji dijete koristi.
 
