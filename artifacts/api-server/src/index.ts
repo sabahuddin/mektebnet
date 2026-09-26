@@ -48,6 +48,19 @@ if (Number.isNaN(port) || port <= 0) {
 // below (a separate concern) will remain.
 async function runResidualSchema() {
   try {
+    // Vanjska produkcijska baza je u djelimično migriranom stanju: Drizzle
+    // stane prije 0011, a bez ove tabele nije moguće napraviti reset link.
+    // Napravi je prije drugih residual izmjena, čak i ako neka kasnija padne.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id serial PRIMARY KEY,
+        user_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash varchar(128) NOT NULL UNIQUE,
+        expires_at timestamp NOT NULL,
+        used_at timestamp,
+        created_at timestamp DEFAULT now()
+      )
+    `);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMP;`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_acknowledged_at TIMESTAMP;`);
     await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS administrator_declaration_accepted_at TIMESTAMP;`);

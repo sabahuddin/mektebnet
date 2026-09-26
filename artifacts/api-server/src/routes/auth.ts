@@ -13,11 +13,31 @@ import {
   pretplateTable,
   passwordResetTokensTable,
 } from "@workspace/db/schema";
-import { eq, and, isNull, gt, desc, inArray } from "drizzle-orm";
+import { eq, and, isNull, gt, desc, inArray, sql } from "drizzle-orm";
 import { signToken, requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { sendRegistrationNotification, sendPasswordResetEmail } from "../lib/email.js";
 
 const router = Router();
+
+const emailInUseMessage = "Ovaj email je već u upotrebi. Prijavite se ili koristite drugi email.";
+
+function normalizedEmailAddress(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+async function emailAlreadyInUse(email: string): Promise<boolean> {
+  const existing = await db.select({ id: usersTable.id })
+    .from(usersTable)
+    .where(sql`lower(btrim(${usersTable.email})) = ${email}`)
+    .limit(1);
+  return existing.length > 0;
+}
+
+function isEmailUniqueViolation(error: unknown): boolean {
+  const err = error as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
+  const databaseError = err?.cause ?? err;
+  return databaseError?.code === "23505" && databaseError.constraint === "users_email_unique";
+}
 
 type AcknowledgementKey =
   | "terms"
@@ -234,12 +254,21 @@ router.post("/forgot-password", async (req, res) => {
       res.status(400).json({ error: "Email je obavezan" });
       return;
     }
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizedEmailAddress(email);
 
-    const [user] = await db
+    const matchingUsers = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, normalizedEmail));
+      .where(sql`lower(btrim(${usersTable.email})) = ${normalizedEmail}`)
+      .limit(2);
+    // Stari podaci mogu imati dva naloga s istim emailom ali različitim
+    // velikim/malim slovima. U tom slučaju ne biraj proizvoljnog primaoca.
+    if (matchingUsers.length > 1) {
+      req.log.error("Reset šifre: više naloga koristi istu normalizovanu email adresu");
+      res.json({ ok: true, message: "Ako račun s tim emailom postoji, link za reset je poslan." });
+      return;
+    }
+    const user = matchingUsers[0];
 
     if (user) {
       const rawToken = crypto.randomBytes(32).toString("hex");
@@ -539,6 +568,11 @@ router.post("/register-ucenik", async (req, res) => {
       res.status(400).json({ error: "Morate pročitati i prihvatiti Uvjete i Pravila privatnosti" });
       return;
     }
+    const normalizedEmail = normalizedEmailAddress(email);
+    if (await emailAlreadyInUse(normalizedEmail)) {
+      res.status(409).json({ error: emailInUseMessage });
+      return;
+    }
 
     const firstName = displayName.trim().split(/\s+/)[0];
     const password = crypto.randomBytes(4).toString("hex");
@@ -563,7 +597,7 @@ router.post("/register-ucenik", async (req, res) => {
             username,
             passwordHash,
             displayName: displayName.trim(),
-            email: email.trim(),
+            email: normalizedEmail,
             role: "ucenik",
             isActive: false,
             trialUntil,
@@ -612,6 +646,10 @@ router.post("/register-ucenik", async (req, res) => {
       trialUntil: trialUntil.toISOString(),
     });
   } catch (err) {
+    if (isEmailUniqueViolation(err)) {
+      res.status(409).json({ error: emailInUseMessage });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: "Greška servera" });
   }
@@ -631,12 +669,9 @@ router.post("/register-roditelj-v2", async (req, res) => {
     }
     // Provjera duplikata emaila prije insert-a — ljepša poruka nego "Greška servera"
     // koju bi vratio fallback na unique constraint violation.
-    const normalizedEmail = email.trim().toLowerCase();
-    const existingEmail = await db.select({ id: usersTable.id })
-      .from(usersTable)
-      .where(eq(usersTable.email, normalizedEmail));
-    if (existingEmail.length > 0) {
-      res.status(409).json({ error: "Ovaj email je već u upotrebi. Prijavite se ili koristite drugi email." });
+    const normalizedEmail = normalizedEmailAddress(email);
+    if (await emailAlreadyInUse(normalizedEmail)) {
+      res.status(409).json({ error: emailInUseMessage });
       return;
     }
     // Porodična pretplata pokriva do 4 djece — roditelj ih dodaje sam u svom profilu.
@@ -703,6 +738,10 @@ router.post("/register-roditelj-v2", async (req, res) => {
       trialUntil: trialUntil.toISOString(),
     });
   } catch (err) {
+    if (isEmailUniqueViolation(err)) {
+      res.status(409).json({ error: emailInUseMessage });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: "Greška servera" });
   }
@@ -953,6 +992,11 @@ router.post("/register-mekteb", async (req, res) => {
       res.status(400).json({ error: "Odaberite dostupnu kombinaciju paketa i broja muallima" });
       return;
     }
+    const normalizedEmail = normalizedEmailAddress(email);
+    if (await emailAlreadyInUse(normalizedEmail)) {
+      res.status(409).json({ error: emailInUseMessage });
+      return;
+    }
 
     const usernameClean = String(korisnickoIme).trim().toLowerCase().replace(/\s+/g, ".");
     const existing = await db.select().from(usersTable).where(eq(usersTable.username, usernameClean));
@@ -981,7 +1025,7 @@ router.post("/register-mekteb", async (req, res) => {
         username: usernameClean,
         passwordHash,
         displayName: displayName.trim(),
-        email: email.trim(),
+        email: normalizedEmail,
         role: "muallim",
         isActive: false,
         trialUntil,
@@ -992,7 +1036,7 @@ router.post("/register-mekteb", async (req, res) => {
       const [mekteb] = await tx.insert(mektebiTable).values({
         naziv: nazivMekteba.trim(),
         grad: grad.trim(),
-        kontaktEmail: email.trim(),
+        kontaktEmail: normalizedEmail,
         glavniMuallimId: u.id,
         dozvoljenoMuallima,
         billingPaket,
@@ -1045,6 +1089,10 @@ router.post("/register-mekteb", async (req, res) => {
       trialUntil: trialUntil.toISOString(),
     });
   } catch (err) {
+    if (isEmailUniqueViolation(err)) {
+      res.status(409).json({ error: emailInUseMessage });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: "Greška servera" });
   }

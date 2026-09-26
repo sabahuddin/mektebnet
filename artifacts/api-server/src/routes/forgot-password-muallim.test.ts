@@ -89,4 +89,40 @@ test("muallim može dobiti email za oporavak, a neuspjelo slanje se ne prikazuje
   assert.match((await failed.json() as { error: string }).error, /Nije moguće poslati email/);
   assert.deepEqual(await db.select({ id: passwordResetTokensTable.id }).from(passwordResetTokensTable)
     .where(eq(passwordResetTokensTable.userId, teacherId)), []);
+
+  // Stariji nalozi mogli su sačuvati email s velikim slovima; reset ih i
+  // tada mora pronaći. SMTP je isključen pa očekujemo 503, ne lažni 200.
+  await db.update(usersTable).set({ email: teacherEmail.toUpperCase() })
+    .where(eq(usersTable.id, teacherId));
+  const legacyEmail = await recover(teacherEmail);
+  assert.equal(legacyEmail.status, 503, await legacyEmail.clone().text());
+  assert.deepEqual(await db.select({ id: passwordResetTokensTable.id }).from(passwordResetTokensTable)
+    .where(eq(passwordResetTokensTable.userId, teacherId)), []);
+});
+
+test("postojeći email pri registraciji vraća jasnu grešku umjesto greške servera", async () => {
+  const register = (path: string, body: Record<string, unknown>) => fetch(`${baseUrl}/api/auth/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, email: headEmail.toUpperCase(), termsAccepted: true, privacyAcknowledged: true }),
+  });
+
+  const attempts = [
+    register("register-ucenik", { displayName: "Test učenik", godine: 20 }),
+    register("register-roditelj-v2", { displayName: "Test roditelj", parentAcknowledged: true }),
+    register("register-mekteb", {
+      korisnickoIme: `new.${suffix}`,
+      displayName: "Test muallim",
+      administratorDeclarationAccepted: true,
+      drzava: "Bosna i Hercegovina",
+      grad: "Sarajevo",
+      nazivMekteba: "Test mekteb",
+      paket: "do100",
+      koliko_muallima: 1,
+    }),
+  ];
+  for (const response of await Promise.all(attempts)) {
+    assert.equal(response.status, 409, await response.clone().text());
+    assert.match((await response.json() as { error: string }).error, /email je već u upotrebi/);
+  }
 });

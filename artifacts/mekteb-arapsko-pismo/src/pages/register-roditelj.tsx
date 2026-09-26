@@ -72,7 +72,7 @@ type Tab = "ucenik" | "roditelj" | "mekteb";
 
 export default function RegisterRoditeljPage() {
   const [, setLocation] = useLocation();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { login } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("ucenik");
   const [isBiH, setIsBiH] = useState<boolean | null>(null);
@@ -207,15 +207,12 @@ export default function RegisterRoditeljPage() {
 
   if (success && credentials) {
     const trialDate = new Date(credentials.trialUntil);
-    const dateLocale = { bs: "bs-BA", en: "en-GB", de: "de-DE", sq: "sq-AL", tr: "tr-TR", ar: "ar" }[lang];
-    const trialDateStr = trialDate.toLocaleDateString(dateLocale, { day: "numeric", month: "long", year: "numeric" });
+    const formatDate = (date: Date) =>
+      `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
+    const trialDateStr = formatDate(trialDate);
     const subscriptionUntil = new Date(trialDate);
     subscriptionUntil.setFullYear(subscriptionUntil.getFullYear() + 1);
-    const subscriptionUntilStr = subscriptionUntil.toLocaleDateString(dateLocale, {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    const subscriptionUntilStr = formatDate(subscriptionUntil);
     const copyText = `${t("Korisničko ime:")} ${credentials.username}\n${t("Lozinka:")} ${credentials.password}`;
     const paymentLink = activeTab === "mekteb"
       ? mektebOfferLink(mektebForm.paket, mektebIsBiH, mektebForm.koliko_muallima)
