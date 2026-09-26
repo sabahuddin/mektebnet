@@ -28,9 +28,12 @@ interface Grupa {
 
 interface PrisustvoRecord {
   ucenikId: number;
+  cas: 1 | 2;
   status: Status;
   napomena?: string;
 }
+
+const attendanceKey = (ucenikId: number, cas: 1 | 2) => `${ucenikId}:${cas}`;
 
 const STATUS_OPTIONS: { value: Status; label: string; icon: React.ReactNode; color: string; bg: string; border: string }[] = [
   { value: "prisutan", label: "Prisutan", icon: <Check className="w-3.5 h-3.5" />, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-400" },
@@ -56,8 +59,8 @@ export default function PrisustvoPage() {
   const [grupa, setGrupa] = useState<Grupa | null>(null);
   const [ucenici, setUcenici] = useState<Ucenik[]>([]);
   const [datum, setDatum] = useState(todayStr());
-  const [statusi, setStatusi] = useState<Record<number, Status>>({});
-  const [napomene, setNapomene] = useState<Record<number, string>>({});
+  const [statusi, setStatusi] = useState<Record<string, Status>>({});
+  const [napomene, setNapomene] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
   const [hasExistingRecords, setHasExistingRecords] = useState(false);
@@ -73,8 +76,8 @@ export default function PrisustvoPage() {
       setGrupa(g || null);
       const grupaUcenici = sviUcenici.filter((u: any) => (u.grupaId || u.profil?.grupaId) === parseInt(grupaId));
       setUcenici(grupaUcenici);
-      const defaultStatusi: Record<number, Status> = {};
-      grupaUcenici.forEach((u: Ucenik) => { defaultStatusi[u.id] = "prisutan"; });
+      const defaultStatusi: Record<string, Status> = {};
+      grupaUcenici.forEach((u: Ucenik) => { defaultStatusi[attendanceKey(u.id, 1)] = "prisutan"; });
       setStatusi(defaultStatusi);
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [token, grupaId]);
@@ -85,8 +88,8 @@ export default function PrisustvoPage() {
       return;
     }
     let ignore = false;
-    const defaultStatusi: Record<number, Status> = {};
-    ucenici.forEach(u => { defaultStatusi[u.id] = "prisutan"; });
+    const defaultStatusi: Record<string, Status> = {};
+    ucenici.forEach(u => { defaultStatusi[attendanceKey(u.id, 1)] = "prisutan"; });
     setStatusi(defaultStatusi);
     setNapomene({});
     setHasExistingRecords(false);
@@ -96,10 +99,11 @@ export default function PrisustvoPage() {
       .then(records => {
         if (ignore) return;
         const newStatusi = { ...defaultStatusi };
-        const newNapomene: Record<number, string> = {};
+        const newNapomene: Record<string, string> = {};
         for (const r of records) {
-          newStatusi[r.ucenikId] = r.status as Status;
-          if (r.napomena) newNapomene[r.ucenikId] = r.napomena;
+          const key = attendanceKey(r.ucenikId, r.cas === 2 ? 2 : 1);
+          newStatusi[key] = r.status;
+          if (r.napomena) newNapomene[key] = r.napomena;
         }
         setStatusi(newStatusi);
         setNapomene(newNapomene);
@@ -121,11 +125,14 @@ export default function PrisustvoPage() {
     if (!token || !grupaId) return;
     setIsSaving(true);
     try {
-      const prisustvoData = ucenici.map(u => ({
-        ucenikId: u.id,
-        status: statusi[u.id] || "prisutan",
-        napomena: napomene[u.id] || null,
-      }));
+      const prisustvoData = ucenici.flatMap(u =>
+        ([1, 2] as const).filter(cas => cas === 1 || statusi[attendanceKey(u.id, cas)])
+          .map(cas => ({
+            ucenikId: u.id, cas,
+            status: statusi[attendanceKey(u.id, cas)] || "prisutan",
+            napomena: napomene[attendanceKey(u.id, cas)] || null,
+          })),
+      );
       await apiRequest("POST", "/muallim/prisustvo", { grupaId: parseInt(grupaId), datum, prisustvo: prisustvoData }, token);
       toast({
         title: hasExistingRecords ? t("Prisustvo ažurirano!") : t("Prisustvo sačuvano!"),
@@ -199,45 +206,61 @@ export default function PrisustvoPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-primary/5 border border-primary/15 px-4 py-3 flex-wrap">
+              <p className="text-sm text-muted-foreground">{t("Drugi čas nije obavezan. Označite ga samo kada se održava.")}</p>
+              <Button type="button" variant="outline" size="sm" disabled={isAttendanceLoading || isSaving}
+                onClick={() => setStatusi(prev => {
+                  const next = { ...prev };
+                  ucenici.forEach(u => { next[attendanceKey(u.id, 2)] ??= "prisutan"; });
+                  return next;
+                })}>
+                {t("Evidentiraj drugi čas za sve")}
+              </Button>
+            </div>
             {ucenici.map((u, i) => {
-              const currentStatus = statusi[u.id] || "prisutan";
               return (
                 <motion.div key={u.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
                   className="bg-white border border-border/50 rounded-2xl p-4">
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <div className="font-bold text-foreground">{u.displayName}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{u.username}</div>
-                    </div>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {STATUS_OPTIONS.map(opt => (
-                        <button
-                          key={opt.value}
-                          disabled={isAttendanceLoading}
-                          onClick={() => setStatusi(prev => ({ ...prev, [u.id]: opt.value }))}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
-                            currentStatus === opt.value
-                              ? `${opt.bg} ${opt.color} ${opt.border}`
-                              : "bg-muted/50 text-muted-foreground border-transparent hover:border-border"
-                          }`}
-                        >
-                          {opt.icon} {t(opt.label)}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="font-bold text-foreground">{u.displayName}</div>
+                  <div className="text-xs text-muted-foreground font-mono mb-3">{u.username}</div>
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {([1, 2] as const).map(cas => {
+                      const key = attendanceKey(u.id, cas);
+                      const currentStatus = statusi[key];
+                      return (
+                        <div key={cas} className="rounded-xl border border-border/60 p-3 min-w-0">
+                          <div className="flex items-center justify-between mb-2 gap-2">
+                            <span className="text-sm font-bold text-foreground">{cas}. {t("čas")}</span>
+                            {cas === 2 && !currentStatus && <span className="text-xs text-muted-foreground">{t("Nije evidentiran")}</span>}
+                          </div>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {STATUS_OPTIONS.map(opt => (
+                              <button type="button" key={opt.value} disabled={isAttendanceLoading || isSaving}
+                                aria-pressed={currentStatus === opt.value}
+                                aria-label={`${u.displayName}, ${cas}. ${t("čas")}: ${t(opt.label)}`}
+                                onClick={() => setStatusi(prev => ({ ...prev, [key]: opt.value }))}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
+                                  currentStatus === opt.value
+                                    ? `${opt.bg} ${opt.color} ${opt.border}`
+                                    : "bg-muted/50 text-muted-foreground border-transparent hover:border-border"
+                                }`}
+                              >
+                                {opt.icon} {t(opt.label)}
+                              </button>
+                            ))}
+                          </div>
+                          {currentStatus && currentStatus !== "prisutan" && (
+                            <input type="text" disabled={isAttendanceLoading || isSaving}
+                              placeholder={t("Napomena (opcionalno)")}
+                              value={napomene[key] || ""}
+                              onChange={e => setNapomene(prev => ({ ...prev, [key]: e.target.value }))}
+                              className="mt-3 w-full border border-border rounded-xl px-3 py-2 text-sm text-foreground bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  {(currentStatus === "odsutan" || currentStatus === "opravdan" || currentStatus === "zakasnio") && (
-                    <div className="mt-3">
-                      <input
-                        type="text"
-                        disabled={isAttendanceLoading}
-                        placeholder={t("Napomena (opcionalno)")}
-                        value={napomene[u.id] || ""}
-                        onChange={e => setNapomene(prev => ({ ...prev, [u.id]: e.target.value }))}
-                        className="w-full border border-border rounded-xl px-3 py-2 text-sm text-foreground bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                    </div>
-                  )}
                 </motion.div>
               );
             })}

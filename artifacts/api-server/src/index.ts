@@ -1346,7 +1346,11 @@ async function runResidualSchema() {
         AND ABS(EXTRACT(EPOCH FROM (prateca.created_at - glavna.created_at))) <= 10;
     `);
 
-    logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi + izmjene_lekcija + podgrupe + targeted homework snapshots) ready");
+    // Stariji zapisi predstavljaju prvi čas; drugi se evidentira samo po izboru.
+    await db.execute(sql`ALTER TABLE prisustvo ADD COLUMN IF NOT EXISTS cas INTEGER NOT NULL DEFAULT 1`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS prisustvo_grupa_datum_cas_idx ON prisustvo (grupa_id, datum, cas, ucenik_id)`);
+
+    logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi + izmjene_lekcija + podgrupe + targeted homework snapshots + prisustvo.cas) ready");
   } catch (e) {
     logger.error({ err: e }, "Residual schema migration failed");
   }

@@ -239,7 +239,7 @@ interface ProfilData {
   grupa: { id: number; naziv: string; skolskaGodina: string } | null;
   muallim: { id: number; displayName: string } | null;
   ocjene: { id: number; kategorija: string; predmet?: string | null; ocjena: number | null; ocjenaOpisna?: "uradjeno" | "neuradjeno" | null; lekcijaNaziv?: string; napomena?: string; datum: string; napametStavkaId?: string | null }[];
-  prisustvo: { id: number; datum: string; status: string }[];
+  prisustvo: { id: number; datum: string; status: string; cas?: 1 | 2 }[];
   kvizovi: { id: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string }[];
   napredak?: {
     streakDays: number;
@@ -976,6 +976,39 @@ export default function UcenikProfilPage() {
                       </div>
                     )}
                   </dl>
+                </div>
+
+                <div className="mb-6 rounded-2xl border border-border/50 bg-white p-5">
+                  <h3 className="mb-4 flex items-center gap-2 font-extrabold text-foreground">
+                    <CalendarCheck className="h-5 w-5 text-primary" /> {t("Evidencija prisustva")} ({profil.prisustvo.length})
+                  </h3>
+                  {profil.prisustvo.length === 0 ? (
+                    <p className="py-3 text-center text-sm text-muted-foreground">{t("Nema evidencije prisustva")}</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-3 max-h-80 overflow-y-auto">
+                      {[...profil.prisustvo]
+                        .sort((a, b) => b.datum.localeCompare(a.datum) || (a.cas ?? 1) - (b.cas ?? 1))
+                        .map(record => {
+                          const dateParts = record.datum.split("-");
+                          const dateLabel = dateParts.length === 3
+                            ? `${dateParts[2]}.${dateParts[1]}.`
+                            : record.datum;
+                          const statusLabel = t(record.status === "prisutan" ? "Prisutan"
+                            : record.status === "odsutan" ? "Odsutan"
+                            : record.status === "zakasnio" ? "Zakasnio"
+                            : record.status === "opravdan" ? "Opravdan" : record.status);
+                          return (
+                            <div key={record.id} className="flex flex-col items-center gap-1" title={`${record.datum} — ${t("{cas}. čas", { cas: String(record.cas ?? 1) })} — ${statusLabel}`}>
+                              <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{dateLabel}</span>
+                              <span className="text-[10px] font-extrabold text-muted-foreground">{t("{cas}. čas", { cas: String(record.cas ?? 1) })}</span>
+                              <span className={`rounded-full px-2 py-1 text-xs font-extrabold ${STATUS_COLORS[record.status] ?? "bg-muted text-muted-foreground"}`}>
+                                {statusLabel}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
 
                 {profil.mektebskaGodina && profil.mektebskaGodina.godine.length > 0 && (

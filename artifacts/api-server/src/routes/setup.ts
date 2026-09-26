@@ -149,6 +149,7 @@ router.get("/", async (req, res) => {
         grupa_id INTEGER NOT NULL,
         muallim_id INTEGER NOT NULL,
         datum VARCHAR(20) NOT NULL,
+        cas INTEGER NOT NULL DEFAULT 1,
         status VARCHAR(20) NOT NULL DEFAULT 'prisutan',
         napomena TEXT,
         created_at TIMESTAMP DEFAULT NOW()

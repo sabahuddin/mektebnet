@@ -2860,31 +2860,51 @@ router.delete("/ucenici/:id", async (req, res) => {
 router.post("/prisustvo", async (req, res) => {
   try {
     const { grupaId, datum, prisustvo } = req.body;
-    // prisustvo: [{ ucenikId, status, napomena }]
-
-    for (const p of prisustvo) {
-      const newStatus = p.status || "prisutan";
-
-      // Upsert
-      const existing = await db.select().from(priustvoTable)
-        .where(and(eq(priustvoTable.ucenikId, p.ucenikId), eq(priustvoTable.datum, datum)));
-
-      if (existing.length > 0) {
-        const prev = existing[0];
-        await db.update(priustvoTable)
-          .set({ status: newStatus, napomena: p.napomena })
-          .where(eq(priustvoTable.id, prev.id));
-      } else {
-        await db.insert(priustvoTable).values({
-          ucenikId: p.ucenikId,
-          grupaId,
-          muallimId: req.user!.userId,
-          datum,
-          status: newStatus,
-          napomena: p.napomena || null,
-        });
-      }
+    if (!Number.isInteger(grupaId) || !/^\d{4}-\d{2}-\d{2}$/.test(datum)
+      || !Array.isArray(prisustvo) || prisustvo.length > 500) {
+      res.status(400).json({ error: "Neispravan datum ili evidencija prisustva" });
+      return;
     }
+    if (!await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role)) {
+      res.status(403).json({ error: "Nije vaša grupa" });
+      return;
+    }
+    const ucenici = await db.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
+      .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+    const allowed = new Set(ucenici.map(u => u.userId));
+    const keys = new Set<string>();
+    for (const p of prisustvo) {
+      const cas = p?.cas ?? 1; // stariji klijenti šalju samo dnevni zapis
+      const key = `${p?.ucenikId}:${cas}`;
+      if (!allowed.has(p?.ucenikId) || (cas !== 1 && cas !== 2)
+        || !["prisutan", "odsutan", "zakasnio", "opravdan"].includes(p?.status)
+        || (p.napomena != null && (typeof p.napomena !== "string" || p.napomena.length > 2000))
+        || keys.has(key)) {
+        res.status(400).json({ error: "Neispravan učenik, čas ili status prisustva" });
+        return;
+      }
+      keys.add(key);
+    }
+
+    await db.transaction(async tx => {
+      const existing = await tx.select().from(priustvoTable)
+        .where(and(eq(priustvoTable.grupaId, grupaId), eq(priustvoTable.datum, datum)));
+      const existingKeys = new Set(existing.map(p => `${p.ucenikId}:${p.cas}`));
+      for (const p of prisustvo) {
+        const cas = p.cas ?? 1;
+        if (existingKeys.has(`${p.ucenikId}:${cas}`)) {
+          await tx.update(priustvoTable)
+            .set({ status: p.status, napomena: p.napomena || null })
+            .where(and(eq(priustvoTable.grupaId, grupaId), eq(priustvoTable.ucenikId, p.ucenikId),
+              eq(priustvoTable.datum, datum), eq(priustvoTable.cas, cas)));
+        } else {
+          await tx.insert(priustvoTable).values({
+            ucenikId: p.ucenikId, grupaId, muallimId: req.user!.userId,
+            datum, cas, status: p.status, napomena: p.napomena || null,
+          });
+        }
+      }
+    });
 
     // Prisustvo NE generiše obavijesti roditeljima (po zahtjevu korisnika) — samo evidencija.
     res.json({ success: true });
@@ -2898,6 +2918,10 @@ router.get("/prisustvo", async (req, res) => {
   try {
     const grupaId = parseInt(req.query.grupaId as string);
     const datum = req.query.datum as string;
+    if (!Number.isInteger(grupaId) || !await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role)) {
+      res.status(403).json({ error: "Nije vaša grupa" });
+      return;
+    }
     const where = datum
       ? and(eq(priustvoTable.grupaId, grupaId), eq(priustvoTable.datum, datum))
       : eq(priustvoTable.grupaId, grupaId);
@@ -4462,7 +4486,8 @@ async function getGrupaFullStats(grupaId: number) {
     : [];
   const zvjezdiceMap = await getZvjezdiceZaUcenike(ucenikIds);
 
-  const svaDatumi = [...new Set(svoPrisustvo.map(p => p.datum))].sort();
+  // Svaki čas ima zasebnu kolonu; datum sam ne može razlikovati dva zapisa.
+  const svaDatumi = [...new Set(svoPrisustvo.map(p => `${p.datum}#${p.cas}`))].sort();
   const ukupnoCasova = svaDatumi.length;
 
   const mjesecSet = new Set<string>();
@@ -4479,7 +4504,7 @@ async function getGrupaFullStats(grupaId: number) {
     const prisustvoPct = ukupnoPrisustvo > 0 ? Math.round((prisutanCount / ukupnoPrisustvo) * 100) : null;
 
     const prisustvoPoDatumu: Record<string, string> = {};
-    prisutvoRec.forEach(p => { prisustvoPoDatumu[p.datum] = p.status; });
+    prisutvoRec.forEach(p => { prisustvoPoDatumu[`${p.datum}#${p.cas}`] = p.status; });
 
     const mjesecnoStats = mjeseci.map(m => {
       const mRec = prisutvoRec.filter(p => p.datum.startsWith(m));
@@ -4568,12 +4593,14 @@ async function getGrupaFullStats(grupaId: number) {
     return { mjesec: m, prisutan: mPrisutan, odsutan: mOdsutan, zakasnio: mZakasnio, opravdan: mOpravdan, ukupno: mRecs.length, pct: mRecs.length > 0 ? Math.round((mPrisutan / mRecs.length) * 100) : null };
   });
 
-  const prisustvoPoDatumu = svaDatumi.map(d => {
-    const recs = svoPrisustvo.filter(p => p.datum === d);
+  const prisustvoPoDatumu = svaDatumi.map(key => {
+    const [datum, casStr] = key.split("#");
+    const cas = Number(casStr);
+    const recs = svoPrisustvo.filter(p => p.datum === datum && p.cas === cas);
     const perStudent: Record<number, string> = {};
     recs.forEach(r => { perStudent[r.ucenikId] = r.status; });
     const prisutanCount = recs.filter(r => r.status === "prisutan").length;
-    return { datum: d, prisutan: prisutanCount, ukupno: recs.length, pct: recs.length > 0 ? Math.round((prisutanCount / recs.length) * 100) : null, perStudent };
+    return { datum, cas, prisutan: prisutanCount, ukupno: recs.length, pct: recs.length > 0 ? Math.round((prisutanCount / recs.length) * 100) : null, perStudent };
   });
 
   const zvjezdicePozitivne = ucenici.reduce((a, u) => a + u.zvjezdicePozitivne, 0);
@@ -5690,7 +5717,10 @@ router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
     const wb = XLSX.utils.book_new();
 
     const prisustvoRows: any[] = [];
-    const headerRow: string[] = ["Učenik", ...stats.svaDatumi, "Prisutan", "Odsutan", "Zakasnio", "Opravdan", "Ukupno", "%"];
+    const headerRow: string[] = ["Učenik", ...stats.svaDatumi.map(key => {
+      const [datum, cas] = key.split("#");
+      return `${datum} (${cas}. čas)`;
+    }), "Prisutan", "Odsutan", "Zakasnio", "Opravdan", "Ukupno", "%"];
     prisustvoRows.push(headerRow);
     for (const u of stats.ucenici) {
       const row: any[] = [sanitizeExcelCell(u.ime)];

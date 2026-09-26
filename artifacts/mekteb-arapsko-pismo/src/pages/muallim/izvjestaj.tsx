@@ -21,7 +21,7 @@ const REPORT_SECTIONS: { id: ReportSection; label: string }[] = [
   { id: "stars", label: "Zvjezdice" },
 ];
 
-interface Prisustvo { id: number; datum: string; status: string; napomena?: string }
+interface Prisustvo { id: number; datum: string; cas?: 1 | 2 | null; status: string; napomena?: string }
 interface Ocjena { id: number; predmet?: string | null; ocjena: number; lekcijaNaziv?: string; napomena?: string; datum: string }
 interface KvizRezultat { id: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string }
 
@@ -217,7 +217,7 @@ export default function MuallimIzvjestajPage() {
           }),
         )}` : "";
       const attendance = selectedSections.has("attendance")
-        ? `<h2>${t("Prisustvo")}</h2>${rows([t("Učenik"), t("Datum"), t("Status"), t("Napomena")], filteredUcenici.flatMap(u => u.prisustvo.map(p => [u.ucenik.displayName, p.datum, statusLabel(p.status), p.napomena || ""])))}` : "";
+        ? `<h2>${t("Prisustvo")}</h2>${rows([t("Učenik"), t("Datum"), t("Čas"), t("Status"), t("Napomena")], filteredUcenici.flatMap(u => u.prisustvo.map(p => [u.ucenik.displayName, p.datum, t("{n}. čas", { n: String(p.cas === 2 ? 2 : 1) }), statusLabel(p.status), p.napomena || ""])))}` : "";
       const grades = selectedSections.has("grades")
         ? `<h2>${t("Ocjene")}</h2>${rows([t("Učenik"), t("Datum"), t("Predmet"), t("Ocjena"), t("Lekcija"), t("Napomena")], filteredUcenici.flatMap(u => u.ocjene.map(o => [u.ucenik.displayName, o.datum, o.predmet || t("Nije određeno"), o.ocjena, o.lekcijaNaziv || "", o.napomena || ""])))}` : "";
       const quizzes = selectedSections.has("quizzes")
@@ -742,6 +742,7 @@ function UcenikSekcija({ ucenik, firstOnPage, sections }: { ucenik: UcenikIzvjes
               <thead>
                 <tr className="border-b border-border/40">
                   <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Datum")}</th>
+                  <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Čas")}</th>
                   <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Status")}</th>
                   <th className="text-left py-1.5 px-2 font-bold text-foreground">{t("Napomena")}</th>
                 </tr>
@@ -750,6 +751,7 @@ function UcenikSekcija({ ucenik, firstOnPage, sections }: { ucenik: UcenikIzvjes
                 {ucenik.prisustvo.slice().reverse().slice(0, 30).map(p => (
                   <tr key={p.id} className="border-b border-border/20">
                     <td className="py-1 px-2 text-foreground">{fmtDate(p.datum)}</td>
+                    <td className="py-1 px-2 text-foreground">{t("{n}. čas", { n: String(p.cas === 2 ? 2 : 1) })}</td>
                     <td className="py-1 px-2 text-foreground font-medium">{STATUS_LABELS[p.status] || p.status}</td>
                     <td className="py-1 px-2 text-muted-foreground">{p.napomena || "—"}</td>
                   </tr>

@@ -63,6 +63,7 @@ interface Prisustvo {
   id: number;
   datum: string;
   status: string;
+  cas?: 1 | 2;
   napomena?: string;
 }
 
@@ -586,7 +587,7 @@ function DijeteContent({
           ) : (
             <>
               <div className="flex flex-wrap gap-3 max-h-80 overflow-y-auto">
-                {[...prisustvo].sort((a, b) => b.datum.localeCompare(a.datum)).map(p => {
+                {[...prisustvo].sort((a, b) => b.datum.localeCompare(a.datum) || (a.cas ?? 1) - (b.cas ?? 1)).map(p => {
                   const cfg = STATUS_CONFIG[p.status] || STATUS_CONFIG.prisutan;
                   const parts = p.datum.split("-");
                   const dm = parts.length === 3 ? `${parts[2]}.${parts[1]}.` : p.datum;
@@ -594,9 +595,10 @@ function DijeteContent({
                     <div
                       key={p.id}
                       className="flex flex-col items-center gap-1"
-                      title={`${p.datum} — ${t(cfg.label)}${p.napomena ? ` (${p.napomena})` : ""}`}
+                      title={`${p.datum} — ${t("{cas}. čas", { cas: String(p.cas ?? 1) })} — ${t(cfg.label)}${p.napomena ? ` (${p.napomena})` : ""}`}
                     >
                       <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{dm}</span>
+                      <span className="text-[10px] font-extrabold text-muted-foreground">{t("{cas}. čas", { cas: String(p.cas ?? 1) })}</span>
                       <span className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-sm font-extrabold ${cfg.circle}`}>
                         {cfg.letter}
                       </span>

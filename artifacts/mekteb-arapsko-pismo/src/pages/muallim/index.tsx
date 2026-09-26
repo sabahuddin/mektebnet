@@ -256,6 +256,7 @@ interface MjesecniPregled {
 
 interface PrisustvoPoDatumu {
   datum: string;
+  cas: 1 | 2;
   prisutan: number;
   ukupno: number;
   pct: number | null;
@@ -2838,11 +2839,12 @@ export default function MuallimPanel() {
                               if (!st) return null;
                               const cls = st === "prisutan" ? "bg-emerald-500 text-white" : st === "odsutan" ? "bg-red-500 text-white" : st === "zakasnio" ? "bg-amber-400 text-white" : "bg-blue-400 text-white";
                               const label = st === "prisutan" ? "P" : st === "odsutan" ? "O" : st === "zakasnio" ? "Z" : "OP";
-                              const parts = d.split("-");
+                              const [datum, cas] = d.split("#");
+                              const parts = datum.split("-");
                               return (
                                 <div key={d} className="flex flex-col items-center gap-0.5">
                                   <span className={`inline-block w-8 h-8 leading-8 rounded-md text-xs font-bold text-center ${cls}`}>{label}</span>
-                                  <span className="text-[10px] text-muted-foreground font-medium">{parts[2]}.{parts[1]}</span>
+                                  <span className="text-[10px] text-muted-foreground font-medium">{parts[2]}.{parts[1]} · {cas}. {t("čas")}</span>
                                 </div>
                               );
                             })}
@@ -3234,8 +3236,9 @@ export default function MuallimPanel() {
                                 <tr>
                                   <th className="px-3 py-2 text-left text-xs font-extrabold uppercase text-muted-foreground sticky left-0 bg-white z-20 min-w-[140px] shadow-[1px_0_0_0_hsl(var(--border))]">{t("Učenik")}</th>
                                   {statData.svaDatumi.map(d => {
-                                    const parts = d.split("-");
-                                    return <th key={d} className="px-1.5 py-2 text-center text-xs font-bold text-muted-foreground whitespace-nowrap min-w-[44px]">{parts[2]}.{parts[1]}</th>;
+                                     const [datum, cas] = d.split("#");
+                                     const parts = datum.split("-");
+                                     return <th key={d} className="px-1.5 py-2 text-center text-xs font-bold text-muted-foreground whitespace-nowrap min-w-[65px]">{parts[2]}.{parts[1]}<span className="block">{cas}. {t("čas")}</span></th>;
                                   })}
                                   <th className="px-3 py-2 text-center text-xs font-extrabold uppercase text-muted-foreground">%</th>
                                 </tr>
@@ -3262,7 +3265,7 @@ export default function MuallimPanel() {
                                 <tr>
                                   <td className="px-3 py-2 font-extrabold text-foreground sticky left-0 bg-white z-20 shadow-[1px_0_0_0_hsl(var(--border))]">{t("UKUPNO")}</td>
                                   {statData.prisustvoPoDatumu.map(d => (
-                                    <td key={d.datum} className="px-0.5 py-2 text-center">
+                                     <td key={`${d.datum}#${d.cas}`} className="px-0.5 py-2 text-center">
                                       <span className={`text-xs font-bold ${d.pct !== null && d.pct >= 80 ? "text-emerald-600" : d.pct !== null && d.pct >= 50 ? "text-amber-600" : "text-red-600"}`}>
                                         {d.prisutan}/{d.ukupno}
                                       </span>

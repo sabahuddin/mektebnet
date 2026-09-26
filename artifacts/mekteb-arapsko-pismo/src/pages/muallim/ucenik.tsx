@@ -28,6 +28,7 @@ interface Ucenik {
 interface Prisustvo {
   id: number;
   datum: string;
+  cas?: 1 | 2 | null;
   status: string;
   napomena?: string;
 }
@@ -1015,8 +1016,13 @@ export default function UcenikPage() {
                               odsutan: { slovo: "O", cls: "bg-red-500" },
                               zakasnio: { slovo: "Z", cls: "bg-amber-400" },
                             };
-                            const prisMap = new Map<string, string>();
-                            prisustvo.forEach(p => prisMap.set(p.datum.slice(0, 10), p.status));
+                            const prisMap = new Map<string, Prisustvo[]>();
+                            prisustvo.forEach(p => {
+                              const key = `${p.datum.slice(0, 10)}-${p.cas === 2 ? 2 : 1}`;
+                              const entries = prisMap.get(key) || [];
+                              entries.push(p);
+                              prisMap.set(key, entries);
+                            });
                             const mjeseci = [...new Set(prisustvo.map(p => p.datum.slice(0, 7)))].sort();
                             const dani = [...new Set(prisustvo.map(p => parseInt(p.datum.slice(8, 10), 10)))].sort((a, b) => a - b);
                             return (
@@ -1043,18 +1049,23 @@ export default function UcenikPage() {
                                           <td className="text-xs font-bold text-muted-foreground text-right pr-1 w-7">{dan}.</td>
                                           {mjeseci.map(m => {
                                             const key = `${m}-${String(dan).padStart(2, "0")}`;
-                                            const status = prisMap.get(key);
-                                            const cfg = status ? oznaka[status] : null;
+                                            const records = [1, 2].flatMap(cas => (
+                                              prisMap.get(`${key}-${cas}`) || []
+                                            ).map(record => ({ record, cas })));
                                             return (
                                               <td key={m} className="text-center">
-                                                {cfg ? (
-                                                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-[10px] font-extrabold ${cfg.cls}`}
-                                                    title={`${dan}.${m.split("-")[1]}.${m.split("-")[0]}.`}>
-                                                    {cfg.slovo}
-                                                  </span>
-                                                ) : (
-                                                  <span className="inline-block w-7 h-7 rounded-full bg-muted/40" />
-                                                )}
+                                                <div className="flex min-h-7 flex-col items-center justify-center gap-0.5">
+                                                  {records.map(({ record, cas }) => {
+                                                    const cfg = oznaka[record.status];
+                                                    return (
+                                                      <span key={record.id}
+                                                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-extrabold text-white ${cfg?.cls || "bg-muted-foreground"}`}
+                                                        title={`${dan}.${m.split("-")[1]}.${m.split("-")[0]}. — ${cas}. čas — ${record.status}`}>
+                                                        {t("{n}. čas", { n: String(cas) })} {cfg?.slovo || record.status}
+                                                      </span>
+                                                    );
+                                                  })}
+                                                </div>
                                               </td>
                                             );
                                           })}

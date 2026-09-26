@@ -9,6 +9,7 @@ export const priustvoTable = pgTable("prisustvo", {
   grupaId: integer("grupa_id").notNull(),
   muallimId: integer("muallim_id").notNull(),
   datum: varchar("datum", { length: 20 }).notNull(),
+  cas: integer("cas").notNull().default(1),
   status: varchar("status", { length: 20 }).notNull().default("prisutan"),
   napomena: text("napomena"),
   createdAt: timestamp("created_at").defaultNow(),
