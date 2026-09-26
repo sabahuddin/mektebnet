@@ -497,7 +497,7 @@ router.get("/mekteb/muallimi", async (req, res) => {
       .where(eq(muallimProfiliTable.mektebId, ctx.mektebId));
     const ids = profili.map(p => p.userId);
     const users = ids.length > 0
-      ? await db.select({ id: usersTable.id, username: usersTable.username, displayName: usersTable.displayName, isActive: usersTable.isActive })
+      ? await db.select({ id: usersTable.id, username: usersTable.username, displayName: usersTable.displayName, email: usersTable.email, isActive: usersTable.isActive })
           .from(usersTable).where(inArray(usersTable.id, ids))
       : [];
     const userMap = new Map(users.map(u => [u.id, u]));
@@ -517,6 +517,7 @@ router.get("/mekteb/muallimi", async (req, res) => {
         userId: p.userId,
         username: u?.username ?? null,
         displayName: u?.displayName ?? "Nepoznat",
+        email: u?.email ?? null,
         isActive: u?.isActive ?? false,
         isGlavni: p.isGlavni ?? false,
         brojGrupa: grupe.length,
@@ -561,9 +562,18 @@ router.post("/mekteb/muallimi", async (req, res) => {
       return;
     }
     const displayName = String(req.body?.displayName || "").trim();
+    const email = String(req.body?.email ?? "").trim().toLowerCase();
     if (!displayName) {
       res.status(400).json({ error: "Ime i prezime muallima je obavezno" });
       return;
+    }
+    if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      res.status(400).json({ error: "Email adresa nije valjana" }); return;
+    }
+    if (email) {
+      const [existing] = await db.select({ id: usersTable.id }).from(usersTable)
+        .where(sql`lower(${usersTable.email}) = ${email}`).limit(1);
+      if (existing) { res.status(409).json({ error: "Email adresa se već koristi" }); return; }
     }
 
     const [m] = await db.select().from(mektebiTable).where(eq(mektebiTable.id, ctx.mektebId));
@@ -586,6 +596,7 @@ router.post("/mekteb/muallimi", async (req, res) => {
         try {
           const [u] = await tx.insert(usersTable).values({
             username,
+            email: email || null,
             passwordHash,
             displayName,
             role: "muallim",
@@ -662,7 +673,7 @@ router.delete("/mekteb/muallimi/:id", async (req, res) => {
 });
 
 // PUT /api/muallim/mekteb/muallimi/:id — uredi muallima (glavni only).
-// Body: { displayName?: string, resetPassword?: boolean }
+// Body: { displayName?: string, email?: string, resetPassword?: boolean }
 // Resetovana šifra se vraća JEDNOM u odgovoru — nije pohranjena u čistom tekstu.
 router.put("/mekteb/muallimi/:id", async (req, res) => {
   try {
@@ -678,9 +689,24 @@ router.put("/mekteb/muallimi/:id", async (req, res) => {
     if (target.isGlavni) {
       res.status(400).json({ error: "Profil glavnog muallima ne može editovati drugi korisnik" }); return;
     }
-    const { displayName, resetPassword } = req.body as { displayName?: string; resetPassword?: boolean };
-    const updates: { displayName?: string; passwordHash?: string } = {};
+    const { displayName, email, resetPassword } = req.body as { displayName?: string; email?: string; resetPassword?: boolean };
+    const updates: { displayName?: string; email?: string | null; passwordHash?: string } = {};
     if (displayName && displayName.trim().length >= 2) updates.displayName = displayName.trim();
+    if (email !== undefined) {
+      if (typeof email !== "string") { res.status(400).json({ error: "Email adresa nije valjana" }); return; }
+      const normalizedEmail = email.trim().toLowerCase();
+      if (normalizedEmail && (normalizedEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))) {
+        res.status(400).json({ error: "Email adresa nije valjana" }); return;
+      }
+      if (normalizedEmail) {
+        const [existing] = await db.select({ id: usersTable.id }).from(usersTable)
+          .where(sql`lower(${usersTable.email}) = ${normalizedEmail}`).limit(1);
+        if (existing && existing.id !== targetId) {
+          res.status(409).json({ error: "Email adresa se već koristi" }); return;
+        }
+      }
+      updates.email = normalizedEmail || null;
+    }
     let newPassword: string | null = null;
     if (resetPassword) {
       const suffix = randomSuffix();

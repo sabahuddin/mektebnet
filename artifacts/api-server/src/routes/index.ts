@@ -24,6 +24,7 @@ import krunisanjaRouter from "./krunisanja";
 import vjezbeRouter from "./vjezbe";
 import osmosmjerkeRouter from "./osmosmjerke";
 import naseVjezbeRouter from "./nase-vjezbe";
+import biltenMuallimiRouter from "./bilten-muallimi";
 
 const router: IRouter = Router();
 
@@ -36,6 +37,7 @@ router.use("/roditelj", roditeljRouter);
 router.use("/admin", adminRouter);
 router.use("/content", contentRouter);
 router.use("/poruke", porukeRouter);
+router.use("/bilten-muallimi", biltenMuallimiRouter);
 router.use("/ucenik", ucenikRouter);
 router.use("/setup", setupRouter);
 router.use("/import-content", importContentRouter);

@@ -23,7 +23,7 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
   });
   console.log(`[Email] SMTP configured: ${SMTP_HOST}:${SMTP_PORT}`);
 } else {
-  console.log("[Email] SMTP not configured — emails will be logged to console only");
+  console.log("[Email] SMTP not configured — email delivery disabled");
 }
 
 export async function sendEmail(to: string, subject: string, html: string) {
@@ -40,7 +40,8 @@ export async function sendEmail(to: string, subject: string, html: string) {
     }
   }
 
-  console.log(`[Email] (No SMTP) HTML:\n${html}`);
+  // Poruke za reset sadrže jednokratni token; nikad ne ispisuj tijelo u log.
+  console.error("[Email] SMTP nije podešen — poruka nije poslana");
   return false;
 }
 

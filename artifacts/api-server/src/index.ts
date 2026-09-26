@@ -1256,6 +1256,32 @@ async function runResidualSchema() {
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS grupa_muallimi_uidx ON grupa_muallimi (grupa_id, muallim_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS grupa_muallimi_muallim_idx ON grupa_muallimi (muallim_id);`);
 
+    // Administratorski bilten: nacrti nisu vidljivi muallimima i objava se
+    // šalje tek na izričit adminov klik. Čitanje se prati po muallimu.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS bilten_muallimi (
+        id serial PRIMARY KEY,
+        naslov varchar(180) NOT NULL,
+        sadrzaj text NOT NULL,
+        status varchar(12) NOT NULL DEFAULT 'nacrt'
+          CHECK (status IN ('nacrt', 'objavljeno')),
+        autor_id integer REFERENCES users(id) ON DELETE SET NULL,
+        created_at timestamp NOT NULL DEFAULT NOW(),
+        updated_at timestamp NOT NULL DEFAULT NOW(),
+        published_at timestamp
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS bilten_muallimi_published_idx ON bilten_muallimi (status, published_at DESC);`);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS bilten_muallimi_citanja (
+        bilten_id integer NOT NULL REFERENCES bilten_muallimi(id) ON DELETE CASCADE,
+        muallim_id integer NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        procitano_at timestamp NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (bilten_id, muallim_id)
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS bilten_muallimi_citanja_muallim_idx ON bilten_muallimi_citanja (muallim_id);`);
+
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS izmjene_lekcija (
         id serial PRIMARY KEY,

@@ -259,7 +259,12 @@ router.post("/forgot-password", async (req, res) => {
       const resetUrl = `${origin.replace(/\/$/, "")}/reset-sifra?token=${rawToken}`;
 
       if (user.email) {
-        await sendPasswordResetEmail(user.email, user.displayName, resetUrl);
+        const sent = await sendPasswordResetEmail(user.email, user.displayName, resetUrl);
+        if (!sent) {
+          await db.delete(passwordResetTokensTable).where(eq(passwordResetTokensTable.tokenHash, tokenHash));
+          res.status(503).json({ error: "Nije moguće poslati email za reset šifre. Pokušajte kasnije ili kontaktirajte podršku." });
+          return;
+        }
       }
     }
 

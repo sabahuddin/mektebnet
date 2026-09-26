@@ -21,6 +21,7 @@ import { NapametGlobalProgramEditor } from "@/components/NapametGlobalProgramEdi
 import { LANG_LABELS, type Lang } from "@/lib/i18n";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BiltenMuallimiAdmin from "./admin/bilten-muallimi";
 
 const SVI_JEZICI: Lang[] = ["bs", "sq", "de", "en", "tr", "ar"];
 
@@ -1903,9 +1904,10 @@ export default function AdminPage() {
       setStatLoading(false);
     }
   };
-  const [activeMainTab, setActiveMainTab] = useState<"korisnici" | "sistemski">(() => {
+  const [activeMainTab, setActiveMainTab] = useState<"korisnici" | "sistemski" | "bilten">(() => {
     if (typeof window === "undefined") return "korisnici";
-    return window.sessionStorage.getItem("admin-main-tab") === "sistemski" ? "sistemski" : "korisnici";
+    const saved = window.sessionStorage.getItem("admin-main-tab");
+    return saved === "sistemski" || saved === "bilten" ? saved : "korisnici";
   });
   const [statistike, setStatistike] = useState<Statistike | null>(null);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
@@ -2464,6 +2466,7 @@ export default function AdminPage() {
         <div className="flex gap-1 bg-muted/50 p-1 rounded-2xl mb-6">
           {[
             { key: "korisnici" as const, label: t("Korisnici"), icon: <Users className="w-4 h-4" /> },
+            { key: "bilten" as const, label: t("Bilten za muallime"), icon: <FileText className="w-4 h-4" /> },
             { key: "sistemski" as const, label: t("Sistemski alati"), icon: <ShieldCheck className="w-4 h-4" /> },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveMainTab(tab.key)}
@@ -2472,6 +2475,8 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
+
+        {activeMainTab === "bilten" && <BiltenMuallimiAdmin />}
 
         {activeMainTab === "korisnici" && (
           <div className="flex gap-1 bg-muted/30 p-1 rounded-xl mb-5 overflow-x-auto">

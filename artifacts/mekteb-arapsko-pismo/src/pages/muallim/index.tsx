@@ -16,6 +16,8 @@ import {
   Heart, School, Copy, KeyRound, Upload, Pencil, Archive, ChevronDown, Search, RotateCcw, Bell, MessageSquare
 } from "lucide-react";
 import RoditeljiTab from "./roditelji-tab";
+import PitanjaPrijedloziTab from "./pitanja-prijedlozi-tab";
+import BiltenTab from "./bilten-tab";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -376,6 +378,7 @@ interface MektebMuallim {
   userId: number;
   username: string | null;
   displayName: string;
+  email: string | null;
   isActive: boolean;
   isGlavni: boolean;
   brojGrupa: number;
@@ -472,8 +475,23 @@ export default function MuallimPanel() {
   const { user, token } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "profil";
+  type TabId = "pregled" | "ucenici" | "grupe" | "prisustvo" | "kalendar" | "plan" | "statistika" | "muallimi" | "mekteb" | "zadace" | "izvjestaji" | "roditelji" | "pitanja" | "bilten" | "profil";
   const [activeTab, setActiveTab] = useState<TabId>("pregled");
+  const [biltenUnread, setBiltenUnread] = useState(0);
+  const [biltenRefresh, setBiltenRefresh] = useState(0);
+  useEffect(() => {
+    if (!token) return;
+    let active = true;
+    const refresh = async () => {
+      try {
+        const result = await apiRequest<{ count: number }>("GET", "/bilten-muallimi/neprocitano", undefined, token);
+        if (active) setBiltenUnread(result.count);
+      } catch { /* Archive has its own retry state; keep the last known badge. */ }
+    };
+    void refresh();
+    const timer = window.setInterval(() => { void refresh(); }, 30_000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [token, biltenRefresh]);
   const [panelContext, setPanelContext] = useState<"moje" | "mekteb">("moje");
   const [selectedMuallimId, setSelectedMuallimId] = useState<number | null>(null);
 
@@ -489,7 +507,7 @@ export default function MuallimPanel() {
   useEffect(() => {
     const params = new URLSearchParams(locationSearch);
     const t = params.get("tab");
-    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","profil"].includes(t)) {
+    if (t && ["pregled","ucenici","grupe","prisustvo","kalendar","plan","statistika","muallimi","mekteb","zadace","izvjestaji","roditelji","pitanja","bilten","profil"].includes(t)) {
       setActiveTab(t as TabId);
       if (t === "ucenici") setPanelContext("mekteb");
       else setPanelContext("moje");
@@ -533,10 +551,12 @@ export default function MuallimPanel() {
   const [subscription, setSubscription] = useState<SubscriptionProfile | null>(null);
   const [mektebMuallimi, setMektebMuallimi] = useState<MektebMuallim[] | null>(null);
   const [novMuallimIme, setNovMuallimIme] = useState("");
+  const [novMuallimEmail, setNovMuallimEmail] = useState("");
   const [kreiranMuallim, setKreiranMuallim] = useState<{ displayName: string; username: string; generatedPassword: string } | null>(null);
   const [muallimSaving, setMuallimSaving] = useState(false);
   const [editingMuallimId, setEditingMuallimId] = useState<number | null>(null);
   const [editMuallimName, setEditMuallimName] = useState("");
+  const [editMuallimEmail, setEditMuallimEmail] = useState("");
   const [editMuallimSaving, setEditMuallimSaving] = useState(false);
   const [editMuallimNewPass, setEditMuallimNewPass] = useState<string | null>(null);
   const [mektebStatsAll, setMektebStatsAll] = useState<MektebStatsAll | null>(null);
@@ -1472,9 +1492,10 @@ export default function MuallimPanel() {
     setMuallimSaving(true);
     try {
       const res = await apiRequest<{ userId: number; displayName: string; username: string; generatedPassword: string }>(
-        "POST", "/muallim/mekteb/muallimi", { displayName: novMuallimIme.trim() }, token);
+        "POST", "/muallim/mekteb/muallimi", { displayName: novMuallimIme.trim(), email: novMuallimEmail.trim() }, token);
       setKreiranMuallim(res);
       setNovMuallimIme("");
+      setNovMuallimEmail("");
       const [info, lista] = await Promise.all([
         apiRequest<MektebInfo>("GET", "/muallim/mekteb/info", undefined, token),
         apiRequest<MektebMuallim[]>("GET", "/muallim/mekteb/muallimi", undefined, token),
@@ -1501,7 +1522,7 @@ export default function MuallimPanel() {
     }
   };
 
-  const handleEditMuallima = async (userId: number, opts: { displayName?: string; resetPassword?: boolean }) => {
+  const handleEditMuallima = async (userId: number, opts: { displayName?: string; email?: string; resetPassword?: boolean }) => {
     if (!token) return;
     setEditMuallimSaving(true);
     try {
@@ -1559,12 +1580,14 @@ export default function MuallimPanel() {
     { id: "izvjestaji", label: t("Izvještaji"), icon: FileText },
     { id: "kalendar", label: t("Kalendar"), icon: Calendar },
     { id: "roditelji", label: t("Roditelji"), icon: Heart },
+    { id: "bilten", label: t("Bilten za muallime"), icon: BookOpen },
+    { id: "pitanja", label: t("Pitanja i prijedlozi"), icon: MessageSquare },
     { id: "profil", label: t("Profil"), icon: Settings },
   ];
   const visibleTabs = panelContext === "moje" && mektebMeta.isGlavni && !isMuallimPreview
     ? TABS.filter(tab => tab.id !== "ucenici")
     : isMuallimPreview
-      ? TABS.filter(tab => tab.id !== "profil")
+      ? TABS.filter(tab => tab.id !== "profil" && tab.id !== "pitanja" && tab.id !== "bilten")
     : TABS;
 
   const brzaPretragaQ = brzaPretraga.trim().toLocaleLowerCase();
@@ -1819,7 +1842,7 @@ export default function MuallimPanel() {
           <p className="px-3 pt-2 pb-1 text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">{t("Moduli")}</p>
         <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 xl:flex xl:flex-col">
           {visibleTabs.map(tab => {
-            const badgeCount = tab.id === "pregled" ? pendingRoditelji.length : 0;
+            const badgeCount = tab.id === "pregled" ? pendingRoditelji.length : tab.id === "bilten" ? biltenUnread : 0;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`relative flex w-full items-center gap-2 px-4 py-3 rounded-xl text-left font-bold text-sm transition-all border ${activeTab === tab.id ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20" : "bg-white border-border/60 text-muted-foreground hover:bg-muted"}`}>
@@ -3412,6 +3435,14 @@ export default function MuallimPanel() {
                       className="flex-1 px-4 py-2.5 rounded-xl border border-border/60 text-sm"
                       data-testid="input-nov-muallim"
                     />
+                    <input
+                      type="email"
+                      value={novMuallimEmail}
+                      onChange={e => setNovMuallimEmail(e.target.value)}
+                      placeholder={t("Email (za reset šifre)")}
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-border/60 text-sm"
+                      data-testid="input-nov-muallim-email"
+                    />
                     <button
                       onClick={handleKreirajMuallima}
                       disabled={muallimSaving || !novMuallimIme.trim() || (mektebInfo ? mektebInfo.slobodnoMjesta <= 0 : false)}
@@ -3482,8 +3513,16 @@ export default function MuallimPanel() {
                                   className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                                   placeholder={t("Ime i prezime")}
                                 />
+                                <input
+                                  type="email"
+                                  value={editMuallimEmail}
+                                  onChange={e => setEditMuallimEmail(e.target.value)}
+                                  className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                  placeholder={t("Email (za reset šifre)")}
+                                  data-testid={`input-muallim-email-${m.userId}`}
+                                />
                                 <div className="flex flex-wrap gap-2">
-                                  <Button size="sm" onClick={() => handleEditMuallima(m.userId, { displayName: editMuallimName })} disabled={editMuallimSaving || !editMuallimName.trim()} className="rounded-xl text-xs h-8">
+                                  <Button size="sm" onClick={() => handleEditMuallima(m.userId, { displayName: editMuallimName, email: editMuallimEmail })} disabled={editMuallimSaving || !editMuallimName.trim()} className="rounded-xl text-xs h-8">
                                     {editMuallimSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
                                     {t("Sačuvaj ime")}
                                   </Button>
@@ -3506,10 +3545,11 @@ export default function MuallimPanel() {
                                 {m.isGlavni && <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-extrabold">{t("GLAVNI")}</span>}
                               </div>
                               <div className="text-xs text-muted-foreground">{m.username} · {t("{grupa} grupa · {ucenika} učenika", { grupa: String(m.brojGrupa), ucenika: String(m.brojUcenika) })}</div>
+                              <div className="text-xs text-muted-foreground break-all">{m.email || t("Nema emaila za reset šifre")}</div>
                             </div>
                             {!m.isGlavni && (
                               <>
-                                <button onClick={() => { setEditingMuallimId(m.userId); setEditMuallimName(m.displayName); setEditMuallimNewPass(null); }} className="p-2 rounded-lg text-primary hover:bg-primary/10" title={t("Uredi muallima")} data-testid={`button-uredi-muallim-${m.userId}`}>
+                                <button onClick={() => { setEditingMuallimId(m.userId); setEditMuallimName(m.displayName); setEditMuallimEmail(m.email || ""); setEditMuallimNewPass(null); }} className="p-2 rounded-lg text-primary hover:bg-primary/10" title={t("Uredi muallima")} data-testid={`button-uredi-muallim-${m.userId}`}>
                                   <Pencil className="w-4 h-4" />
                                 </button>
                                 <button onClick={() => handleObrisiMuallima(m.userId, m.displayName)} className="p-2 rounded-lg text-rose-500 hover:bg-rose-50" title={t("Obriši muallima")} data-testid={`button-obrisi-muallim-${m.userId}`}>
@@ -4815,6 +4855,8 @@ export default function MuallimPanel() {
                 readOnly={isMuallimPreview}
               />
             )}
+            {activeTab === "pitanja" && !isMuallimPreview && <PitanjaPrijedloziTab />}
+            {activeTab === "bilten" && !isMuallimPreview && <BiltenTab onRead={() => setBiltenRefresh(n => n + 1)} />}
 
             {/* PROFIL — uređivanje display name-a, premješteno iz inline header dugmeta. */}
             {activeTab === "profil" && (

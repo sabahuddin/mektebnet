@@ -82,3 +82,4 @@
 - [Grupa s više muallima](grupa-vise-muallima.md) — jedan odgovorni i najviše dva dodatna iz istog mekteba; saradnja bez dupliranja učenika i bez prenošenja ovlasti za brisanje.
 - [Backup vanjske produkcijske baze](prod-postgres-backup.md) — provjeri verziju pg_dump klijenta; ako je stariji od servera, sigurnosnu kopiju ciljane tabele napravi preko psql JSONL izvoza.
 - [Nazivi namaza u prijevodima](nazivi-namaza-prijevodi.md) — AI prijevodi znaju zamijeniti nazive namaza; provjeri izvor i engleski po polju, ne radi globalnu zamjenu teksta.
+- [Pitanja muallima adminu](muallim-admin-pitanja.md) — privatna pitanja/prijedlozi su izabrani prije foruma; ne pretvarati ih u javne teme bez posebnog zahtjeva.

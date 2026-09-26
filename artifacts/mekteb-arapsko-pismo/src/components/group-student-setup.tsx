@@ -61,7 +61,8 @@ interface DuplicatePrompt {
 
 function parseBulkEntries(text: string) {
   return text.split("\n").map(line => {
-    const [u, r] = line.split("|");
+    // Zarez je jednostavan za unos; prihvati i stari znak zbog već pripremljenih spiskova.
+    const [u, r] = line.split(/[,،，|]/, 2);
     return { ucenik: (u || "").trim(), roditelj: r ? r.trim() : null };
   }).filter(entry => entry.ucenik.length > 0);
 }
@@ -379,13 +380,12 @@ export function GroupStudentSetup({ grupaId, grupaNaziv, onStudentsChanged }: Gr
         ) : (
           <div>
             <p className="text-sm text-muted-foreground mb-2">
-              {t("Unesite imena učenika, svako u novi red. Ako želite kreirati i nalog za roditelja, upišite ga iza znaka")}{" "}
-              <code className="bg-muted px-1.5 py-0.5 rounded text-xs">|</code>:
+              {t("Unesite imena učenika, svako u novi red. Ako želite kreirati i nalog za roditelja, odvojite imena zarezom.")}
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 text-xs text-blue-900">
               <div className="font-bold mb-1">{t("Primjer:")}</div>
               <code className="block whitespace-pre-wrap font-mono leading-relaxed">
-                Amina Hasić | Senad Hasić{"\n"}Ahmed Begović{"\n"}Merjem Hadžić | Edina Hadžić
+                Amina Hasić, Senad Hasić{"\n"}Ahmed Begović{"\n"}Merjem Hadžić, Edina Hadžić
               </code>
               <p className="mt-2 text-blue-800">{t("Roditelj ne ulazi u kvotu licenci.")}</p>
             </div>
@@ -393,7 +393,7 @@ export function GroupStudentSetup({ grupaId, grupaNaziv, onStudentsChanged }: Gr
               value={bulkNames}
               onChange={event => setBulkNames(event.target.value)}
               rows={8}
-              placeholder={"Amina Hasić | Senad Hasić\nAhmed Begović\nMerjem Hadžić | Edina Hadžić"}
+              placeholder={"Amina Hasić, Senad Hasić\nAhmed Begović\nMerjem Hadžić, Edina Hadžić"}
               className="w-full border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 bg-muted/20 resize-none font-medium font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground mt-1 mb-4">
