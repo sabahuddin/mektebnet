@@ -147,7 +147,7 @@ function MuallimGuide() {
       title: t("Dodavanje učenika"),
       icon: GraduationCap,
       intro: t("Učenike i njihove roditelje možeš dodati pojedinačno ili masovno, a zatim ih rasporediti u odgovarajuće grupe."),
-      action: t("U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a roditelja iza znaka |. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu."),
+      action: t("U grupi otvori Podešavanja → Učenici grupe → Dodaj nove učenike. Unesi svakog učenika u novi red, a ime roditelja dodaj nakon zareza. Ako se pojavi isto ime i prezime, izaberi DA za istu osobu ili NE za drugu osobu."),
       result: t("Provjera se radi samo unutar istog džemata. DA preskače postojeću osobu, a NE kreira novi nalog. Ako je postojeća osoba roditelj, učenik se kreira bez novog roditelja i možeš ih spojiti naknadno."),
     },
     {
