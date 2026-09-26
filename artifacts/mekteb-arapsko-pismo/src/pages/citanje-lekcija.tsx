@@ -12,27 +12,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
 import { ArrowLeft, Volume2, VolumeX, Check, X, Timer, RotateCcw, Play, Square } from "lucide-react";
-import { lekcijaPoBroju, type ReplikaPrice } from "@/data/citanje-lekcije";
+import { lekcijaPoBroju, type ReplikaPrice, type Raspolozenje } from "@/data/citanje-lekcije";
 import { vjezbeZaLekciju, type VjezbaCitanja, type StavkaVjezbe } from "@/data/citanje-vjezbe";
 import { PROGRAM_CITANJA } from "@/data/citanje-program";
 import { RIJECI_CITANJA } from "@/data/citanje-rijeci";
 import { pustiZapis, zaustaviZvuk } from "@/lib/citanje-zvuk";
 
-const POZE: Record<string, string> = {
-  hoda: "/images/maskota/poses/pcela-hoda.webp",
-  razmislja: "/images/maskota/poses/pcela-razmislja.webp",
-  cita: "/images/maskota/poses/pcela-cita-kuran.webp",
-  mase: "/images/maskota/poses/pcela-mase.webp",
-  palac: "/images/maskota/poses/pcela-palac.webp",
-  leti: "/images/maskota/poses/pcela-leti.webp",
-  pokazuje: "/images/maskota/poses/pcela-pokazuje-lijevo.webp",
-  pokazujeDesno: "/images/maskota/poses/pcela-pokazuje-desno.webp",
-  boka: "/images/maskota/poses/pcela-boka.webp",
-  skace: "/images/maskota/poses/pcela-skace.webp",
-  razmislja2: "/images/maskota/poses/pcela-razmislja2.webp",
-  iznenadjena: "/images/maskota/poses/pcela-iznenadjena.webp",
-  spava: "/images/maskota/poses/pcela-spava.webp",
+/**
+ * Slika po liku i raspoloženju. Rumejsa i Bilal imaju svoju sliku za isto
+ * raspoloženje, pa priča kazuje šta lik osjeća, a ne koja datoteka stoji.
+ */
+const POZE: Record<"rumejsa" | "bilal", Record<Raspolozenje, string>> = {
+  rumejsa: {
+    pozdrav: "pcela-mase", odobrava: "pcela-palac", razmislja: "pcela-razmislja2",
+    paznja: "pcela-boka", radost: "pcela-skace", "cudi-se": "pcela-iznenadjena",
+    pokazuje: "pcela-pokazuje-lijevo", spava: "pcela-spava", zuri: "pcela-leti",
+  },
+  bilal: {
+    pozdrav: "mrav-mase", odobrava: "mrav-palac", razmislja: "mrav-razmislja",
+    paznja: "mrav-boka", radost: "mrav-skace", "cudi-se": "mrav-oduseven",
+    pokazuje: "mrav-pokazuje", spava: "mrav-spava", zuri: "mrav-trci",
+  },
 };
+
+const putanjaPoze = (ko: "rumejsa" | "bilal", raspolozenje: Raspolozenje) =>
+  `/images/maskota/poses/${POZE[ko][raspolozenje]}.webp`;
 
 const LIKOVI: Record<ReplikaPrice["ko"], { ime: string; okvir: string; mjehur: string }> = {
   rumejsa: { ime: "Rumejsa", okvir: "border-amber-200", mjehur: "bg-amber-50 text-amber-950" },
@@ -64,11 +68,10 @@ function Prica({ replike }: { replike: ReplikaPrice[] }) {
         }
         return (
           <div key={i} className="flex items-start gap-3">
-            {/* Rumejsa ima poze. Bilal ih još nema — kad stigne slika mrava u
-                istom stilu, doda se ovdje isto kao i za nju. */}
-            <div className={`w-14 h-14 shrink-0 rounded-2xl border-2 ${lik.okvir} bg-white overflow-hidden grid place-items-center`}>
-              {r.ko === "rumejsa" && r.slika
-                ? <img src={POZE[r.slika]} alt="" className="w-full h-full object-contain" />
+            <div className={`w-16 h-16 shrink-0 rounded-2xl border-2 ${lik.okvir} bg-white overflow-hidden grid place-items-center`}>
+              {r.slika
+                ? <img src={putanjaPoze(r.ko as "rumejsa" | "bilal", r.slika)} alt=""
+                    className="w-full h-full object-contain" loading="lazy" />
                 : <span className="text-xs font-bold text-muted-foreground">{lik.ime.slice(0, 2)}</span>}
             </div>
             <div className={`flex-1 rounded-2xl px-4 py-3 ${lik.mjehur}`}>
