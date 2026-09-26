@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { sanitizeMuallimLessonHtml } from "./lesson-html-sanitizer.js";
 
-const iframeHosts = ["youtube.com", "youtube-nocookie.com", "learningapps.org"];
+const iframeHosts = ["youtube.com", "youtube-nocookie.com", "learningapps.org", "wayground.com"];
 
 test("uklanja izvršivi HTML i event handlere", () => {
   const result = sanitizeMuallimLessonHtml(
@@ -58,11 +58,21 @@ test("čuva dozvoljeni iframe, a uklanja nedozvoljeni", () => {
     `<iframe src="https://www.youtube-nocookie.com/embed/abc" allowfullscreen></iframe>`,
     iframeHosts,
   );
+  const wayground = sanitizeMuallimLessonHtml(
+    `<iframe src="https://wayground.com/embed/quiz/abc" allowfullscreen></iframe>`,
+    iframeHosts,
+  );
   const denied = sanitizeMuallimLessonHtml(
     `<iframe src="https://example.com/embed/abc"></iframe>`,
     iframeHosts,
   );
+  const spoofed = sanitizeMuallimLessonHtml(
+    `<iframe src="https://wayground.com.evil.example/embed/quiz/abc"></iframe>`,
+    iframeHosts,
+  );
 
   assert.match(allowed, /youtube-nocookie\.com/);
+  assert.match(wayground, /wayground\.com/);
   assert.equal(denied.includes("<iframe"), false);
+  assert.equal(spoofed.includes("<iframe"), false);
 });

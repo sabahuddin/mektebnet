@@ -201,7 +201,7 @@ export default function GrupaPage() {
   // Zadaća modal — ako zadacaTarget=null → zadaća za cijelu grupu
   const [showZadacaModal, setShowZadacaModal] = useState(false);
   const [zadacaTarget, setZadacaTarget] = useState<Ucenik | null>(null);
-  const [newZadaca, setNewZadaca] = useState({ opis: "", lekcijaNaslov: "", lekcijaSlug: "" });
+  const [newZadaca, setNewZadaca] = useState({ opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
   const [zadMaterijali, setZadMaterijali] = useState<NastavniMaterijal[]>([]);
   const [zadPriloziIds, setZadPriloziIds] = useState<Set<number>>(new Set());
   const [savingZadaca, setSavingZadaca] = useState(false);
@@ -515,7 +515,7 @@ export default function GrupaPage() {
     setZadacaTarget(u);
     setZadacaModalTab("pregled");
     setZadaceTargeta([]);
-    setNewZadaca({ opis: "", lekcijaNaslov: "", lekcijaSlug: "" });
+    setNewZadaca({ opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
     setZadMaterijali([]); setZadPriloziIds(new Set());
     setShowZadacaModal(true);
     if (!token) return;
@@ -614,14 +614,14 @@ export default function GrupaPage() {
         grupaId,
         naslov: izvorniNaslov ?? opis.split(/\r?\n/)[0].slice(0, 80).trim(),
         opis: opis || null,
-        rokDo: null,
+        rokDo: newZadaca.rokDo || null,
         lekcijaNaslov: izvorniNaslov,
         lekcijaSlug: imaLekciju ? newZadaca.lekcijaSlug : null,
         lekcijaTip: imaLekciju ? (quranPageFromSlug(newZadaca.lekcijaSlug) ? "kuran" : "ilmihal") : null,
         priloziIds: zadacaTarget ? [] : Array.from(zadPriloziIds),
         ucenikIds: zadacaTarget ? [zadacaTarget.id] : [],
       }, token);
-      setNewZadaca({ opis: "", lekcijaNaslov: "", lekcijaSlug: "" });
+      setNewZadaca({ opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
       if (zadacaTarget) {
         try {
           const data = await apiRequest<UcenikZadaca[]>("GET", `/muallim/ucenik/${zadacaTarget.id}/zadace`, undefined, token);
@@ -1527,6 +1527,13 @@ export default function GrupaPage() {
                     onChange={e => setNewZadaca(z => ({ ...z, opis: e.target.value }))}
                     placeholder={t("Upiši naziv i opis zadaće ako nije vezana za lekciju")}
                     className="w-full border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+                </div>
+                <div>
+                  <label htmlFor="grupa-zadaca-rok-do" className="text-xs font-bold text-muted-foreground block mb-1">{t("Rok zadaće")}</label>
+                  <input id="grupa-zadaca-rok-do" type="date" value={newZadaca.rokDo}
+                    onChange={e => setNewZadaca(z => ({ ...z, rokDo: e.target.value }))}
+                    className="w-full border border-border rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    data-testid="input-grupa-zadaca-rok-do" />
                 </div>
                 <div>
                     <label className="text-xs font-bold text-muted-foreground block mb-1">{t("Lekcija (opcionalno)")}</label>

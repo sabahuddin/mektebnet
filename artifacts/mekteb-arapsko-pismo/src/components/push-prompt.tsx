@@ -11,6 +11,17 @@ import {
 } from "@/lib/push";
 
 const DISMISS_KEY = "mekteb-push-dismissed";
+const DISMISS_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+function isDismissed(userId: number): boolean {
+  try {
+    const dismissedAt = Number(localStorage.getItem(`${DISMISS_KEY}:${userId}`));
+    const elapsed = Date.now() - dismissedAt;
+    return dismissedAt > 0 && elapsed >= 0 && elapsed < DISMISS_DURATION_MS;
+  } catch {
+    return false;
+  }
+}
 
 function isAllowedOrigin(): boolean {
   if (typeof window === "undefined") return false;
@@ -34,11 +45,11 @@ function isPushSupported(): boolean {
  *
  * Logika:
  * - Sakriven ako: nije logiran / nije podržano / origin ≠ mekteb.net /
- *   permission je već granted ili denied / korisnik je odgodio u ovoj sesiji
- * - Dvije akcije: "Prihvati" (traži dozvolu) i "Ne sada" (odgodi do sljedeće sesije)
+ *   permission je već granted ili denied / korisnik je odgodio na 30 dana
+ * - Dvije akcije: "Prihvati" (traži dozvolu) i "Ne sada" (odgodi na 30 dana)
  */
 export function PushPrompt() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -61,12 +72,18 @@ export function PushPrompt() {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !user) {
+      setVisible(false);
+      return;
+    }
     if (!appIdReady) return;
     if (!isPushSupported()) return;
     if (!isAllowedOrigin()) return;
 
-    if (sessionStorage.getItem(DISMISS_KEY) === "true") return;
+    if (isDismissed(user.id)) {
+      setVisible(false);
+      return;
+    }
     if (isCapacitorNative() && isPushEnabledLocally()) return;
 
     // Na native shell-u Notification API ne postoji u Cordova webview-u na isti
@@ -80,6 +97,7 @@ export function PushPrompt() {
     // Mali delay da banner ne iskoči odmah na home — daje korisniku vremena
     // da se snađe nakon login-a.
     const t = setTimeout(() => {
+      if (isDismissed(user.id)) return;
       // Re-check u trenutku prikaza: ako je dozvola u međuvremenu data
       // (npr. kroz OneSignal-ov vlastiti "Subscribe" prompt), ne prikazuj
       // banner — tiho dovrši registraciju u pozadini.
@@ -92,7 +110,7 @@ export function PushPrompt() {
       setVisible(true);
     }, 4000);
     return () => clearTimeout(t);
-  }, [isAuthenticated, appIdReady]);
+  }, [isAuthenticated, user?.id, appIdReady]);
 
   const onEnable = async () => {
     setBusy(true);
@@ -114,7 +132,13 @@ export function PushPrompt() {
   };
 
   const onDismiss = () => {
-    sessionStorage.setItem(DISMISS_KEY, "true");
+    if (user) {
+      try {
+        localStorage.setItem(`${DISMISS_KEY}:${user.id}`, String(Date.now()));
+      } catch {
+        // Ako preglednik blokira pohranu, odgoda traje samo do ponovnog učitavanja.
+      }
+    }
     setVisible(false);
   };
 

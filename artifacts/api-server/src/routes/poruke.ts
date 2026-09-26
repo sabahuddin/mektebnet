@@ -232,10 +232,26 @@ async function izracunajKontakte(userId: number, role: string): Promise<Contact[
         }
       }
 
-      const mojiUcenici = await db.select({
-        userId: ucenikProfiliTable.userId,
-        grupaId: ucenikProfiliTable.grupaId,
-      }).from(ucenikProfiliTable).where(eq(ucenikProfiliTable.muallimId, userId));
+      // Isti opseg kao pregled učenika: vlastiti učenici bez grupe, učenici
+      // grupa u kojima muallim radi, a za glavnog svi učenici njegovog mekteba.
+      // Uključuje i arhivirane, kako link na roditelja iz arhive otvara razgovor.
+      const rows = await db.execute(sql`
+        SELECT up.user_id, up.grupa_id
+        FROM ucenik_profili up
+        LEFT JOIN grupe g ON g.id = up.grupa_id
+        LEFT JOIN muallim_profili owner ON owner.user_id = COALESCE(g.muallim_id, up.muallim_id)
+        WHERE (up.grupa_id IS NULL AND up.muallim_id = ${userId})
+           OR (up.grupa_id IS NOT NULL AND (
+             g.muallim_id = ${userId}
+             OR EXISTS (SELECT 1 FROM grupa_muallimi gm WHERE gm.grupa_id = g.id AND gm.muallim_id = ${userId})
+           ))
+           OR (${Boolean(mprofil?.isGlavni && mprofil.mektebId)} AND (
+             owner.mekteb_id = ${mprofil?.mektebId ?? -1}
+             OR (owner.user_id IS NULL AND up.mekteb_id = ${mprofil?.mektebId ?? -1})
+           ))
+      `);
+      const mojiUcenici = (rows.rows as { user_id: number; grupa_id: number | null }[])
+        .map(r => ({ userId: r.user_id, grupaId: r.grupa_id }));
 
       let ucenikContacts: Contact[] = [];
       let roditeljContacts: Contact[] = [];
@@ -267,7 +283,10 @@ async function izracunajKontakte(userId: number, role: string): Promise<Contact[
         const veze = await db.select({
           roditeljId: roditeljUcenikTable.roditeljId,
           ucenikId: roditeljUcenikTable.ucenikId,
-        }).from(roditeljUcenikTable).where(inArray(roditeljUcenikTable.ucenikId, uIds));
+        }).from(roditeljUcenikTable).where(and(
+          inArray(roditeljUcenikTable.ucenikId, uIds),
+          eq(roditeljUcenikTable.status, "approved"),
+        ));
 
         if (veze.length > 0) {
           const roditeljIds = [...new Set(veze.map(v => v.roditeljId))];

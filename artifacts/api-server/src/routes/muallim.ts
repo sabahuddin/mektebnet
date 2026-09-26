@@ -1664,6 +1664,7 @@ router.get("/ucenici", async (req, res) => {
     if (!userId) { res.status(403).json({ error: "Pregled muallima nije dozvoljen" }); return; }
     const ctx = await getMektebCtx(userId);
     const scopedView = Boolean(req.query.muallimId);
+    const includeArchived = req.query.includeArchived === "1";
 
     if (ctx?.isGlavni && ctx.mektebId && !scopedView) {
       // Svi učenici džemata — join kroz muallim_profili (siguran i za starije zapise
@@ -1676,6 +1677,8 @@ router.get("/ucenici", async (req, res) => {
                u.last_seen_at, u.total_screentime_sec,
                mu.display_name AS muallim_display_name,
                g.naziv AS grupa_naziv,
+                roditelj.id AS roditelj_id,
+                roditelj.display_name AS roditelj_ime,
                EXISTS (
                  SELECT 1
                  FROM roditelj_ucenik ru
@@ -1684,14 +1687,25 @@ router.get("/ucenici", async (req, res) => {
                ) AS roditelj_povezan
         FROM ucenik_profili up
         LEFT JOIN grupe g ON g.id = up.grupa_id
-        JOIN muallim_profili mp
+        LEFT JOIN muallim_profili mp
           ON mp.user_id = COALESCE(g.muallim_id, up.muallim_id)
-         AND mp.mekteb_id = ${ctx.mektebId}
         JOIN users u ON u.id = up.user_id
         LEFT JOIN users mu ON mu.id = COALESCE(g.muallim_id, up.muallim_id)
-        WHERE (up.is_archived = false OR up.is_archived IS NULL)
+        LEFT JOIN LATERAL (
+          SELECT r.id, r.display_name
+          FROM roditelj_ucenik ru
+          JOIN users r ON r.id = ru.roditelj_id
+          WHERE ru.ucenik_id = up.user_id AND ru.status = 'approved'
+          ORDER BY ru.id
+          LIMIT 1
+        ) roditelj ON true
+        WHERE (mp.mekteb_id = ${ctx.mektebId}
+          OR (mp.user_id IS NULL AND up.mekteb_id = ${ctx.mektebId}))
+          AND (${includeArchived} OR (
+          (up.is_archived = false OR up.is_archived IS NULL)
           AND (up.grupa_id IS NULL OR COALESCE(g.is_archived, false) = false)
           AND (up.grupa_id IS NULL OR COALESCE(g.is_active, true) = true)
+        ))
         ORDER BY u.display_name ASC
       `);
 
@@ -1701,7 +1715,7 @@ router.get("/ucenici", async (req, res) => {
         role: string;
         last_seen_at: string | null; total_screentime_sec: number | null;
         muallim_display_name: string | null; grupa_naziv: string | null;
-        roditelj_povezan: boolean;
+        roditelj_povezan: boolean; roditelj_id: number | null; roditelj_ime: string | null;
       };
       res.json((rows.rows as Row[]).map(r => ({
         id: r.user_id,
@@ -1716,7 +1730,8 @@ router.get("/ucenici", async (req, res) => {
         muallimId: r.muallim_id,
         muallimDisplayName: r.muallim_display_name,
         roditeljPovezan: r.roditelj_povezan,
-        aktivanStatus: true,
+        roditelj: r.roditelj_id ? { id: r.roditelj_id, displayName: r.roditelj_ime } : null,
+        aktivanStatus: !r.is_archived,
         profil: { userId: r.user_id, muallimId: r.muallim_id, grupaId: r.grupa_id, mektebId: r.mekteb_id, isArchived: r.is_archived ?? false },
       })));
       return;
@@ -1741,6 +1756,8 @@ router.get("/ucenici", async (req, res) => {
         u.total_screentime_sec,
         g.naziv AS grupa_naziv,
         mu.display_name AS muallim_display_name,
+        roditelj.id AS roditelj_id,
+        roditelj.display_name AS roditelj_ime,
         EXISTS (
           SELECT 1
           FROM roditelj_ucenik ru
@@ -1751,13 +1768,23 @@ router.get("/ucenici", async (req, res) => {
       JOIN users u ON u.id = up.user_id
       LEFT JOIN grupe g ON g.id = up.grupa_id
       LEFT JOIN users mu ON mu.id = COALESCE(g.muallim_id, up.muallim_id)
-      WHERE (up.is_archived = false OR up.is_archived IS NULL)
+      LEFT JOIN LATERAL (
+        SELECT r.id, r.display_name
+        FROM roditelj_ucenik ru
+        JOIN users r ON r.id = ru.roditelj_id
+        WHERE ru.ucenik_id = up.user_id AND ru.status = 'approved'
+        ORDER BY ru.id
+        LIMIT 1
+      ) roditelj ON true
+      WHERE (${includeArchived} OR (up.is_archived = false OR up.is_archived IS NULL))
         AND (
           (up.grupa_id IS NULL AND up.muallim_id = ${userId})
           OR (
             up.grupa_id IS NOT NULL
-            AND COALESCE(g.is_archived, false) = false
-            AND COALESCE(g.is_active, true) = true
+            AND (${includeArchived} OR (
+              COALESCE(g.is_archived, false) = false
+              AND COALESCE(g.is_active, true) = true
+            ))
             AND (
               g.muallim_id = ${userId}
               OR EXISTS (
@@ -1778,7 +1805,7 @@ router.get("/ucenici", async (req, res) => {
       display_name: string; username: string; email: string | null; role: string;
       last_seen_at: string | null; total_screentime_sec: number | null;
       grupa_naziv: string | null; muallim_display_name: string | null;
-      roditelj_povezan: boolean;
+        roditelj_povezan: boolean; roditelj_id: number | null; roditelj_ime: string | null;
     };
     res.json((rows.rows as OwnStudentRow[]).map(r => ({
       id: r.user_id,
@@ -1793,7 +1820,8 @@ router.get("/ucenici", async (req, res) => {
       muallimId: r.muallim_id,
       muallimDisplayName: r.muallim_display_name,
       roditeljPovezan: r.roditelj_povezan,
-      aktivanStatus: true,
+      roditelj: r.roditelj_id ? { id: r.roditelj_id, displayName: r.roditelj_ime } : null,
+      aktivanStatus: !r.is_archived,
       profil: {
         userId: r.user_id,
         muallimId: r.profil_muallim_id,
