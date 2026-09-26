@@ -22,22 +22,24 @@ const date = (value: string) => new Date(value).toLocaleDateString("bs-BA", { da
 // Urednički prijedlog je samo lokalni tekst u obrascu; ne kreira se nacrt niti
 // se bilo šta šalje dok administrator ne klikne Sačuvaj i potom Objavi.
 const firstBulletin = {
-  naslov: "Novosti u Mektebu · 24–26. septembar 2026.",
-  sadrzaj: `Dragi muallimi,
+  naslov: "Novosti u Mektebu · 20–26. septembra 2026.",
+  sadrzaj: `Esselamu alejkum, dragi muallimi,
 
-Donosimo kratak pregled novosti iz posljednjih nekoliko dana:
+U protekloj sedmici pripremili smo nekoliko novosti koje vam olakšavaju nastavu i praćenje napretka djece. Evo najvažnijeg:
 
-• Pitanja i prijedlozi — u Muallim panelu možete privatno pisati administratoru. Odgovor ćete vidjeti na istom mjestu; vaša pitanja nisu vidljiva drugim muallimima.
+• Planiranje nastave — lekcije sada možete planirati po časovima i pratiti statistiku učeničkih vježbi. Na jednoj grupi mogu sarađivati odgovorni muallim i do dva dodatna muallima.
 
-• Obavijesti muallimima — važne zajedničke novosti ubuduće su u posebnoj arhivi, odvojene od privatnih poruka.
+• Zadaće po mjeri učenika — možete formirati podgrupe i zadati zadaću samo odabranoj podgrupi. Rokovi su ponovo dostupni, a u zadaću možete ugraditi i Wayground vježbu. Za kur'anske zadaće i ocjene možete odabrati konkretnu stranicu.
 
-• Dodavanje učenika i roditelja — pri masovnom unosu imena roditelja možete odvojiti zarezom.
+• Napamet i lekcije — program Napamet ima odvojene prikaze za pregled i uređivanje. Stavke možete pripremati za svoj mekteb i dodjeljivati ih učenicima ili grupama; muallimske lekcije možete pripremiti privatno prije dijeljenja.
 
-• Zadaće — vraćen je prikaz rokova, a u zadaću se mogu ugraditi i Wayground vježbe. Dostupna je i ciljana dodjela podgrupama.
+• Novo za djecu — zasebna cjelina „Učim čitati” sada ima sedam lekcija i audio-primjere. Naše interaktivne vježbe i etapni ispiti prikazuju se na jeziku koji dijete koristi.
 
-• Saradnja s roditeljima — pregled učenika olakšava slanje poruka roditeljima i pronalazak arhiviranih učenika.
+• Lakša saradnja s roditeljima — na pregledu možete pronaći sve učenike, filtrirati arhivirane i poslati poruku roditelju. Automatske obavijesti o ocjenama i zadaći prilagođene su jeziku roditelja.
 
-Hvala vam na prijedlozima i svakodnevnom radu s djecom. Ako imate pitanje ili primijetite problem, pišite nam kroz „Pitanja i prijedlozi” u svom panelu.
+• Dva odvojena načina komunikacije — u „Pitanjima i prijedlozima” možete privatno pisati administraciji; poruka i odgovor nisu vidljivi drugim muallimima. Ovaj bilten služi za zajedničke novosti i njihovu arhivu.
+
+Hvala vam na svakodnevnom radu s djecom i prijedlozima koji nam pomažu da Mekteb bude bolji. Ako imate pitanje ili primijetite problem, pišite nam kroz „Pitanja i prijedlozi” u svom panelu.
 
 Srdačno,
 Mekteb tim`,
