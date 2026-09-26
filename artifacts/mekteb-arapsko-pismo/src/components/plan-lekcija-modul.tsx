@@ -12,6 +12,7 @@ export interface PlanLekcija {
   grupaId?: number;
   datum: string;
   lekcijaNaslov: string;
+  opisCasa: string | null;
   lekcijaTip: string;
   redoslijed: number;
   // Redni broj časa tog dana (1-baziran); server ga izvodi iz `redoslijed`.
@@ -72,7 +73,7 @@ export function PlanLekcijaModul({ grupaId, readOnly = false, onOtvoriKalendar }
   const [loading, setLoading] = useState(true);
   const [prikaz, setPrikaz] = useState<"nadolazeci" | "svi">("nadolazeci");
   // Radne vrijednosti po jednom času: ključ je `${datum}#${cas}`.
-  const [unosi, setUnosi] = useState<Record<string, { naslov: string; tip: string; slobodanUnos: boolean }>>({});
+  const [unosi, setUnosi] = useState<Record<string, { opis: string; lekcija: string; tip: string }>>({});
   const [dodatniCasovi, setDodatniCasovi] = useState<Record<string, number>>({});
   const [cuvaCas, setCuvaCas] = useState<string | null>(null);
 
@@ -98,13 +99,14 @@ export function PlanLekcijaModul({ grupaId, readOnly = false, onOtvoriKalendar }
 
   // Server prepisuje postojeći unos za isti dan i čas, pa isto dugme radi i za
   // prvi upis i za izmjenu.
-  async function sacuvajCas(datum: string, cas: number, naslov: string, tip: string) {
-    if (!token || !naslov.trim()) return;
+  async function sacuvajCas(datum: string, cas: number, opis: string, lekcija: string, tip: string) {
+    const naslov = lekcija.trim() || opis.trim();
+    if (!token || !naslov) return;
     const kljuc = `${datum}#${cas}`;
     setCuvaCas(kljuc);
     try {
       const upisan = await apiRequest<PlanLekcija>("POST", "/muallim/plan-lekcija", {
-        grupaId, datum, cas, lekcijaNaslov: naslov.trim(), lekcijaTip: tip,
+        grupaId, datum, cas, lekcijaNaslov: naslov, opisCasa: opis.trim() || null, lekcijaTip: tip,
       }, token);
       setPlan(prev => [...prev.filter(p => p.id !== upisan.id), upisan]);
       setUnosi(prev => {
@@ -214,13 +216,20 @@ export function PlanLekcijaModul({ grupaId, readOnly = false, onOtvoriKalendar }
                     const postojeci = poCasu.get(cas) ?? null;
                     const kljuc = `${datum}#${cas}`;
                     const unos = unosi[kljuc];
-                    const naslov = unos?.naslov ?? postojeci?.lekcijaNaslov ?? "";
+                     const stariNaslov = postojeci?.lekcijaNaslov ?? "";
+                     const poznataLekcija = lekcije.some(l => (l.izvorniNaslov ?? l.naslov) === stariNaslov);
+                     const stariOpis = postojeci?.opisCasa ?? (poznataLekcija ? "" : stariNaslov);
+                     const staraLekcija = postojeci?.opisCasa
+                       ? (postojeci.opisCasa === stariNaslov ? "" : stariNaslov)
+                       : (poznataLekcija ? stariNaslov : "");
+                     const opis = unos?.opis ?? stariOpis;
+                     const lekcija = unos?.lekcija ?? staraLekcija;
                     const tip = unos?.tip ?? postojeci?.lekcijaTip ?? "obrada";
-                    const poznataLekcija = lekcije.some(l => (l.izvorniNaslov ?? l.naslov) === naslov);
-                    const slobodanUnos = unos?.slobodanUnos ?? (naslov !== "" && !poznataLekcija);
-                    const izmijenjeno = !!unos && (naslov !== (postojeci?.lekcijaNaslov ?? "") || tip !== (postojeci?.lekcijaTip ?? "obrada"));
-                    const postaviUnos = (izmjene: Partial<{ naslov: string; tip: string; slobodanUnos: boolean }>) =>
-                      setUnosi(prev => ({ ...prev, [kljuc]: { naslov, tip, slobodanUnos, ...izmjene } }));
+                     const izmijenjeno = !!unos && (
+                       opis !== stariOpis || lekcija !== staraLekcija || tip !== (postojeci?.lekcijaTip ?? "obrada")
+                     );
+                     const postaviUnos = (izmjene: Partial<{ opis: string; lekcija: string; tip: string }>) =>
+                       setUnosi(prev => ({ ...prev, [kljuc]: { opis, lekcija, tip, ...izmjene } }));
 
                     if (readOnly) {
                       return (
@@ -229,49 +238,60 @@ export function PlanLekcijaModul({ grupaId, readOnly = false, onOtvoriKalendar }
                             {t("{n}. čas", { n: String(cas) })}
                           </span>
                           <span className="min-w-0 flex-1 break-words text-sm text-foreground">
-                            {naslov || <span className="text-muted-foreground">{t("nije upisano")}</span>}
+                             {postojeci?.opisCasa && postojeci.opisCasa !== stariNaslov && (
+                               <span className="block">{postojeci.opisCasa}</span>
+                             )}
+                             {stariNaslov || <span className="text-muted-foreground">{t("nije upisano")}</span>}
                           </span>
-                          {naslov && <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">{t(nazivVrste(tip))}</span>}
+                           {stariNaslov && <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">{t(nazivVrste(tip))}</span>}
                         </div>
                       );
                     }
 
                     return (
                       <div key={kljuc} className="px-3 py-3 sm:px-4" data-testid={`plan-cas-${datum}-${cas}`}>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                          <span className="shrink-0 rounded-lg bg-violet-50 px-2.5 py-1 text-xs font-extrabold text-violet-700">
+                         <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)]">
+                           <span className="self-start rounded-lg bg-violet-50 px-2.5 py-1 text-xs font-extrabold text-violet-700">
                             {t("{n}. čas", { n: String(cas) })}
                           </span>
-                          {slobodanUnos ? (
-                            <input
-                              type="text"
-                              value={naslov}
-                              placeholder={t("Npr. provjera gradiva, praktično klanjanje")}
-                              onChange={e => postaviUnos({ naslov: e.target.value, slobodanUnos: true })}
-                              className="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                            />
-                          ) : (
-                            <select
-                              value={naslov}
-                              onChange={e => {
-                                if (e.target.value === "__aktivnost__") postaviUnos({ naslov: "", slobodanUnos: true });
-                                else postaviUnos({ naslov: e.target.value, slobodanUnos: false });
-                              }}
-                              className="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                            >
-                              <option value="">{t("— Odaberi lekciju —")}</option>
-                              {[1, 2, 3, 4].map(nivo => {
-                                const nivoLekcije = lekcije.filter(l => l.nivo === nivo);
-                                if (nivoLekcije.length === 0) return null;
-                                return (
-                                  <optgroup key={nivo} label={t("Nivo {n}", { n: String(nivo) })}>
-                                    {nivoLekcije.map(l => <option key={l.id} value={l.izvorniNaslov ?? l.naslov}>{l.naslov}</option>)}
-                                  </optgroup>
-                                );
-                              })}
-                              <option value="__aktivnost__">{t("— Druga aktivnost (upiši) —")}</option>
-                            </select>
-                          )}
+                           <div className="grid min-w-0 gap-2 lg:grid-cols-2">
+                             <label className="min-w-0 text-xs font-bold text-muted-foreground">
+                               {t("Šta radimo na ovom času")}
+                               <input
+                                 type="text"
+                                 maxLength={300}
+                                 value={opis}
+                                 placeholder={t("Npr. ispitivanje prethodne lekcije")}
+                                 onChange={e => postaviUnos({ opis: e.target.value })}
+                                 className="mt-1 w-full min-w-0 rounded-lg border border-border bg-white px-3 py-2 text-sm font-normal text-foreground focus:outline-none focus:ring-2 focus:ring-violet-300"
+                                 data-testid={`input-plan-opis-${datum}-${cas}`}
+                               />
+                             </label>
+                             <label className="min-w-0 text-xs font-bold text-muted-foreground">
+                               {t("Lekcija (neobavezno)")}
+                               <select
+                                 value={lekcija}
+                                 onChange={e => postaviUnos({ lekcija: e.target.value })}
+                                 className="mt-1 w-full min-w-0 rounded-lg border border-border bg-white px-3 py-2 text-sm font-normal text-foreground focus:outline-none focus:ring-2 focus:ring-violet-300"
+                                 data-testid={`select-plan-lekcija-${datum}-${cas}`}
+                               >
+                                 <option value="">{t("— Bez povezane lekcije —")}</option>
+                                 {lekcija && !lekcije.some(l => (l.izvorniNaslov ?? l.naslov) === lekcija) && (
+                                   <option value={lekcija}>{lekcija}</option>
+                                 )}
+                                 {[1, 2, 3, 4].map(nivo => {
+                                   const nivoLekcije = lekcije.filter(l => l.nivo === nivo);
+                                   if (nivoLekcije.length === 0) return null;
+                                   return (
+                                     <optgroup key={nivo} label={t("Nivo {n}", { n: String(nivo) })}>
+                                       {nivoLekcije.map(l => <option key={l.id} value={l.izvorniNaslov ?? l.naslov}>{l.naslov}</option>)}
+                                     </optgroup>
+                                   );
+                                 })}
+                               </select>
+                             </label>
+                           </div>
+                           <div className="flex flex-wrap items-center gap-2 sm:col-start-2">
                           <select
                             value={tip}
                             onChange={e => postaviUnos({ tip: e.target.value })}
@@ -284,8 +304,8 @@ export function PlanLekcijaModul({ grupaId, readOnly = false, onOtvoriKalendar }
                           <div className="flex shrink-0 items-center gap-1">
                             <Button
                               type="button"
-                              onClick={() => sacuvajCas(datum, cas, naslov, tip)}
-                              disabled={!naslov.trim() || !izmijenjeno || cuvaCas === kljuc}
+                               onClick={() => sacuvajCas(datum, cas, opis, lekcija, tip)}
+                               disabled={!(opis.trim() || lekcija) || !izmijenjeno || cuvaCas === kljuc}
                               className="rounded-xl bg-violet-600 text-sm font-bold hover:bg-violet-700"
                               data-testid={`btn-plan-sacuvaj-${datum}-${cas}`}
                             >
@@ -297,16 +317,8 @@ export function PlanLekcijaModul({ grupaId, readOnly = false, onOtvoriKalendar }
                               </button>
                             )}
                           </div>
+                           </div>
                         </div>
-                        {slobodanUnos && (
-                          <button
-                            type="button"
-                            onClick={() => postaviUnos({ naslov: "", slobodanUnos: false })}
-                            className="ml-1 mt-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-                          >
-                            {t("← Nazad na spisak lekcija")}
-                          </button>
-                        )}
                       </div>
                     );
                   })}

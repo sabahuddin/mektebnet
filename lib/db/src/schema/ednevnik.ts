@@ -55,6 +55,7 @@ export const planLekcijaTable = pgTable("plan_lekcija", {
   muallimId: integer("muallim_id").notNull(),
   datum: varchar("datum", { length: 20 }).notNull(),
   lekcijaNaslov: varchar("lekcija_naslov", { length: 300 }).notNull(),
+  opisCasa: text("opis_casa"),
   lekcijaTip: varchar("lekcija_tip", { length: 50 }).notNull().default("ilmihal"),
   redoslijed: integer("redoslijed").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),

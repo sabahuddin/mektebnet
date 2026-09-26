@@ -29,6 +29,7 @@ interface PlanOdgovor {
   id: number;
   datum: string;
   lekcijaNaslov: string;
+  opisCasa: string | null;
   lekcijaTip: string;
   redoslijed: number;
   cas: number;
@@ -134,6 +135,30 @@ test("ponovni upis istog časa mijenja postojeći unos umjesto da doda novi", as
   assert.equal(plan.length, 2);
   assert.equal(plan[0].lekcijaNaslov, "Namaz");
   assert.equal(plan[0].lekcijaTip, "ponavljanje");
+});
+
+test("opis časa ostaje sačuvan uz lekciju, a može se i ukloniti", async () => {
+  const upis = await poziv("/api/muallim/plan-lekcija", {
+    method: "POST",
+    body: JSON.stringify({
+      grupaId, datum: DATUM, cas: 2, opisCasa: "Prvo provjeravamo ranije gradivo",
+      lekcijaNaslov: "Abdest", lekcijaTip: "provjera",
+    }),
+  }, token);
+  assert.equal(upis.status, 200);
+  const sacuvan = await upis.json() as PlanOdgovor;
+  assert.equal(sacuvan.opisCasa, "Prvo provjeravamo ranije gradivo");
+  assert.equal(sacuvan.lekcijaNaslov, "Abdest");
+
+  const spisak = await poziv(`/api/muallim/plan-lekcija?grupaId=${grupaId}`, { method: "GET" }, token);
+  const plan = await spisak.json() as PlanOdgovor[];
+  assert.equal(plan.find(p => p.cas === 2)?.opisCasa, "Prvo provjeravamo ranije gradivo");
+
+  const bezOpisa = await poziv(`/api/muallim/plan-lekcija/${sacuvan.id}`, {
+    method: "PATCH", body: JSON.stringify({ opisCasa: null }),
+  }, token);
+  assert.equal(bezOpisa.status, 200);
+  assert.equal((await bezOpisa.json() as PlanOdgovor).opisCasa, null);
 });
 
 test("izmjena vrste časa ide kroz PATCH", async () => {

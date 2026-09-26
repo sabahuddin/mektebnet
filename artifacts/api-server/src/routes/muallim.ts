@@ -4145,8 +4145,14 @@ router.get("/plan-lekcija", async (req, res) => {
 // bez brisanja).
 router.post("/plan-lekcija", async (req, res) => {
   try {
-    const { grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed, cas } = req.body;
-    if (!grupaId || !datum || !lekcijaNaslov) { res.status(400).json({ error: "grupaId, datum i lekcijaNaslov su obavezni" }); return; }
+    const { grupaId, datum, lekcijaNaslov, lekcijaTip, redoslijed, cas, opisCasa } = req.body ?? {};
+    const naslov = typeof lekcijaNaslov === "string" ? lekcijaNaslov.trim() : "";
+    const opis = typeof opisCasa === "string" ? opisCasa.trim() : null;
+    if (!grupaId || !datum || !naslov || naslov.length > 300 ||
+        (opisCasa != null && (typeof opisCasa !== "string" || opisCasa.length > 500))) {
+      res.status(400).json({ error: "Unesite aktivnost ili lekciju (do 300 znakova); opis časa može imati do 500 znakova" });
+      return;
+    }
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
@@ -4165,7 +4171,11 @@ router.post("/plan-lekcija", async (req, res) => {
 
     if (postojeci) {
       const [azuriran] = await db.update(planLekcijaTable)
-        .set({ lekcijaNaslov, lekcijaTip: lekcijaTip || postojeci.lekcijaTip })
+        .set({
+          lekcijaNaslov: naslov,
+          lekcijaTip: lekcijaTip || postojeci.lekcijaTip,
+          ...(opisCasa !== undefined ? { opisCasa: opis || null } : {}),
+        })
         .where(eq(planLekcijaTable.id, postojeci.id))
         .returning();
       res.json(planLekcijaOut(azuriran));
@@ -4173,7 +4183,8 @@ router.post("/plan-lekcija", async (req, res) => {
     }
 
     const [nova] = await db.insert(planLekcijaTable).values({
-      grupaId, muallimId: req.user!.userId, datum, lekcijaNaslov,
+      grupaId, muallimId: req.user!.userId, datum, lekcijaNaslov: naslov,
+      opisCasa: opis || null,
       lekcijaTip: lekcijaTip || "ilmihal",
       redoslijed: noviRedoslijed,
     }).returning();
@@ -4194,10 +4205,17 @@ router.patch("/plan-lekcija/:id", async (req, res) => {
     const grupa = await verifyGrupaAccess(entry.grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
 
-    const { lekcijaNaslov, lekcijaTip } = req.body ?? {};
+    const { lekcijaNaslov, lekcijaTip, opisCasa } = req.body ?? {};
     const izmjene: Partial<PlanLekcijaRed> = {};
-    if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) izmjene.lekcijaNaslov = lekcijaNaslov.trim();
+    if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim() && lekcijaNaslov.length <= 300) izmjene.lekcijaNaslov = lekcijaNaslov.trim();
     if (typeof lekcijaTip === "string" && lekcijaTip.trim()) izmjene.lekcijaTip = lekcijaTip.trim();
+    if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "opisCasa")) {
+      if (opisCasa !== null && (typeof opisCasa !== "string" || opisCasa.length > 500)) {
+        res.status(400).json({ error: "Opis časa može imati do 500 znakova" });
+        return;
+      }
+      izmjene.opisCasa = typeof opisCasa === "string" ? opisCasa.trim() || null : null;
+    }
     if (Object.keys(izmjene).length === 0) { res.status(400).json({ error: "Nema izmjena" }); return; }
 
     const [azuriran] = await db.update(planLekcijaTable)

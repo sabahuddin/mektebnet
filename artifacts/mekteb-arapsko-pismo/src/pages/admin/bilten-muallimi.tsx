@@ -25,21 +25,19 @@ const firstBulletin = {
   naslov: "Novosti u Mektebu · 20–26. septembra 2026.",
   sadrzaj: `Esselamu alejkum, dragi muallimi,
 
-U protekloj sedmici pripremili smo nekoliko novosti koje vam olakšavaju nastavu i praćenje napretka djece. Evo najvažnijeg:
+Pripremili smo nekoliko novosti koje vam olakšavaju nastavu, saradnju s roditeljima i praćenje napretka djece:
 
-• Planiranje nastave — lekcije sada možete planirati po časovima i pratiti statistiku učeničkih vježbi. Na jednoj grupi mogu sarađivati odgovorni muallim i do dva dodatna muallima.
+• Novi modul Kur’an Časni — sure možete pretraživati i čitati po suri ili po stranici Mushafa. Dostupni su slušanje ajeta, izbor učača, podešavanje brzine i ponavljanje ajeta. U kur’anskoj zadaći i ocjeni možete označiti konkretnu stranicu.
 
-• Dodavanje učenika i roditelja — pri masovnom unosu svaki učenik ide u novi red, a ime roditelja dopišete iza zareza, npr. „Amina Hasić, Senad Hasić”. Učenika možete unijeti i bez roditelja. Ime i prezime učenika možete naknadno ispraviti bez promjene njegovih podataka za prijavu.
+• Planiranje nastave — za svaki dan možete upisati prvi i drugi čas. Na svakom času prvo napišite šta radite, a zatim po želji odaberite lekciju. Tako jedan čas možete posvetiti ispitivanju, a drugi obradi novog gradiva. Grupu mogu voditi odgovorni muallim i još do dva dodatna muallima.
 
-• Zadaće po mjeri učenika — možete formirati podgrupe i zadati zadaću samo odabranoj podgrupi. Rokovi su ponovo dostupni, u zadaću možete ugraditi Wayground vježbu, a s kartice učenika možete zadati i zadaću bez povezane lekcije. Za kur'anske zadaće i ocjene možete odabrati konkretnu stranicu.
+• Učenici i roditelji — pojedinačnog učenika možete dodati iz svog Profila. Pri masovnom unosu u postavkama grupe svakog učenika upišite u novi red; ime roditelja dodajte iza zareza, npr. „Amina Hasić, Senad Hasić”. Učenika možete unijeti i bez roditelja. Roditeljski profil je redizajniran: pregled djece je na karticama, s prečicama za zadaće, ocjene, prisustvo i kalendar.
 
-• Napamet i lekcije — program Napamet ima odvojene prikaze za pregled i uređivanje. Možete odrediti jesu li stavke vidljive grupi ili pojedinom učeniku. Dodatne lekcije preglednije su raspoređene po nivoima, a muallimske lekcije možete pripremiti privatno prije dijeljenja.
+• Zadaće po mjeri učenika — možete formirati podgrupe i zadati zadaću samo odabranoj podgrupi. Rokovi su dostupni, u zadaću možete ugraditi Wayground vježbu, a s kartice učenika možete zadati i zadaću bez povezane lekcije.
 
-• Novo za djecu — zasebna cjelina „Učim čitati” sada ima sedam lekcija i audio-primjere. Naše interaktivne vježbe i etapni ispiti prikazuju se na jeziku koji dijete koristi.
+• Vlastite lekcije i sadržaji — ako želite dodavati svoje lekcije ili druge nastavne sadržaje, javite se administraciji da dogovorimo način pripreme i objave.
 
-• Lakša saradnja s roditeljima — na pregledu možete pronaći sve učenike, filtrirati arhivirane i poslati poruku roditelju. Automatske obavijesti o ocjenama i zadaći prilagođene su jeziku roditelja.
-
-• Dva odvojena načina komunikacije — u „Pitanjima i prijedlozima” možete privatno pisati administraciji; poruka i odgovor nisu vidljivi drugim muallimima. Ovaj bilten služi za zajedničke novosti i njihovu arhivu.
+• Pitanja i prijedlozi — administraciji možete pisati privatno; vaše pitanje i odgovor nisu vidljivi drugim muallimima. Bilten služi za zajedničke novosti i njihovu arhivu.
 
 Hvala vam na svakodnevnom radu s djecom i prijedlozima koji nam pomažu da Mekteb bude bolji. Ako imate pitanje ili primijetite problem, pišite nam kroz „Pitanja i prijedlozi” u svom panelu.
 

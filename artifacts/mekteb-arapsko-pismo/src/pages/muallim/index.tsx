@@ -188,6 +188,7 @@ interface PlanLekcija {
   grupaId: number;
   datum: string;
   lekcijaNaslov: string;
+  opisCasa?: string | null;
   lekcijaTip: string;
   redoslijed: number;
   // Redni broj časa tog dana (1-baziran); server ga izvodi iz `redoslijed`.
@@ -4322,6 +4323,7 @@ export default function MuallimPanel() {
                                           <span className="mr-1.5 rounded bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-violet-700">
                                             {t("{n}. čas", { n: String(l.cas ?? l.redoslijed + 1) })}
                                           </span>
+                                          {l.opisCasa && l.opisCasa !== l.lekcijaNaslov && `${l.opisCasa} · `}
                                           {l.lekcijaNaslov}
                                           <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t(nazivVrste(l.lekcijaTip))}</span>
                                         </span>
@@ -4647,16 +4649,21 @@ export default function MuallimPanel() {
                                     <span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-extrabold text-violet-700">
                                       {t("{n}. čas", { n: String(l.cas ?? l.redoslijed + 1) })}
                                     </span>
+                                    <div className="min-w-0 flex-1">
+                                      {l.opisCasa && l.opisCasa !== l.lekcijaNaslov && (
+                                        <p className="truncate text-sm font-medium text-foreground">{l.opisCasa}</p>
+                                      )}
                                     {(() => {
                                       const matchSlug = dostupneLekcije.find(dl => dl.naslov === l.lekcijaNaslov)?.slug;
                                       return matchSlug ? (
-                                        <Link href={`/ilmihal/${matchSlug}`} className="min-w-0 flex-1 text-sm font-medium text-primary hover:underline inline-flex items-center gap-1">
+                                        <Link href={`/ilmihal/${matchSlug}`} className="min-w-0 text-sm font-medium text-primary hover:underline inline-flex items-center gap-1">
                                           <BookOpen className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{l.lekcijaNaslov}</span>
                                         </Link>
                                       ) : (
-                                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{l.lekcijaNaslov}</span>
+                                        <span className="block truncate text-sm font-medium text-foreground">{l.lekcijaNaslov}</span>
                                       );
                                     })()}
+                                    </div>
                                     <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t(nazivVrste(l.lekcijaTip))}</span>
                                     <button onClick={() => deleteLekcija(l.id)} className="shrink-0 text-red-400 hover:text-red-600">
                                       <Trash2 className="w-3.5 h-3.5" />
@@ -4862,6 +4869,20 @@ export default function MuallimPanel() {
             {activeTab === "profil" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {subscription && <SubscriptionCard data={subscription} />}
+
+                {!isMuallimPreview && (
+                  <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border/50 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="font-extrabold text-foreground">{t("Učenici")}</h3>
+                      <p className="text-sm text-muted-foreground">{t("Dodajte pojedinačnog učenika i povežite ga s grupom.")}</p>
+                    </div>
+                    <Link href="/muallim/dodaj-ucenika">
+                      <Button className="flex items-center gap-2 rounded-xl font-bold">
+                        <Plus className="h-4 w-4" /> {t("Dodaj učenika")}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
 
                 <div className="bg-white border border-border/50 rounded-2xl p-5">
                   <h3 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
