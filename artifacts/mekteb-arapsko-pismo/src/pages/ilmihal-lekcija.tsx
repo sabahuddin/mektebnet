@@ -3764,17 +3764,23 @@ export default function IlmihalLekcijaPage() {
 
   // Fetch all lekcije for the same nivo to build the strip
   useEffect(() => {
-    apiRequest<LekcijaNav[]>("GET", "/content/ilmihal")
+    let cancelled = false;
+    // Use the same viewer as the lesson detail: the public list excludes
+    // muallim-only introductions, shifting the strip's numbering for admins.
+    apiRequest<LekcijaNav[]>("GET", "/content/ilmihal", undefined, token || undefined)
       .then(all => {
-        if (!lekcija) return;
+        if (cancelled || !lekcija) return;
         const dn = displayNivo(lekcija.nivo);
         const same = all
           .filter(l => displayNivo(l.nivo) === dn)
           .sort((a, b) => (a.redoslijed ?? 0) - (b.redoslijed ?? 0));
         setLekcijeStrip(same);
       })
-      .catch(() => {});
-  }, [lekcija, lang]);
+      .catch(() => {
+        if (!cancelled) setLekcijeStrip([]);
+      });
+    return () => { cancelled = true; };
+  }, [lekcija, lang, token]);
 
   // Učitaj listu završenih lekcija da pokažemo ✓ na strip-u i sinhronizujemo "completed" state
   useEffect(() => {
