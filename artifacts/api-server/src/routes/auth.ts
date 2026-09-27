@@ -878,6 +878,9 @@ router.get("/subscription", requireAuth, async (req, res) => {
             ))
             .limit(1)
         : [];
+      const independentlyRegisteredOnline = mekteb?.naziv.trim().toLocaleLowerCase("bs") === "online džemat"
+        && ownSubscription?.planType === "individual"
+        && Boolean(account.trialUntil || ownSubscription.status === "active" || ownSubscription.paidAt);
 
       if (account.billingOverride === "self" && ownSubscription?.planType === "individual") {
         coverage = "self";
@@ -888,6 +891,11 @@ router.get("/subscription", requireAuth, async (req, res) => {
         coverage = "family";
         planType = "family";
         subscriptionOwnerId = familyLink.roditeljId;
+      } else if (independentlyRegisteredOnline) {
+        coverage = "self";
+        planType = "individual";
+        subscriptionOwnerId = userId;
+        canRenew = true;
       } else if (mekteb) {
         coverage = "mekteb";
         mektebMuallimCount = mekteb.dozvoljenoMuallima;

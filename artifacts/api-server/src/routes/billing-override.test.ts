@@ -5,6 +5,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   mektebiTable,
+  muallimProfiliTable,
   pretplateTable,
   ucenikProfiliTable,
   usersTable,
@@ -21,8 +22,11 @@ let pendingStudentId: number;
 let raceStudentId: number;
 let mixedStudentId: number;
 let mektebId: number;
+let onlineStudentId: number;
+let onlineTeacherId: number;
+let onlineMektebId: number;
 
-async function createUser(role: "admin" | "ucenik", label: string): Promise<number> {
+async function createUser(role: "admin" | "ucenik" | "muallim", label: string): Promise<number> {
   const [user] = await db.insert(usersTable).values({
     username: `${label}.${SUFFIX}`,
     displayName: `${label} ${SUFFIX}`,
@@ -65,18 +69,37 @@ before(async () => {
   pendingStudentId = await createUser("ucenik", "pending-student");
   raceStudentId = await createUser("ucenik", "race-student");
   mixedStudentId = await createUser("ucenik", "mixed-student");
+  onlineStudentId = await createUser("ucenik", "online-student");
+  onlineTeacherId = await createUser("muallim", "online-teacher");
   const [mekteb] = await db.insert(mektebiTable).values({
     naziv: `Billing override mekteb ${SUFFIX}`,
     billingPaket: "do100",
     billingRegion: "bih",
   }).returning({ id: mektebiTable.id });
   mektebId = mekteb.id;
+  const [onlineMekteb] = await db.insert(mektebiTable).values({
+    naziv: "Online džemat",
+    billingPaket: "do100",
+    billingRegion: "bih",
+  }).returning({ id: mektebiTable.id });
+  onlineMektebId = onlineMekteb.id;
+  await db.insert(muallimProfiliTable).values({ userId: onlineTeacherId, mektebId: onlineMektebId });
   await db.insert(ucenikProfiliTable).values([
     { userId: paidStudentId, mektebId },
     { userId: pendingStudentId, mektebId },
     { userId: raceStudentId, mektebId },
     { userId: mixedStudentId },
+    { userId: onlineStudentId, muallimId: onlineTeacherId },
   ]);
+  await db.update(usersTable)
+    .set({ trialUntil: new Date("2027-12-01T00:00:00Z") })
+    .where(eq(usersTable.id, onlineStudentId));
+  await db.insert(pretplateTable).values({
+    userId: onlineStudentId,
+    planType: "individual",
+    status: "pending",
+    licencesPurchased: 1,
+  });
   await db.insert(pretplateTable).values({
     userId: paidStudentId,
     planType: "individual",
@@ -122,11 +145,13 @@ before(async () => {
 
 after(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
-  const userIds = [adminId, paidStudentId, pendingStudentId, raceStudentId, mixedStudentId].filter(Boolean);
+  const userIds = [adminId, paidStudentId, pendingStudentId, raceStudentId, mixedStudentId, onlineStudentId, onlineTeacherId].filter(Boolean);
   await db.delete(pretplateTable).where(inArray(pretplateTable.userId, userIds));
   await db.delete(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, userIds));
+  if (onlineTeacherId) await db.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, onlineTeacherId));
   await db.delete(usersTable).where(inArray(usersTable.id, userIds));
   if (mektebId) await db.delete(mektebiTable).where(eq(mektebiTable.id, mektebId));
+  if (onlineMektebId) await db.delete(mektebiTable).where(eq(mektebiTable.id, onlineMektebId));
 });
 
 test("admin move keeps an active own subscription and makes auth coverage self", async () => {
@@ -153,9 +178,10 @@ test("admin move keeps an active own subscription and makes auth coverage self",
   assert.equal(subscription.status, 200);
   assert.equal((await subscription.json() as { coverage: string; planType: string }).coverage, "self");
   const schoolList = await request("/api/admin/korisnici", adminToken);
-  const schoolUser = (await schoolList.json() as Array<{ id: number; billingCoverage: string; mektebNaziv: string | null }>)
+  const schoolUser = (await schoolList.json() as Array<{ id: number; billingCoverage: string; mektebNaziv: string | null; pretplata: { id: number } | null }>)
     .find((user) => user.id === paidStudentId);
-  assert.equal(schoolUser?.billingCoverage, "mekteb");
+  assert.equal(schoolUser?.billingCoverage, "self");
+  assert.equal(schoolUser?.pretplata?.id, originalId);
   assert.match(schoolUser?.mektebNaziv ?? "", /Billing override mekteb/);
 
   const movedAgain = await request(`/api/admin/korisnik/${paidStudentId}/billing-override`, adminToken, {
@@ -164,6 +190,26 @@ test("admin move keeps an active own subscription and makes auth coverage self",
   });
   assert.equal(movedAgain.status, 200);
   assert.equal((await db.select().from(pretplateTable).where(eq(pretplateTable.userId, paidStudentId))).length, 1);
+});
+
+test("online džemat nije mektebska naplata samostalno registrovanog učenika", async () => {
+  const response = await request("/api/admin/korisnici", tokenFor(adminId, "admin", "admin"));
+  assert.equal(response.status, 200);
+  const student = (await response.json() as Array<{
+    id: number; role: string; billingCoverage: string; billingPlan: string;
+    mektebNaziv: string | null; pretplata: { status: string } | null;
+  }>).find((user) => user.id === onlineStudentId);
+  assert.equal(student?.role, "ucenik");
+  assert.equal(student?.billingCoverage, "self");
+  assert.equal(student?.billingPlan, "individual");
+  assert.equal(student?.pretplata?.status, "pending");
+  assert.equal(student?.mektebNaziv, "Online džemat");
+  const ownProfile = await request("/api/auth/subscription", tokenFor(onlineStudentId, "ucenik", "online-student"));
+  assert.equal(ownProfile.status, 200);
+  const subscription = await ownProfile.json() as { coverage: string; planType: string; canRenew: boolean };
+  assert.equal(subscription.coverage, "self");
+  assert.equal(subscription.planType, "individual");
+  assert.equal(subscription.canRenew, true);
 });
 
 test("admin move creates one pending subscription and is idempotent", async () => {

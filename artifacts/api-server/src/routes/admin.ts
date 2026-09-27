@@ -1751,14 +1751,6 @@ router.get("/korisnici", async (req, res) => {
       if (expectedPlan === p.planType && !latestByUser.has(p.userId)) latestByUser.set(p.userId, p);
     }
     const familyChildren = new Set(veze.map((v) => v.ucenikId));
-    const familySubscriptionParents = new Set(
-      korisnici.filter((user) => user.role === "roditelj" && latestByUser.get(user.id)?.planType === "family")
-        .map((user) => user.id),
-    );
-    const familySubscriptionChildren = new Set(
-      veze.filter((veza) => familySubscriptionParents.has(veza.roditeljId))
-        .map((veza) => veza.ucenikId),
-    );
     const studentProfiles = new Map(ucenikProfili.map((p) => [p.userId, p]));
     const parentProfiles = new Set(roditeljProfili.map((profile) => profile.userId));
     const muallimMektebi = new Map(muallimProfili.map((p) => [p.userId, p.mektebId]));
@@ -1774,11 +1766,22 @@ router.get("/korisnici", async (req, res) => {
       veze.filter((veza) => mektebChildren.has(veza.ucenikId)).map((veza) => veza.roditeljId),
     );
     const mektebNameById = new Map(mektebi.map((mekteb) => [mekteb.id, mekteb.naziv]));
+    // Online džemat organizuje samostalno registrovane učenike; sama veza s
+    // njegovim muallimom nije dokaz da džemat plaća njihovu pretplatu.
+    const onlineMektebIds = new Set(
+      mektebi.filter((mekteb) => mekteb.naziv.trim().toLocaleLowerCase("bs") === "online džemat")
+        .map((mekteb) => mekteb.id),
+    );
     const mektebIdByStudent = new Map(ucenikProfili.map((profile) => [
       profile.userId,
       profile.mektebId ?? (profile.muallimId ? muallimMektebi.get(profile.muallimId) ?? null : null),
     ]));
+    const onlineStudents = new Set(
+      [...mektebIdByStudent].filter(([, id]) => id !== null && onlineMektebIds.has(id))
+        .map(([userId]) => userId),
+    );
     const mektebNameByParent = new Map<number, string | null>();
+    const onlineParents = new Set<number>();
     for (const parentId of mektebParents) {
       const linkedSchoolIds = [...new Set(
         veze
@@ -1786,9 +1789,26 @@ router.get("/korisnici", async (req, res) => {
           .map((veza) => mektebIdByStudent.get(veza.ucenikId))
           .filter((mektebId): mektebId is number => Boolean(mektebId)),
       )];
+      if (linkedSchoolIds.length > 0 && linkedSchoolIds.every((id) => onlineMektebIds.has(id))) {
+        onlineParents.add(parentId);
+      }
       mektebNameByParent.set(parentId,
         linkedSchoolIds.map((id) => mektebNameById.get(id)).filter((name): name is string => Boolean(name)).join(", ") || null);
     }
+    const familySubscriptionParents = new Set(
+      korisnici.filter((user) => {
+        const own = latestByUser.get(user.id);
+        const registered = Boolean(user.trialUntil || own?.status === "active" || own?.paidAt);
+        return user.role === "roditelj" && parentProfiles.has(user.id) && own?.planType === "family"
+          && (user.billingOverride === "self"
+            || !mektebParents.has(user.id)
+            || (registered && onlineParents.has(user.id)));
+      }).map((user) => user.id),
+    );
+    const familySubscriptionChildren = new Set(
+      veze.filter((veza) => familySubscriptionParents.has(veza.roditeljId))
+        .map((veza) => veza.ucenikId),
+    );
 
     const classified = korisnici.map((k) => {
       let billingPlan: "individual" | "family" | null = null;
@@ -1797,15 +1817,11 @@ router.get("/korisnici", async (req, res) => {
       const ownPlan = ownSubscription?.planType;
       const independentlyRegistered = Boolean(k.trialUntil || ownSubscription?.status === "active" || ownSubscription?.paidAt);
       if (k.role === "roditelj") {
-        if (mektebParents.has(k.id)) {
-          billingCoverage = "mekteb";
-        } else if (
-          ownPlan === "family"
-          && parentProfiles.has(k.id)
-          && independentlyRegistered
-        ) {
+        if (familySubscriptionParents.has(k.id)) {
           billingPlan = "family";
           billingCoverage = "self";
+        } else if (mektebParents.has(k.id)) {
+          billingCoverage = "mekteb";
         }
       } else if (k.role === "ucenik") {
         const profile = studentProfiles.get(k.id);
@@ -1813,17 +1829,19 @@ router.get("/korisnici", async (req, res) => {
           profile?.mektebId ||
           (profile?.muallimId && muallimMektebi.get(profile.muallimId)),
         );
-        if (coveredByMekteb) billingCoverage = "mekteb";
-        else if (k.billingOverride === "self" && ownPlan === "individual") {
+        if (ownPlan === "individual" && k.billingOverride === "self") {
+          billingPlan = "individual";
+          billingCoverage = "self";
+        } else if (familySubscriptionChildren.has(k.id) && (!coveredByMekteb || onlineStudents.has(k.id))) billingCoverage = "family";
+        else if (ownPlan === "individual" && onlineStudents.has(k.id) && independentlyRegistered) {
           billingPlan = "individual";
           billingCoverage = "self";
         }
-        else if (familySubscriptionChildren.has(k.id)) billingCoverage = "family";
+        else if (coveredByMekteb) billingCoverage = "mekteb";
         else if (familyChildren.has(k.id)) billingCoverage = "family";
         else if (
           ownPlan === "individual"
           && studentProfiles.has(k.id)
-          && independentlyRegistered
         ) {
           billingPlan = "individual";
           billingCoverage = "self";

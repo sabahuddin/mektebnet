@@ -83,7 +83,7 @@ before(async () => {
   familyChildId = await createUser("ucenik", "ucenik-family");
 
   const [mekteb] = await db.insert(mektebiTable).values({
-    naziv: `Test mekteb ${SUFFIX}`,
+    naziv: "Online džemat",
     billingPaket: "do100",
     billingRegion: "bih",
   }).returning({ id: mektebiTable.id });
@@ -112,7 +112,7 @@ before(async () => {
   });
   await db.insert(pretplateTable).values([
     { userId: selfParentId, planType: "family", status: "active", licencesPurchased: 4, iznos: 30, valuta: "EUR",
-      activatedAt: new Date("2026-06-01T00:00:00Z"), expiresAt: new Date("2027-06-01T00:00:00Z") },
+      paidAt: new Date("2026-06-01T00:00:00Z"), activatedAt: new Date("2026-06-01T00:00:00Z"), expiresAt: new Date("2027-06-01T00:00:00Z") },
     { userId: selfStudentId, planType: "individual", status: "pending", licencesPurchased: 1, iznos: 20, valuta: "EUR" },
   ]);
 
@@ -194,6 +194,7 @@ test("admin popis vraća istu klasifikaciju roditelja kao roditeljski profil", a
   assert.equal(mektebParent?.billingPlan, null);
   assert.equal(selfParent?.billingCoverage, "self");
   assert.equal(selfParent?.billingPlan, "family");
+  assert.equal(familyChild?.billingCoverage, "family");
   assert.deepEqual(selfParent?.porodicnaDjeca, [{
     id: familyChildId,
     username: `ucenik-family.${SUFFIX}`,
