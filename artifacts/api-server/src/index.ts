@@ -1362,6 +1362,16 @@ async function runResidualSchema() {
     // Stariji zapisi predstavljaju prvi čas; drugi se evidentira samo po izboru.
     await db.execute(sql`ALTER TABLE prisustvo ADD COLUMN IF NOT EXISTS cas INTEGER NOT NULL DEFAULT 1`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS prisustvo_grupa_datum_cas_idx ON prisustvo (grupa_id, datum, cas, ucenik_id)`);
+    // Novim grupama je podrazumijevano dnevno prisustvo; za stare sačuvaj
+    // već korišteni broj časova, ali ne prepisuj kasniji izbor muallima.
+    await db.execute(sql`ALTER TABLE grupe ADD COLUMN IF NOT EXISTS prisustvo_casova INTEGER`);
+    await db.execute(sql`
+      UPDATE grupe g SET prisustvo_casova = LEAST(4, GREATEST(1,
+        COALESCE((SELECT MAX(p.cas) FROM prisustvo p WHERE p.grupa_id = g.id), 1)))
+      WHERE g.prisustvo_casova IS NULL
+    `);
+    await db.execute(sql`ALTER TABLE grupe ALTER COLUMN prisustvo_casova SET DEFAULT 1`);
+    await db.execute(sql`ALTER TABLE grupe ALTER COLUMN prisustvo_casova SET NOT NULL`);
 
     logger.info("Residual schema (game_sessions + lesson_pause_answers + h5p indexes + zadace_ucenici constraints + pitanja_banka.meta + one-parent unique index + 0006 catch-up: kvizovi cols + obavjestenja + kviz_pitanja + pitanja_banka idx + presence + prilozi catch-up + Task#126 etape/krunisanje + mekteb is_glavni/glavni_muallim_id/dozvoljeno_muallima + muallim dozvoljeni_jezici + mekteb_dokumenti + grupa_muallimi + izmjene_lekcija + podgrupe + targeted homework snapshots + prisustvo.cas) ready");
   } catch (e) {

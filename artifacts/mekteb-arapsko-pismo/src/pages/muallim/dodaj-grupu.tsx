@@ -31,6 +31,7 @@ interface Grupa {
   datumKraja?: string | null;
   daniNastave: string[];
   vrijemeNastave: string;
+  prisustvoCasova?: number;
   muallimId?: number;
 }
 
@@ -59,6 +60,7 @@ export default function DodajGrupuPage() {
   const [datumKraja, setDatumKraja] = useState("");
   const [vrijemeNastave, setVrijemeNastave] = useState("");
   const [daniNastave, setDaniNastave] = useState<string[]>([]);
+  const [prisustvoCasova, setPrisustvoCasova] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(isEdit);
   const [loaded, setLoaded] = useState(!isEdit);
@@ -105,6 +107,7 @@ export default function DodajGrupuPage() {
         setDatumKraja(dateInput(g.datumKraja));
         setVrijemeNastave(g.vrijemeNastave || "");
         setDaniNastave(g.daniNastave || []);
+        setPrisustvoCasova(g.prisustvoCasova ?? 1);
         if (g.muallimId) setSelectedMuallimId(g.muallimId);
         setLoaded(true);
       })
@@ -128,6 +131,7 @@ export default function DodajGrupuPage() {
         datumKraja: datumKraja || null,
         vrijemeNastave,
         daniNastave,
+        prisustvoCasova,
       };
       // Glavnom muallimu pošalji odabranog muallima
       if (isGlavni && selectedMuallimId) {
@@ -267,6 +271,22 @@ export default function DodajGrupuPage() {
               ))}
             </div>
           </div>
+
+          <fieldset className="rounded-xl border border-border/60 p-4">
+            <legend className="px-1 text-sm font-bold text-foreground">{t("Evidencija prisustva")}</legend>
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3, 4].map(broj => (
+                <label key={broj} className={`cursor-pointer rounded-xl border-2 px-3 py-2 text-sm font-bold transition-colors ${
+                  prisustvoCasova === broj ? "border-primary bg-primary/10 text-primary" : "border-border bg-white text-muted-foreground hover:border-primary/40"
+                }`}>
+                  <input type="radio" name="prisustvoCasova" value={broj} checked={prisustvoCasova === broj}
+                    onChange={() => setPrisustvoCasova(broj)} className="sr-only" />
+                  {broj === 1 ? t("Po danu") : t("Po času ({n})", { n: String(broj) })}
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">{t("Za evidenciju po danu unosi se jedan status, a po času status za svaki odabrani čas.")}</p>
+          </fieldset>
 
           <div>
             <label className="text-sm font-bold text-foreground mb-1.5 block">{t("Vrijeme nastave")}</label>

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
-import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -26,6 +25,7 @@ interface Grupa {
   id: number;
   naziv: string;
   skolskaGodina: string;
+  prisustvoCasova: number;
 }
 
 interface PrisustvoRecord {
@@ -65,6 +65,8 @@ export default function PrisustvoPage() {
   const [napomene, setNapomene] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isAttendanceLoading, setIsAttendanceLoading] = useState(false);
+  const [attendanceLoadError, setAttendanceLoadError] = useState(false);
+  const [historyMaxCas, setHistoryMaxCas] = useState(1);
   const [hasExistingRecords, setHasExistingRecords] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -78,30 +80,37 @@ export default function PrisustvoPage() {
       setGrupa(g || null);
       const grupaUcenici = sviUcenici.filter((u: any) => (u.grupaId || u.profil?.grupaId) === parseInt(grupaId));
       setUcenici(grupaUcenici);
-      const defaultStatusi: Record<string, Status> = {};
-      grupaUcenici.forEach((u: Ucenik) => { defaultStatusi[attendanceKey(u.id, 1)] = "prisutan"; });
-      setStatusi(defaultStatusi);
-    }).catch(() => {}).finally(() => setIsLoading(false));
+    }).catch(() => {
+      toast({ title: t("Greška"), description: t("Nije moguće učitati grupu i učenike"), variant: "destructive" });
+    }).finally(() => setIsLoading(false));
   }, [token, grupaId]);
 
   useEffect(() => {
-    if (!token || !grupaId || ucenici.length === 0) {
+    if (!token || !grupaId || !grupa || ucenici.length === 0) {
       setHasExistingRecords(false);
       return;
     }
     let ignore = false;
     const defaultStatusi: Record<string, Status> = {};
-    ucenici.forEach(u => { defaultStatusi[attendanceKey(u.id, 1)] = "prisutan"; });
+    ucenici.forEach(u => {
+      CASOVI.slice(0, grupa.prisustvoCasova).forEach(cas => {
+        defaultStatusi[attendanceKey(u.id, cas)] = "prisutan";
+      });
+    });
     setStatusi(defaultStatusi);
     setNapomene({});
     setHasExistingRecords(false);
+    setAttendanceLoadError(false);
+    setHistoryMaxCas(1);
     setIsAttendanceLoading(true);
 
     apiRequest<PrisustvoRecord[]>("GET", `/muallim/prisustvo?grupaId=${grupaId}&datum=${datum}`, undefined, token)
       .then(records => {
         if (ignore) return;
-        const newStatusi = { ...defaultStatusi };
+        // Postojeći dan uređujemo bez automatskog dopunjavanja časova koji nisu bili evidentirani.
+        const newStatusi = records.length ? {} as Record<string, Status> : defaultStatusi;
         const newNapomene: Record<string, string> = {};
+        setHistoryMaxCas(Math.min(4, Math.max(1, ...records.map(r => r.cas))));
         for (const r of records) {
           if (!CASOVI.includes(r.cas as Cas)) continue;
           const key = attendanceKey(r.ucenikId, r.cas as Cas);
@@ -114,6 +123,7 @@ export default function PrisustvoPage() {
       })
       .catch(() => {
         if (!ignore) {
+          setAttendanceLoadError(true);
           toast({ title: t("Greška"), description: t("Nije moguće učitati prisustvo za odabrani datum"), variant: "destructive" });
         }
       })
@@ -122,14 +132,14 @@ export default function PrisustvoPage() {
       });
 
     return () => { ignore = true; };
-  }, [datum, ucenici, token, grupaId, toast, t]);
+  }, [datum, ucenici, token, grupaId, grupa, toast, t]);
 
   async function handleSave() {
-    if (!token || !grupaId) return;
+    if (!token || !grupaId || !grupa || isAttendanceLoading || attendanceLoadError) return;
     setIsSaving(true);
     try {
       const prisustvoData = ucenici.flatMap(u =>
-        CASOVI.filter(cas => cas === 1 || statusi[attendanceKey(u.id, cas)])
+        visibleCasovi.filter(cas => statusi[attendanceKey(u.id, cas)])
           .map(cas => ({
             ucenikId: u.id, cas,
             status: statusi[attendanceKey(u.id, cas)] || "prisutan",
@@ -149,12 +159,14 @@ export default function PrisustvoPage() {
     }
   }
 
-  const prisutnih = Object.values(statusi).filter(s => s === "prisutan").length;
-  const odsutnih = Object.values(statusi).filter(s => s === "odsutan").length;
+  const visibleCasovi = CASOVI.slice(0, Math.max(grupa?.prisustvoCasova ?? 1, historyMaxCas));
+  const visibleStatuses = ucenici.flatMap(u => visibleCasovi.map(cas => statusi[attendanceKey(u.id, cas)]));
+  const prisutnih = visibleStatuses.filter(s => s === "prisutan").length;
+  const odsutnih = visibleStatuses.filter(s => s === "odsutan").length;
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
         </button>
@@ -179,7 +191,7 @@ export default function PrisustvoPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start">
+        <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_190px] items-start">
         <main className="min-w-0">
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <div>
@@ -217,71 +229,70 @@ export default function PrisustvoPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-3 rounded-xl bg-primary/5 border border-primary/15 px-4 py-3 flex-wrap">
-              <p className="text-sm text-muted-foreground">{t("Časovi 2–4 nisu obavezni. Označite ih samo kada se održavaju.")}</p>
-              <div className="flex flex-wrap gap-2">
-                {CASOVI.filter(cas => cas > 1).map(cas => (
-                  <Button key={cas} type="button" variant="outline" size="sm" disabled={isAttendanceLoading || isSaving}
-                    onClick={() => setStatusi(prev => {
-                      const next = { ...prev };
-                      ucenici.forEach(u => { next[attendanceKey(u.id, cas)] ??= "prisutan"; });
-                      return next;
-                    })}>
-                    {t("Evidentiraj {n}. čas za sve", { n: String(cas) })}
-                  </Button>
-                ))}
-              </div>
+            {historyMaxCas > (grupa?.prisustvoCasova ?? 1) && (
+              <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs text-blue-800">
+                {t("Za ovaj datum prikazani su i ranije evidentirani časovi. Promjena podešavanja grupe ne briše stare zapise.")}
+              </p>
+            )}
+            <div className="overflow-x-auto rounded-2xl border border-border/60 bg-white">
+              <table className="w-full table-fixed border-collapse text-left" style={{ minWidth: 160 + visibleCasovi.length * 190 }}>
+                <caption className="sr-only">{t("Evidencija prisustva po učeniku")}</caption>
+                <thead className="bg-muted/40 text-sm text-foreground">
+                  <tr>
+                    <th scope="col" className="sticky left-0 z-10 w-40 border-b border-r border-border/60 bg-muted px-4 py-3">{t("Učenik")}</th>
+                    {visibleCasovi.map(cas => (
+                      <th scope="col" key={cas} className="border-b border-border/60 px-3 py-3">
+                        {visibleCasovi.length === 1 ? t("Dan") : `${cas}. ${t("čas")}`}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {ucenici.map(u => (
+                    <tr key={u.id} className="align-top">
+                      <th scope="row" className="sticky left-0 z-10 border-r border-border/60 bg-white px-4 py-3 text-sm">
+                        <span className="block font-bold text-foreground">{u.displayName}</span>
+                        <span className="block break-all font-mono text-xs font-normal text-muted-foreground">{u.username}</span>
+                      </th>
+                      {visibleCasovi.map(cas => {
+                        const key = attendanceKey(u.id, cas);
+                        const currentStatus = statusi[key];
+                        return (
+                          <td key={cas} className="px-3 py-3">
+                            <div className="flex gap-1">
+                              {STATUS_OPTIONS.map(opt => (
+                                <button type="button" key={opt.value} disabled={isAttendanceLoading || isSaving || attendanceLoadError}
+                                  aria-pressed={currentStatus === opt.value}
+                                  aria-label={`${u.displayName}, ${visibleCasovi.length === 1 ? t("Dan") : `${cas}. ${t("čas")}`}: ${t(opt.label)}`}
+                                  onClick={() => setStatusi(prev => ({ ...prev, [key]: opt.value }))}
+                                  className={`min-w-8 rounded-lg border-2 px-1.5 py-1.5 text-xs font-bold transition-colors ${
+                                    currentStatus === opt.value
+                                      ? `${opt.bg} ${opt.color} ${opt.border}`
+                                      : "border-transparent bg-muted/50 text-muted-foreground hover:border-border"
+                                  }`}
+                                >{opt.short}</button>
+                              ))}
+                            </div>
+                            {currentStatus && currentStatus !== "prisutan" && (
+                              <input type="text" disabled={isAttendanceLoading || isSaving || attendanceLoadError}
+                                aria-label={`${u.displayName}, ${cas}. ${t("čas")}: ${t("Napomena (opcionalno)")}`}
+                                placeholder={t("Napomena (opcionalno)")}
+                                value={napomene[key] || ""}
+                                onChange={e => setNapomene(prev => ({ ...prev, [key]: e.target.value }))}
+                                className="mt-2 w-full min-w-0 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                              />
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            {ucenici.map((u, i) => {
-              return (
-                <motion.div key={u.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                  className="bg-white border border-border/50 rounded-2xl p-4">
-                  <div className="font-bold text-foreground">{u.displayName}</div>
-                  <div className="text-xs text-muted-foreground font-mono mb-3">{u.username}</div>
-                  <div className="grid gap-3 lg:grid-cols-2">
-                    {CASOVI.map(cas => {
-                      const key = attendanceKey(u.id, cas);
-                      const currentStatus = statusi[key];
-                      return (
-                        <div key={cas} className="rounded-xl border border-border/60 p-3 min-w-0">
-                          <div className="flex items-center justify-between mb-2 gap-2">
-                            <span className="text-sm font-bold text-foreground">{cas}. {t("čas")}</span>
-                            {cas > 1 && !currentStatus && <span className="text-xs text-muted-foreground">{t("Nije evidentiran")}</span>}
-                          </div>
-                          <div className="flex gap-1.5 flex-wrap">
-                            {STATUS_OPTIONS.map(opt => (
-                              <button type="button" key={opt.value} disabled={isAttendanceLoading || isSaving}
-                                aria-pressed={currentStatus === opt.value}
-                                aria-label={`${u.displayName}, ${cas}. ${t("čas")}: ${t(opt.label)}`}
-                                onClick={() => setStatusi(prev => ({ ...prev, [key]: opt.value }))}
-                                className={`min-w-9 justify-center px-2.5 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
-                                  currentStatus === opt.value
-                                    ? `${opt.bg} ${opt.color} ${opt.border}`
-                                    : "bg-muted/50 text-muted-foreground border-transparent hover:border-border"
-                                }`}
-                              >
-                                {opt.short}
-                              </button>
-                            ))}
-                          </div>
-                          {currentStatus && currentStatus !== "prisutan" && (
-                            <input type="text" disabled={isAttendanceLoading || isSaving}
-                              placeholder={t("Napomena (opcionalno)")}
-                              value={napomene[key] || ""}
-                              onChange={e => setNapomene(prev => ({ ...prev, [key]: e.target.value }))}
-                              className="mt-3 w-full border border-border rounded-xl px-3 py-2 text-sm text-foreground bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              );
-            })}
 
             <div className="flex justify-end mt-4">
-              <Button onClick={handleSave} disabled={isSaving || isAttendanceLoading} className="rounded-xl font-bold px-8 flex items-center gap-2">
+              <Button onClick={handleSave} disabled={isSaving || isLoading || isAttendanceLoading || attendanceLoadError || !grupa} className="rounded-xl font-bold px-8 flex items-center gap-2">
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {hasExistingRecords ? t("Sačuvaj izmjene") : t("Sačuvaj prisustvo")}
               </Button>

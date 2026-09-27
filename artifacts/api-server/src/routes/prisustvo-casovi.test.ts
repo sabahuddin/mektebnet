@@ -155,6 +155,50 @@ after(async () => {
   if (mektebId) await db.delete(mektebiTable).where(eq(mektebiTable.id, mektebId));
 });
 
+test("muallim podešava dnevnu evidenciju ili 2–4 časa za svoju grupu", async () => {
+  const kreiranje = await poziv("/api/muallim/grupe", {
+    method: "POST",
+    body: JSON.stringify({
+      naziv: `Nova ${SUFFIX}`,
+      skolskaGodina: `${YEAR_START}/${String(YEAR_START + 1).slice(-2)}`,
+      prisustvoCasova: 3,
+    }),
+  }, token);
+  assert.equal(kreiranje.status, 201);
+  const novaGrupa = await kreiranje.json() as { id: number; prisustvoCasova: number };
+  assert.equal(novaGrupa.prisustvoCasova, 3);
+  await db.delete(grupeTable).where(eq(grupeTable.id, novaGrupa.id));
+
+  for (const prisustvoCasova of [1, 2, 3, 4]) {
+    const update = await poziv(`/api/muallim/grupe/${grupaId}`, {
+      method: "PUT", body: JSON.stringify({ prisustvoCasova }),
+    }, token);
+    assert.equal(update.status, 200);
+    assert.equal((await update.json() as { prisustvoCasova: number }).prisustvoCasova, prisustvoCasova);
+
+    const list = await poziv("/api/muallim/grupe", { method: "GET" }, token);
+    assert.equal(list.status, 200);
+    const grupe = await list.json() as Array<{ id: number; prisustvoCasova: number }>;
+    assert.equal(grupe.find(grupa => grupa.id === grupaId)?.prisustvoCasova, prisustvoCasova);
+  }
+  const tudja = await poziv(`/api/muallim/grupe/${grupaId}`, {
+    method: "PUT", body: JSON.stringify({ prisustvoCasova: 1 }),
+  }, drugiToken);
+  assert.equal(tudja.status, 404);
+
+  for (const neispravno of [0, 5, "3", null]) {
+    const response = await poziv(`/api/muallim/grupe/${grupaId}`, {
+      method: "PUT", body: JSON.stringify({ prisustvoCasova: neispravno }),
+    }, token);
+    assert.equal(response.status, 400);
+    const invalidCreate = await poziv("/api/muallim/grupe", {
+      method: "POST",
+      body: JSON.stringify({ naziv: `Neispravna ${SUFFIX}`, skolskaGodina: "2026/27", prisustvoCasova: neispravno }),
+    }, token);
+    assert.equal(invalidCreate.status, 400);
+  }
+});
+
 test("prisustvo podržava četiri časa, nezavisne izmjene i stariji dnevni unos", async () => {
   const prviDan = await poziv("/api/muallim/prisustvo", {
     method: "POST",

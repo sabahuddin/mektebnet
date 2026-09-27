@@ -1086,6 +1086,7 @@ router.get("/grupe", async (req, res) => {
           g.skolska_godina,
           g.dani_nastave,
           g.vrijeme_nastave,
+          g.prisustvo_casova,
           g.datum_pocetka,
           g.datum_kraja,
           COALESCE(g.is_archived, false) AS is_archived,
@@ -1124,6 +1125,7 @@ router.get("/grupe", async (req, res) => {
         skolskaGodina: r.skolska_godina,
         daniNastave: r.dani_nastave,
         vrijemeNastave: r.vrijeme_nastave,
+        prisustvoCasova: r.prisustvo_casova,
         datumPocetka: r.datum_pocetka ?? null,
         datumKraja: r.datum_kraja ?? null,
         muallimDisplayName: r.muallim_display_name,
@@ -1143,7 +1145,7 @@ router.get("/grupe", async (req, res) => {
     ));
     const grupeSecRows = await db.execute(sql`
       SELECT g.id, g.muallim_id, g.naziv, g.skolska_godina,
-        g.dani_nastave, g.vrijeme_nastave, g.datum_pocetka, g.datum_kraja,
+        g.dani_nastave, g.vrijeme_nastave, g.prisustvo_casova, g.datum_pocetka, g.datum_kraja,
         COALESCE(g.is_archived, false) AS is_archived, g.archived_at,
         u.display_name AS muallim_display_name
       FROM grupe g
@@ -1183,6 +1185,7 @@ router.get("/grupe", async (req, res) => {
         id: g.id, muallimId: g.muallimId, naziv: g.naziv,
         skolskaGodina: g.skolskaGodina, daniNastave: g.daniNastave,
         vrijemeNastave: g.vrijemeNastave,
+        prisustvoCasova: g.prisustvoCasova,
         datumPocetka: (g as any).datumPocetka ?? null,
         datumKraja: (g as any).datumKraja ?? null,
         isArchived: arhivaMap2.get(g.id)?.is_archived ?? false,
@@ -1195,6 +1198,7 @@ router.get("/grupe", async (req, res) => {
         skolskaGodina: r.skolska_godina, daniNastave: r.dani_nastave,
         vrijemeNastave: r.vrijeme_nastave,
         datumPocetka: r.datum_pocetka ?? null, datumKraja: r.datum_kraja ?? null,
+        prisustvoCasova: r.prisustvo_casova,
         isArchived: arhivaMap2.get(r.id)?.is_archived ?? r.is_archived ?? false,
         archivedAt: arhivaMap2.get(r.id)?.archived_at ?? r.archived_at ?? null,
         muallimDisplayName: r.muallim_display_name as string | null,
@@ -1469,7 +1473,10 @@ router.get("/grupe/:id/izvjestaj", async (req, res) => {
 // POST /api/muallim/grupe
 router.post("/grupe", async (req, res) => {
   try {
-    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, datumPocetka, datumKraja, muallimId: bodyMuallimId } = req.body;
+    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, datumPocetka, datumKraja, prisustvoCasova, muallimId: bodyMuallimId } = req.body;
+    if (prisustvoCasova !== undefined && ![1, 2, 3, 4].includes(prisustvoCasova)) {
+      res.status(400).json({ error: "Neispravan broj časova za prisustvo" }); return;
+    }
     const userId = req.user!.userId;
     let muallimId = userId;
 
@@ -1491,6 +1498,7 @@ router.post("/grupe", async (req, res) => {
       vrijemeNastave,
       datumPocetka: datumPocetka || null,
       datumKraja: datumKraja || null,
+      prisustvoCasova: prisustvoCasova ?? 1,
     }).returning();
     res.status(201).json(nova);
   } catch (err) {
@@ -1501,7 +1509,10 @@ router.post("/grupe", async (req, res) => {
 // PUT /api/muallim/grupe/:id
 router.put("/grupe/:id", async (req, res) => {
   try {
-    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive, datumPocetka, datumKraja, muallimId: bodyMuallimId } = req.body;
+    const { naziv, skolskaGodina, daniNastave, vrijemeNastave, isActive, datumPocetka, datumKraja, prisustvoCasova, muallimId: bodyMuallimId } = req.body;
+    if (prisustvoCasova !== undefined && ![1, 2, 3, 4].includes(prisustvoCasova)) {
+      res.status(400).json({ error: "Neispravan broj časova za prisustvo" }); return;
+    }
     const userId = req.user!.userId;
     const grupaId = parseInt(req.params.id);
     const ctx = await getMektebCtx(userId);
@@ -1525,6 +1536,7 @@ router.put("/grupe/:id", async (req, res) => {
     if (isActive !== undefined) updateData.isActive = isActive;
     if (datumPocetka !== undefined) updateData.datumPocetka = datumPocetka;
     if (datumKraja !== undefined) updateData.datumKraja = datumKraja;
+    if (prisustvoCasova !== undefined) updateData.prisustvoCasova = prisustvoCasova;
 
     // Reassign muallima — samo glavni muallim smije, ciljni mora biti u istom mektebu
     if (bodyMuallimId !== undefined && ctx?.isGlavni && ctx.mektebId) {

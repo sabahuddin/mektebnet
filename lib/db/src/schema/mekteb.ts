@@ -48,6 +48,7 @@ export const grupeTable = pgTable("grupe", {
   datumKraja: date("datum_kraja"),
   daniNastave: jsonb("dani_nastave").$type<string[]>().default([]),
   vrijemeNastave: varchar("vrijeme_nastave", { length: 20 }),
+  prisustvoCasova: integer("prisustvo_casova").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
