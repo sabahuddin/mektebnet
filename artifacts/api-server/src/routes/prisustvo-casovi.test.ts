@@ -155,7 +155,7 @@ after(async () => {
   if (mektebId) await db.delete(mektebiTable).where(eq(mektebiTable.id, mektebId));
 });
 
-test("prisustvo podržava oba časa, nezavisne izmjene i stariji dnevni unos", async () => {
+test("prisustvo podržava četiri časa, nezavisne izmjene i stariji dnevni unos", async () => {
   const prviDan = await poziv("/api/muallim/prisustvo", {
     method: "POST",
     body: JSON.stringify({
@@ -164,6 +164,8 @@ test("prisustvo podržava oba časa, nezavisne izmjene i stariji dnevni unos", a
       prisustvo: [
         { ucenikId, cas: 1, status: "prisutan" },
         { ucenikId, cas: 2, status: "odsutan" },
+        { ucenikId, cas: 3, status: "opravdan" },
+        { ucenikId, cas: 4, status: "prisutan" },
       ],
     }),
   }, token);
@@ -178,7 +180,7 @@ test("prisustvo podržava oba časa, nezavisne izmjene i stariji dnevni unos", a
   const pocetniZapisi = await prviDanGet.json() as PrisustvoOdgovor[];
   assert.deepEqual(
     pocetniZapisi.map(({ cas, status }) => [cas, status]).sort((a, b) => Number(a[0]) - Number(b[0])),
-    [[1, "prisutan"], [2, "odsutan"]],
+    [[1, "prisutan"], [2, "odsutan"], [3, "opravdan"], [4, "prisutan"]],
   );
 
   const drugiDan = await poziv("/api/muallim/prisustvo", {
@@ -227,8 +229,8 @@ test("prisustvo podržava oba časa, nezavisne izmjene i stariji dnevni unos", a
   const zapisiPrvogDana = await getDan(DATUM1);
   assert.deepEqual(
     zapisiPrvogDana.map(({ cas, status }) => [cas, status]).sort((a, b) => Number(a[0]) - Number(b[0])),
-    [[1, "zakasnio"], [2, "odsutan"]],
-    "izmjena 1. časa ne smije prepisati 2. čas",
+     [[1, "zakasnio"], [2, "odsutan"], [3, "opravdan"], [4, "prisutan"]],
+     "izmjena 1. časa ne smije prepisati 2–4. čas",
   );
   const zapisiDrugogDana = await getDan(DATUM2);
   assert.deepEqual(
@@ -257,13 +259,15 @@ test("prisustvo podržava oba časa, nezavisne izmjene i stariji dnevni unos", a
   const entries = statistika.prisustvoPoDatumu.filter(entry =>
     entry.datum === DATUM1 || entry.datum === DATUM2,
   );
-  assert.equal(statistika.ukupnoCasova, 5);
+   assert.equal(statistika.ukupnoCasova, 7);
   assert.deepEqual(
     entries.map(({ datum, cas, ukupno, perStudent }) => [datum, cas, ukupno, perStudent[ucenikId]])
       .sort((a, b) => String(a[0]).localeCompare(String(b[0])) || Number(a[1]) - Number(b[1])),
     [
       [DATUM1, 1, 1, "zakasnio"],
       [DATUM1, 2, 1, "odsutan"],
+       [DATUM1, 3, 1, "opravdan"],
+       [DATUM1, 4, 1, "prisutan"],
       [DATUM2, 1, 1, "odsutan"],
       [DATUM2, 2, 1, "prisutan"],
     ],
@@ -272,6 +276,8 @@ test("prisustvo podržava oba časa, nezavisne izmjene i stariji dnevni unos", a
   assert.ok(studentStats);
   assert.equal(studentStats.prisustvoPoDatumu[`${DATUM1}#1`], "zakasnio");
   assert.equal(studentStats.prisustvoPoDatumu[`${DATUM1}#2`], "odsutan");
+   assert.equal(studentStats.prisustvoPoDatumu[`${DATUM1}#3`], "opravdan");
+   assert.equal(studentStats.prisustvoPoDatumu[`${DATUM1}#4`], "prisutan");
   assert.equal(studentStats.prisustvoPoDatumu[`${DATUM2}#1`], "odsutan");
   assert.equal(studentStats.prisustvoPoDatumu[`${DATUM2}#2`], "prisutan");
 });
@@ -292,7 +298,7 @@ test("prisustvo odbija drugog muallima i broj časa van raspona", async () => {
     body: JSON.stringify({
       grupaId,
       datum: DATUM1,
-      prisustvo: [{ ucenikId, cas: 3, status: "prisutan" }],
+       prisustvo: [{ ucenikId, cas: 5, status: "prisutan" }],
     }),
   }, token);
   assert.equal(neispravanCas.status, 400);

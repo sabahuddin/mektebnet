@@ -30,7 +30,7 @@ interface Ucenik {
 interface Prisustvo {
   id: number;
   datum: string;
-  cas?: 1 | 2 | null;
+  cas?: 1 | 2 | 3 | 4 | null;
   status: string;
   napomena?: string;
 }
@@ -1055,7 +1055,7 @@ export default function UcenikPage() {
                             };
                             const prisMap = new Map<string, Prisustvo[]>();
                             prisustvo.forEach(p => {
-                              const key = `${p.datum.slice(0, 10)}-${p.cas === 2 ? 2 : 1}`;
+                               const key = `${p.datum.slice(0, 10)}-${p.cas ?? 1}`;
                               const entries = prisMap.get(key) || [];
                               entries.push(p);
                               prisMap.set(key, entries);
@@ -1086,7 +1086,7 @@ export default function UcenikPage() {
                                           <td className="text-xs font-bold text-muted-foreground text-right pr-1 w-7">{dan}.</td>
                                           {mjeseci.map(m => {
                                             const key = `${m}-${String(dan).padStart(2, "0")}`;
-                                            const records = [1, 2].flatMap(cas => (
+                                             const records = [1, 2, 3, 4].flatMap(cas => (
                                               prisMap.get(`${key}-${cas}`) || []
                                             ).map(record => ({ record, cas })));
                                             return (

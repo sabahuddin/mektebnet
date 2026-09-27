@@ -256,7 +256,7 @@ interface MjesecniPregled {
 
 interface PrisustvoPoDatumu {
   datum: string;
-  cas: 1 | 2;
+  cas: 1 | 2 | 3 | 4;
   prisutan: number;
   ukupno: number;
   pct: number | null;

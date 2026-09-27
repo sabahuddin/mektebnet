@@ -2876,7 +2876,7 @@ router.post("/prisustvo", async (req, res) => {
     for (const p of prisustvo) {
       const cas = p?.cas ?? 1; // stariji klijenti šalju samo dnevni zapis
       const key = `${p?.ucenikId}:${cas}`;
-      if (!allowed.has(p?.ucenikId) || (cas !== 1 && cas !== 2)
+      if (!allowed.has(p?.ucenikId) || !Number.isInteger(cas) || cas < 1 || cas > 4
         || !["prisutan", "odsutan", "zakasnio", "opravdan"].includes(p?.status)
         || (p.napomena != null && (typeof p.napomena !== "string" || p.napomena.length > 2000))
         || keys.has(key)) {

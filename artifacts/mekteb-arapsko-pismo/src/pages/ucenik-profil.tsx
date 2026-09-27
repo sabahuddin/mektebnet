@@ -239,7 +239,7 @@ interface ProfilData {
   grupa: { id: number; naziv: string; skolskaGodina: string } | null;
   muallim: { id: number; displayName: string } | null;
   ocjene: { id: number; kategorija: string; predmet?: string | null; ocjena: number | null; ocjenaOpisna?: "uradjeno" | "neuradjeno" | null; lekcijaNaziv?: string; napomena?: string; datum: string; napametStavkaId?: string | null }[];
-  prisustvo: { id: number; datum: string; status: string; cas?: 1 | 2 }[];
+  prisustvo: { id: number; datum: string; status: string; cas?: 1 | 2 | 3 | 4 }[];
   kvizovi: { id: number; kvizNaslov: string; tacniOdgovori: number; ukupnoPitanja: number; procenat: number; bodovi: number; completedAt: string }[];
   napredak?: {
     streakDays: number;

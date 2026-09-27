@@ -63,7 +63,7 @@ interface Prisustvo {
   id: number;
   datum: string;
   status: string;
-  cas?: 1 | 2;
+  cas?: 1 | 2 | 3 | 4;
   napomena?: string;
 }
 

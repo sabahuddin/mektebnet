@@ -727,11 +727,11 @@ function PendingLessonEdits({ token }: { token: string }) {
               <div className="grid gap-3 border-t border-border/50 p-3 lg:grid-cols-2">
                 {!item.novaLekcija && <div>
                   <p className="mb-2 text-xs font-extrabold uppercase text-muted-foreground">{t("Trenutno objavljeno")}</p>
-                  <div className="max-h-80 overflow-auto rounded-lg border bg-white p-3 text-sm ilmihal-content" dangerouslySetInnerHTML={{ __html: item.trenutniHtml }} />
+                  <div className="max-h-80 overflow-auto rounded-lg border bg-white p-3 text-sm ilmihal-content admin-lesson-preview" dangerouslySetInnerHTML={{ __html: item.trenutniHtml }} />
                 </div>}
                 <div>
                   <p className="mb-2 text-xs font-extrabold uppercase text-amber-700">{t("Muallimov prijedlog")}</p>
-                  <div className="max-h-80 overflow-auto rounded-lg border border-amber-200 bg-white p-3 text-sm ilmihal-content" dangerouslySetInnerHTML={{ __html: item.predlozeniHtml }} />
+                  <div className="max-h-80 overflow-auto rounded-lg border border-amber-200 bg-white p-3 text-sm ilmihal-content admin-lesson-preview" dangerouslySetInnerHTML={{ __html: item.predlozeniHtml }} />
                 </div>
               </div>
             </details>

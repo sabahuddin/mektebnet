@@ -768,13 +768,13 @@ html.font-size-3  { font-size: 150%; }    /* 24px base */
   font-weight: 700;
 }
 
-/* Hide original lesson structure elements that are now handled by React */
-.ilmihal-content .lesson-container,
-.ilmihal-content .hero-box,
-.ilmihal-content .lesson-accordion,
-.ilmihal-content .lesson-section-btn,
-.ilmihal-content .quiz-container,
-.ilmihal-content h1:first-child {
+/* Hide duplicated lesson structure only in learner view; admin must see original HTML. */
+.ilmihal-content:not(.admin-lesson-preview) .lesson-container,
+.ilmihal-content:not(.admin-lesson-preview) .hero-box,
+.ilmihal-content:not(.admin-lesson-preview) .lesson-accordion,
+.ilmihal-content:not(.admin-lesson-preview) .lesson-section-btn,
+.ilmihal-content:not(.admin-lesson-preview) .quiz-container,
+.ilmihal-content:not(.admin-lesson-preview) h1:first-child {
   display: none;
 }
 

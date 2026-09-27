@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
-import { ArrowLeft, CalendarCheck, Check, X, Clock, AlertCircle, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,8 @@ import { goBackOr } from "@/lib/back-navigation";
 import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 
 type Status = "prisutan" | "odsutan" | "zakasnio" | "opravdan";
+const CASOVI = [1, 2, 3, 4] as const;
+type Cas = typeof CASOVI[number];
 
 interface Ucenik {
   id: number;
@@ -28,18 +30,18 @@ interface Grupa {
 
 interface PrisustvoRecord {
   ucenikId: number;
-  cas: 1 | 2;
+  cas: number;
   status: Status;
   napomena?: string;
 }
 
-const attendanceKey = (ucenikId: number, cas: 1 | 2) => `${ucenikId}:${cas}`;
+const attendanceKey = (ucenikId: number, cas: Cas) => `${ucenikId}:${cas}`;
 
-const STATUS_OPTIONS: { value: Status; label: string; icon: React.ReactNode; color: string; bg: string; border: string }[] = [
-  { value: "prisutan", label: "Prisutan", icon: <Check className="w-3.5 h-3.5" />, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-400" },
-  { value: "odsutan", label: "Odsutan", icon: <X className="w-3.5 h-3.5" />, color: "text-red-700", bg: "bg-red-50", border: "border-red-400" },
-  { value: "zakasnio", label: "Zakasnio", icon: <Clock className="w-3.5 h-3.5" />, color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-400" },
-  { value: "opravdan", label: "Opravdan", icon: <AlertCircle className="w-3.5 h-3.5" />, color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-400" },
+const STATUS_OPTIONS: { value: Status; label: string; short: string; color: string; bg: string; border: string }[] = [
+  { value: "prisutan", label: "Prisutan", short: "P", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-400" },
+  { value: "odsutan", label: "Odsutan", short: "O", color: "text-red-700", bg: "bg-red-50", border: "border-red-400" },
+  { value: "zakasnio", label: "Zakasnio", short: "Z", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-400" },
+  { value: "opravdan", label: "Opravdan", short: "OP", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-400" },
 ];
 
 function todayStr() {
@@ -101,7 +103,8 @@ export default function PrisustvoPage() {
         const newStatusi = { ...defaultStatusi };
         const newNapomene: Record<string, string> = {};
         for (const r of records) {
-          const key = attendanceKey(r.ucenikId, r.cas === 2 ? 2 : 1);
+          if (!CASOVI.includes(r.cas as Cas)) continue;
+          const key = attendanceKey(r.ucenikId, r.cas as Cas);
           newStatusi[key] = r.status;
           if (r.napomena) newNapomene[key] = r.napomena;
         }
@@ -126,7 +129,7 @@ export default function PrisustvoPage() {
     setIsSaving(true);
     try {
       const prisustvoData = ucenici.flatMap(u =>
-        ([1, 2] as const).filter(cas => cas === 1 || statusi[attendanceKey(u.id, cas)])
+        CASOVI.filter(cas => cas === 1 || statusi[attendanceKey(u.id, cas)])
           .map(cas => ({
             ucenikId: u.id, cas,
             status: statusi[attendanceKey(u.id, cas)] || "prisutan",
@@ -165,6 +168,14 @@ export default function PrisustvoPage() {
               {t("Prisustvo")}{grupa ? ` — ${grupa.naziv}` : ""}
             </h1>
             <p className="text-muted-foreground text-sm">{grupa?.skolskaGodina}</p>
+            <p className="mt-1 text-xs text-muted-foreground" aria-label={t("Legenda prisustva")}>
+              {STATUS_OPTIONS.map((option, index) => (
+                <span key={option.value} className="inline-block mr-2">
+                  {index > 0 && <span aria-hidden="true" className="mr-2">·</span>}
+                  {t(option.label)} (<strong className={option.color}>{option.short}</strong>)
+                </span>
+              ))}
+            </p>
           </div>
         </div>
 
@@ -207,15 +218,19 @@ export default function PrisustvoPage() {
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3 rounded-xl bg-primary/5 border border-primary/15 px-4 py-3 flex-wrap">
-              <p className="text-sm text-muted-foreground">{t("Drugi čas nije obavezan. Označite ga samo kada se održava.")}</p>
-              <Button type="button" variant="outline" size="sm" disabled={isAttendanceLoading || isSaving}
-                onClick={() => setStatusi(prev => {
-                  const next = { ...prev };
-                  ucenici.forEach(u => { next[attendanceKey(u.id, 2)] ??= "prisutan"; });
-                  return next;
-                })}>
-                {t("Evidentiraj drugi čas za sve")}
-              </Button>
+              <p className="text-sm text-muted-foreground">{t("Časovi 2–4 nisu obavezni. Označite ih samo kada se održavaju.")}</p>
+              <div className="flex flex-wrap gap-2">
+                {CASOVI.filter(cas => cas > 1).map(cas => (
+                  <Button key={cas} type="button" variant="outline" size="sm" disabled={isAttendanceLoading || isSaving}
+                    onClick={() => setStatusi(prev => {
+                      const next = { ...prev };
+                      ucenici.forEach(u => { next[attendanceKey(u.id, cas)] ??= "prisutan"; });
+                      return next;
+                    })}>
+                    {t("Evidentiraj {n}. čas za sve", { n: String(cas) })}
+                  </Button>
+                ))}
+              </div>
             </div>
             {ucenici.map((u, i) => {
               return (
@@ -224,14 +239,14 @@ export default function PrisustvoPage() {
                   <div className="font-bold text-foreground">{u.displayName}</div>
                   <div className="text-xs text-muted-foreground font-mono mb-3">{u.username}</div>
                   <div className="grid gap-3 lg:grid-cols-2">
-                    {([1, 2] as const).map(cas => {
+                    {CASOVI.map(cas => {
                       const key = attendanceKey(u.id, cas);
                       const currentStatus = statusi[key];
                       return (
                         <div key={cas} className="rounded-xl border border-border/60 p-3 min-w-0">
                           <div className="flex items-center justify-between mb-2 gap-2">
                             <span className="text-sm font-bold text-foreground">{cas}. {t("čas")}</span>
-                            {cas === 2 && !currentStatus && <span className="text-xs text-muted-foreground">{t("Nije evidentiran")}</span>}
+                            {cas > 1 && !currentStatus && <span className="text-xs text-muted-foreground">{t("Nije evidentiran")}</span>}
                           </div>
                           <div className="flex gap-1.5 flex-wrap">
                             {STATUS_OPTIONS.map(opt => (
@@ -239,13 +254,13 @@ export default function PrisustvoPage() {
                                 aria-pressed={currentStatus === opt.value}
                                 aria-label={`${u.displayName}, ${cas}. ${t("čas")}: ${t(opt.label)}`}
                                 onClick={() => setStatusi(prev => ({ ...prev, [key]: opt.value }))}
-                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
+                                className={`min-w-9 justify-center px-2.5 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${
                                   currentStatus === opt.value
                                     ? `${opt.bg} ${opt.color} ${opt.border}`
                                     : "bg-muted/50 text-muted-foreground border-transparent hover:border-border"
                                 }`}
                               >
-                                {opt.icon} {t(opt.label)}
+                                {opt.short}
                               </button>
                             ))}
                           </div>
