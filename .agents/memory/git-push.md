@@ -31,6 +31,12 @@ Pri čitanju `git ls-tree` kroz CodeExecution `shellExec`, tab separator može n
 
 **How to apply:** Kada u CodeExecution porediš lokalni i udaljeni tree, upotrijebi eksplicitan format sa razmakom i tolerantan separator redova; ne oslanjaj se na podrazumijevani tab izlaz `ls-tree`.
 
+CodeExecution `shellExec` može vratiti samo dio dugog base64 izlaza i kada zatražiš veći `maxOutputBytes`. Za binarni GitHub blob čitaj base64 u manjim dijelovima (npr. 50 KB), spoji ga u JS-u, provjeri dužinu i poredi vraćeni SHA sa `git ls-tree` SHA prije ažuriranja grane.
+
+**Why:** Skraćeni base64 je izgledao ispravno na oba kraja, ali GitHub je kreirao blob sa pogrešnim SHA-om.
+
+**How to apply:** Za velike priloge u Git Data API-ju nikad ne šalji jedan dugački `shellExec` output bez provjere pune dužine i SHA-a.
+
 ## Coolify
 Push triggeruje deploy preko Coolify-ja, ali Coolify uvijek treba RUČNI redeploy nakon push-a (self-hosted, mekteb.net). Napomeni korisniku da uradi redeploy.
 
