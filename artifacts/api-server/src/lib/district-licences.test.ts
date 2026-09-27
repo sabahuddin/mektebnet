@@ -3,7 +3,19 @@ import assert from "node:assert/strict";
 import { db } from "@workspace/db";
 import { mektebiTable, muallimProfiliTable, pretplateTable, ucenikProfiliTable, usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { assertStudentCapacity, LicenceLimitError } from "./district-licences.js";
+import { assertStudentCapacity, allowedDistrictStudents, LicenceLimitError } from "./district-licences.js";
+
+test("novi džemat ima 20 mjesta u probnom periodu i puni kapacitet po uplati", () => {
+  const now = new Date("2026-09-27T12:00:00Z");
+  const trial = new Date(now.getTime() + 30 * 86400000);
+  const paidUntil = new Date(now.getTime() + 365 * 86400000);
+  assert.equal(allowedDistrictStudents(100, trial, "pending", null, now), 20);
+  assert.equal(allowedDistrictStudents(500, trial, "pending", null, now), 20);
+  assert.equal(allowedDistrictStudents(100, new Date(now.getTime() - 1), "pending", null, now), 0);
+  assert.equal(allowedDistrictStudents(100, trial, "active", paidUntil, now), 100);
+  assert.equal(allowedDistrictStudents(100, trial, "active", new Date(now.getTime() - 1), now), 20);
+  assert.equal(allowedDistrictStudents(100, null, "active", null, now), 100);
+});
 
 test("district seats are shared across teachers and archived students free a seat", async () => {
   const name = `shared-seats-${Date.now()}`;

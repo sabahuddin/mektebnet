@@ -1028,6 +1028,7 @@ router.post("/register-mekteb", async (req, res) => {
         email: normalizedEmail,
         role: "muallim",
         isActive: false,
+        canEditLessons: false,
         trialUntil,
           termsAcceptedAt: acknowledgedAt,
           privacyAcknowledgedAt: acknowledgedAt,

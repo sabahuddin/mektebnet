@@ -84,6 +84,8 @@ interface Korisnik {
   lastSeenAt?: string | null;
   totalScreentimeSec?: number;
   trialUntil?: string | null;
+  mektebNaziv?: string | null;
+  povezaniRoditelji?: { id: number; displayName: string; username: string }[];
   billingPlan?: "individual" | "family" | null;
   billingCoverage?: "self" | "family" | "mekteb" | null;
   porodicnaDjeca?: {
@@ -2021,7 +2023,6 @@ export default function AdminPage() {
   const [deleteKorisnik, setDeleteKorisnik] = useState<Korisnik | null>(null);
   const [pretplataKorisnik, setPretplataKorisnik] = useState<Korisnik | null>(null);
   const [pretplatniciSearch, setPretplatniciSearch] = useState("");
-  const [billingMoveId, setBillingMoveId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [lessonPermissionId, setLessonPermissionId] = useState<number | null>(null);
 
@@ -2040,26 +2041,6 @@ export default function AdminPage() {
       toast({ title: t("Greška"), description: t("Nije moguće učitati podatke"), variant: "destructive" });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const prebaciUPretplatnike = async (k: Korisnik) => {
-    if (!token || (k.role !== "ucenik" && k.role !== "roditelj")) return;
-    if (!window.confirm(
-      `${t("Prebaciti u samostalne pretplatnike")} „${k.displayName}” (${k.username})?\n\n` +
-      t("Veza s mektebom ili porodicom ostaje sačuvana. Postojeća vlastita pretplata ostaje; ako je nema, kreirat će se neplaćena pretplata koju možete urediti.")
-    )) return;
-    setBillingMoveId(k.id);
-    try {
-      await apiRequest("POST", `/admin/korisnik/${k.id}/billing-override`, { mode: "self" }, token);
-      await loadData();
-      setPretplatniciSearch(k.username);
-      setActiveTab("pretplatnici");
-      toast({ title: t("Sačuvano"), description: t("Korisnik je prebačen u samostalne pretplatnike.") });
-    } catch (e: any) {
-      toast({ title: t("Greška"), description: e?.message || t("Nije moguće prebaciti korisnika"), variant: "destructive" });
-    } finally {
-      setBillingMoveId(null);
     }
   };
 
@@ -2434,7 +2415,9 @@ export default function AdminPage() {
     .filter(k =>
       !searchQuery ||
       k.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      k.username.toLowerCase().includes(searchQuery.toLowerCase())
+      k.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      k.mektebNaziv?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      k.povezaniRoditelji?.some(r => r.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .slice()
     .sort((a, b) => {
@@ -2546,7 +2529,7 @@ export default function AdminPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-extrabold text-foreground">{t("Samostalne pretplate")}</h2>
-                <p className="text-sm text-muted-foreground">{t("Porodične i pojedinačne pretplate. Djeca povezana s roditeljem prikazana su uz njega, bez zasebne naplate.")}</p>
+                 <p className="text-sm text-muted-foreground">{t("Samostalno registrovani pojedinci i porodice: 30 dana probnog pristupa, zatim aktivacija po uplati. Neplaćeni računi se brišu nakon 31 dana.")}</p>
               </div>
               <input type="search" value={pretplatniciSearch} onChange={e => setPretplatniciSearch(e.target.value)}
                 placeholder={t("Pretraži ime, email ili korisničko ime")}
@@ -3502,7 +3485,7 @@ export default function AdminPage() {
           <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
             <div>
               <h2 className="font-extrabold text-foreground">{t("Korisnici")}</h2>
-              <p className="text-xs text-muted-foreground">{t("Džematski i povezani porodični nalozi. Samostalni nosioci pretplate su u tabu Pretplatnici.")}</p>
+               <p className="text-xs text-muted-foreground">{t("Muallimi, učenici i roditelji džemata. Samostalno registrovani pojedinci i porodice su u tabu Pretplatnici.")}</p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
               <input
@@ -3552,6 +3535,7 @@ export default function AdminPage() {
                       { label: t("Ime"), sort: "displayName" as SortField },
                       { label: t("Korisničko ime"), sort: null },
                       { label: t("Uloga"), sort: null },
+                       { label: t("Džemat/mekteb"), sort: null },
                       { label: t("Status"), sort: null },
                        { label: t("Pretplata"), sort: null },
                       { label: t("Registrovan"), sort: "createdAt" as SortField },
@@ -3577,13 +3561,21 @@ export default function AdminPage() {
                 <tbody>
                   {prikazaniKorisnici.map(k => (
                     <tr key={k.id} className="border-b border-border/20 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3 font-bold text-foreground">{k.displayName}</td>
+                       <td className="px-4 py-3">
+                         <span className="font-bold text-foreground">{k.displayName}</span>
+                         {k.role === "ucenik" && k.povezaniRoditelji?.map(roditelj => (
+                           <span key={roditelj.id} className="block text-xs font-normal text-muted-foreground">
+                             {t("Roditelj")}: {roditelj.displayName} ({roditelj.username})
+                           </span>
+                         ))}
+                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{k.username}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${ROLE_COLORS[k.role] || "bg-gray-100 text-gray-700"}`}>
                           {ROLE_LABELS[k.role] || k.role}
                         </span>
                       </td>
+                       <td className="px-4 py-3 text-xs text-foreground">{k.mektebNaziv || t("Nije dodijeljen")}</td>
                       <td className="px-4 py-3">
                         {k.billingCoverage === "self" ? (
                           <button
@@ -3602,17 +3594,12 @@ export default function AdminPage() {
                             </span>
                           </button>
                         ) : k.role === "ucenik" || k.role === "roditelj" ? (
-                          <div className="flex flex-col items-start gap-1">
+                           <div className="flex flex-col items-start gap-1">
                             {k.billingCoverage === "family" ? (
                               <span className="text-xs font-bold text-blue-700">{t("Pokriven porodicom")}</span>
                             ) : k.billingCoverage === "mekteb" ? (
                               <span className="text-xs font-bold text-violet-700">{t("Pokriven mektebom")}</span>
                             ) : <span className="text-xs text-muted-foreground">—</span>}
-                            <button type="button" disabled={billingMoveId === k.id}
-                              onClick={() => prebaciUPretplatnike(k)}
-                              className="text-xs font-bold text-primary hover:underline disabled:opacity-50">
-                              {billingMoveId === k.id ? t("Premještanje...") : t("Prebaci u pretplatnike")}
-                            </button>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
@@ -3722,7 +3709,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {filtrirani.length === 0 && (
-                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema korisnika</td></tr>
+                     <tr><td colSpan={10} className="px-4 py-8 text-center text-muted-foreground text-sm">Nema korisnika</td></tr>
                   )}
                 </tbody>
               </table>

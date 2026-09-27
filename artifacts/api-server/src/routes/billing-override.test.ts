@@ -152,6 +152,11 @@ test("admin move keeps an active own subscription and makes auth coverage self",
   const subscription = await request("/api/auth/subscription", studentToken);
   assert.equal(subscription.status, 200);
   assert.equal((await subscription.json() as { coverage: string; planType: string }).coverage, "self");
+  const schoolList = await request("/api/admin/korisnici", adminToken);
+  const schoolUser = (await schoolList.json() as Array<{ id: number; billingCoverage: string; mektebNaziv: string | null }>)
+    .find((user) => user.id === paidStudentId);
+  assert.equal(schoolUser?.billingCoverage, "mekteb");
+  assert.match(schoolUser?.mektebNaziv ?? "", /Billing override mekteb/);
 
   const movedAgain = await request(`/api/admin/korisnik/${paidStudentId}/billing-override`, adminToken, {
     method: "POST",
@@ -217,4 +222,14 @@ test("role-matching own subscription wins over a newer incompatible history entr
   });
   assert.equal(edited.status, 200);
   assert.equal((await edited.json() as { planType: string }).planType, "individual");
+});
+
+test("raniji plaćeni samostalni pretplatnik ostaje vidljiv bez historijskih potvrda pravila", async () => {
+  await db.update(usersTable).set({ termsAcceptedAt: null, privacyAcknowledgedAt: null })
+    .where(eq(usersTable.id, mixedStudentId));
+  const response = await request("/api/admin/korisnici", tokenFor(adminId, "admin", "admin"));
+  assert.equal(response.status, 200);
+  const user = (await response.json() as Array<{ id: number; billingCoverage: string | null }>)
+    .find((row) => row.id === mixedStudentId);
+  assert.equal(user?.billingCoverage, "self");
 });

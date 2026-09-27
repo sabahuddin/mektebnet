@@ -2334,6 +2334,13 @@ async function startup() {
     logger.error({ err: e }, "Homework lifecycle cron start failed");
   }
 
+  try {
+    const { startUnpaidStandaloneTrialCleanupCron } = await import("./lib/unpaid-trial-cleanup.js");
+    startUnpaidStandaloneTrialCleanupCron();
+  } catch (e) {
+    logger.error({ err: e }, "Unpaid standalone trial cleanup cron start failed");
+  }
+
   app.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");

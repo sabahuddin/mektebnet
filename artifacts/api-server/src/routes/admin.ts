@@ -70,6 +70,7 @@ import { requireAuth, invalidateUserStatusCache } from "../middlewares/auth.js";
 import { CT_TABLES, getLang, overlayRows } from "../lib/content-translatable.js";
 import { canAccessAdminRoute, requiresLessonEditingPermission } from "../lib/admin-route-access.js";
 import { assertStudentCapacity, LicenceLimitError } from "../lib/district-licences.js";
+import { deleteUserWithAdminTransaction } from "../lib/admin-user-deletion.js";
 import { countStudentsByTeacher } from "../lib/teacher-student-counts.js";
 import { sanitizeMuallimLessonHtml } from "../lib/lesson-html-sanitizer.js";
 import { CONTENT_IFRAME_WHITELIST, extractEmbedSrc, findDisallowedIframeSrcs, isAllowedNewEmbedUrl } from "../lib/lesson-embed-hosts.js";
@@ -1703,7 +1704,7 @@ router.post("/lekcije/:id/insert-image", async (req, res) => {
 // GET /api/admin/korisnici
 router.get("/korisnici", async (req, res) => {
   try {
-    const [korisnici, pretplate, veze, ucenikProfili, muallimProfili] = await Promise.all([
+    const [korisnici, pretplate, veze, ucenikProfili, roditeljProfili, muallimProfili, mektebi] = await Promise.all([
       db.select({
         id: usersTable.id,
         username: usersTable.username,
@@ -1718,6 +1719,9 @@ router.get("/korisnici", async (req, res) => {
         totalScreentimeSec: usersTable.totalScreentimeSec,
         trialUntil: usersTable.trialUntil,
         billingOverride: usersTable.billingOverride,
+        termsAcceptedAt: usersTable.termsAcceptedAt,
+        privacyAcknowledgedAt: usersTable.privacyAcknowledgedAt,
+        parentAcknowledgedAt: usersTable.parentAcknowledgedAt,
       }).from(usersTable),
       db.select().from(pretplateTable)
         .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id)),
@@ -1732,10 +1736,12 @@ router.get("/korisnici", async (req, res) => {
         muallimId: ucenikProfiliTable.muallimId,
         mektebId: ucenikProfiliTable.mektebId,
       }).from(ucenikProfiliTable),
+      db.select({ userId: roditeljProfiliTable.userId }).from(roditeljProfiliTable),
       db.select({
         userId: muallimProfiliTable.userId,
         mektebId: muallimProfiliTable.mektebId,
       }).from(muallimProfiliTable),
+      db.select({ id: mektebiTable.id, naziv: mektebiTable.naziv }).from(mektebiTable),
     ]);
     const roleByUser = new Map(korisnici.map((user) => [user.id, user.role]));
     const latestByUser = new Map<number, typeof pretplate[number]>();
@@ -1754,6 +1760,7 @@ router.get("/korisnici", async (req, res) => {
         .map((veza) => veza.ucenikId),
     );
     const studentProfiles = new Map(ucenikProfili.map((p) => [p.userId, p]));
+    const parentProfiles = new Set(roditeljProfili.map((profile) => profile.userId));
     const muallimMektebi = new Map(muallimProfili.map((p) => [p.userId, p.mektebId]));
     const mektebChildren = new Set(
       ucenikProfili
@@ -1764,21 +1771,41 @@ router.get("/korisnici", async (req, res) => {
         .map((profile) => profile.userId),
     );
     const mektebParents = new Set(
-      veze
-        .filter((veza) => mektebChildren.has(veza.ucenikId))
-        .map((veza) => veza.roditeljId),
+      veze.filter((veza) => mektebChildren.has(veza.ucenikId)).map((veza) => veza.roditeljId),
     );
+    const mektebNameById = new Map(mektebi.map((mekteb) => [mekteb.id, mekteb.naziv]));
+    const mektebIdByStudent = new Map(ucenikProfili.map((profile) => [
+      profile.userId,
+      profile.mektebId ?? (profile.muallimId ? muallimMektebi.get(profile.muallimId) ?? null : null),
+    ]));
+    const mektebNameByParent = new Map<number, string | null>();
+    for (const parentId of mektebParents) {
+      const linkedSchoolIds = [...new Set(
+        veze
+          .filter((veza) => veza.roditeljId === parentId)
+          .map((veza) => mektebIdByStudent.get(veza.ucenikId))
+          .filter((mektebId): mektebId is number => Boolean(mektebId)),
+      )];
+      mektebNameByParent.set(parentId,
+        linkedSchoolIds.map((id) => mektebNameById.get(id)).filter((name): name is string => Boolean(name)).join(", ") || null);
+    }
 
     const classified = korisnici.map((k) => {
       let billingPlan: "individual" | "family" | null = null;
       let billingCoverage: "self" | "family" | "mekteb" | null = null;
-      const ownPlan = latestByUser.get(k.id)?.planType;
+      const ownSubscription = latestByUser.get(k.id);
+      const ownPlan = ownSubscription?.planType;
+      const independentlyRegistered = Boolean(k.trialUntil || ownSubscription?.status === "active" || ownSubscription?.paidAt);
       if (k.role === "roditelj") {
-        if (ownPlan === "family") {
+        if (mektebParents.has(k.id)) {
+          billingCoverage = "mekteb";
+        } else if (
+          ownPlan === "family"
+          && parentProfiles.has(k.id)
+          && independentlyRegistered
+        ) {
           billingPlan = "family";
           billingCoverage = "self";
-        } else if (mektebParents.has(k.id)) {
-          billingCoverage = "mekteb";
         }
       } else if (k.role === "ucenik") {
         const profile = studentProfiles.get(k.id);
@@ -1786,13 +1813,18 @@ router.get("/korisnici", async (req, res) => {
           profile?.mektebId ||
           (profile?.muallimId && muallimMektebi.get(profile.muallimId)),
         );
-        if (k.billingOverride === "self" && ownPlan === "individual") {
+        if (coveredByMekteb) billingCoverage = "mekteb";
+        else if (k.billingOverride === "self" && ownPlan === "individual") {
           billingPlan = "individual";
           billingCoverage = "self";
-        } else if (familySubscriptionChildren.has(k.id)) billingCoverage = "family";
-        else if (coveredByMekteb) billingCoverage = "mekteb";
+        }
+        else if (familySubscriptionChildren.has(k.id)) billingCoverage = "family";
         else if (familyChildren.has(k.id)) billingCoverage = "family";
-        else if (ownPlan === "individual") {
+        else if (
+          ownPlan === "individual"
+          && studentProfiles.has(k.id)
+          && independentlyRegistered
+        ) {
           billingPlan = "individual";
           billingCoverage = "self";
         }
@@ -1802,6 +1834,11 @@ router.get("/korisnici", async (req, res) => {
         billingPlan,
         billingCoverage,
         pretplata: billingCoverage === "self" ? latestByUser.get(k.id) ?? null : null,
+        mektebNaziv: k.role === "roditelj"
+          ? mektebNameByParent.get(k.id) ?? null
+          : mektebNameById.get(k.role === "ucenik"
+            ? mektebIdByStudent.get(k.id) ?? -1
+            : muallimMektebi.get(k.id) ?? -1) ?? null,
       };
     });
     const byId = new Map(classified.map((k) => [k.id, k]));
@@ -1811,8 +1848,15 @@ router.get("/korisnici", async (req, res) => {
       displayName: string;
       billingCoverage: "self" | "family" | "mekteb" | null;
     }[]>();
+    const parentsByStudent = new Map<number, { id: number; displayName: string; username: string }[]>();
     for (const veza of veze) {
       const child = byId.get(veza.ucenikId);
+      const parent = byId.get(veza.roditeljId);
+      if (child?.role === "ucenik" && parent?.role === "roditelj") {
+        const parents = parentsByStudent.get(child.id) ?? [];
+        parents.push({ id: parent.id, displayName: parent.displayName, username: parent.username });
+        parentsByStudent.set(child.id, parents);
+      }
       if (!child || child.role !== "ucenik") continue;
       const children = childrenByParent.get(veza.roditeljId) ?? [];
       children.push({
@@ -1825,6 +1869,9 @@ router.get("/korisnici", async (req, res) => {
     }
     res.json(classified.map((k) => ({
       ...k,
+      povezaniRoditelji: k.role === "ucenik"
+        ? (parentsByStudent.get(k.id) ?? [])
+        : [],
       porodicnaDjeca: k.role === "roditelj" && k.billingCoverage === "self" && k.billingPlan === "family"
         ? (childrenByParent.get(k.id) ?? []).sort((a, b) => a.displayName.localeCompare(b.displayName, "bs"))
         : [],
@@ -2037,6 +2084,18 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
     }
     const now = new Date();
     const saved = await db.transaction(async (tx) => {
+      // Trial cleanup takes the same user lock before checking and deleting a
+      // pending subscription. Serialize activation with cleanup so a payment
+      // can never race the final eligibility check.
+      const [lockedAccount] = await tx.select({ id: usersTable.id }).from(usersTable)
+        .where(eq(usersTable.id, userId)).for("update");
+      if (!lockedAccount) throw new Error("ACCOUNT_REMOVED");
+      const [lockedLatest] = await tx.select().from(pretplateTable)
+        .where(and(eq(pretplateTable.userId, userId), eq(pretplateTable.planType, expectedPlan)))
+        .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id)).limit(1);
+      if (lockedLatest?.id !== latest?.id || lockedLatest?.status !== latest?.status) {
+        throw new Error("SUBSCRIPTION_CHANGED");
+      }
       let subscription;
       if (metadataOnly) {
         [subscription] = await tx.update(pretplateTable).set({
@@ -5118,79 +5177,7 @@ router.delete("/korisnik/:id", async (req, res) => {
     if (!user) { res.status(404).json({ error: "Korisnik nije pronađen" }); return; }
     if (user.role === "admin") { res.status(403).json({ error: "Ne možete obrisati admin korisnika" }); return; }
 
-    await db.transaction(async (tx) => {
-      if (user.role === "ucenik") {
-        const [profil] = await tx.select().from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
-        if (profil?.muallimId && !profil.isArchived) {
-          await tx.update(muallimProfiliTable)
-            .set({ licencesUsed: sql`GREATEST(${muallimProfiliTable.licencesUsed} - 1, 0)` })
-            .where(eq(muallimProfiliTable.userId, profil.muallimId));
-        }
-        await tx.delete(h5pPokusajiTable).where(eq(h5pPokusajiTable.userId, userId));
-        await tx.delete(zadaceStatusTable).where(eq(zadaceStatusTable.ucenikId, userId));
-        await tx.delete(zadaceUceniciTable).where(eq(zadaceUceniciTable.ucenikId, userId));
-        await tx.delete(pogresniOdgovoriTable).where(eq(pogresniOdgovoriTable.userId, userId));
-        await tx.delete(interaktivniBlokPokusajiTable).where(eq(interaktivniBlokPokusajiTable.userId, userId));
-        await tx.delete(lessonPauseAnswersTable).where(eq(lessonPauseAnswersTable.userId, userId));
-        await tx.delete(misijaProgressTable).where(eq(misijaProgressTable.userId, userId));
-        await tx.delete(medenaVidjenaPitanjaTable).where(eq(medenaVidjenaPitanjaTable.userId, userId));
-        await tx.delete(embedCompletionsTable).where(eq(embedCompletionsTable.studentId, String(userId)));
-        await tx.delete(staticVjezbaPokusajiTable).where(eq(staticVjezbaPokusajiTable.userId, userId));
-        await tx.delete(etapaPokusajOdobrenjaTable).where(eq(etapaPokusajOdobrenjaTable.studentId, String(userId)));
-        await tx.delete(etapaPolaganjaTable).where(eq(etapaPolaganjaTable.studentId, String(userId)));
-        await tx.delete(studentKrunisanjaTable).where(eq(studentKrunisanjaTable.studentId, String(userId)));
-        await tx.delete(studentMedaljoniTable).where(eq(studentMedaljoniTable.studentId, String(userId)));
-        await tx.delete(pushTokensTable).where(eq(pushTokensTable.userId, userId));
-        await tx.delete(ocjeneSadrzajaTable).where(eq(ocjeneSadrzajaTable.userId, userId));
-        await tx.execute(sql`DELETE FROM game_sessions WHERE user_id = ${userId}`);
-        await tx.execute(sql`DELETE FROM grupe_arhiva_clanovi WHERE ucenik_id = ${userId}`);
-        await tx.execute(sql`DELETE FROM zvjezdice_log WHERE ucenik_id = ${userId}`);
-        // Shared learning material remains available, but no longer identifies this account.
-        await tx.update(prilozi).set({ uploadedByUserId: null }).where(eq(prilozi.uploadedByUserId, userId));
-        await tx.update(mektebDokumentiTable).set({ uploadedByUserId: null })
-          .where(eq(mektebDokumentiTable.uploadedByUserId, userId));
-      }
-
-      await tx.delete(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, userId));
-      await tx.delete(korisnikNapredakTable).where(eq(korisnikNapredakTable.userId, userId));
-      try { await tx.delete(studentProgressTable).where(eq(studentProgressTable.studentId, String(userId))); } catch {}
-      try { await tx.delete(exerciseSessionsTable).where(eq(exerciseSessionsTable.studentId, String(userId))); } catch {}
-      await tx.delete(certifikatiTable).where(eq(certifikatiTable.ucenikId, userId));
-      await tx.delete(priustvoTable).where(eq(priustvoTable.ucenikId, userId));
-      await tx.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, userId));
-      await tx.delete(napametUcenikOverrideTable).where(eq(napametUcenikOverrideTable.ucenikId, userId));
-      await tx.delete(porukeTable).where(or(eq(porukeTable.posiljateljId, userId), eq(porukeTable.primateljId, userId)));
-      await tx.delete(roditeljUcenikTable).where(or(eq(roditeljUcenikTable.roditeljId, userId), eq(roditeljUcenikTable.ucenikId, userId)));
-      await tx.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, userId));
-      await tx.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, userId));
-      await tx.delete(pretplateTable).where(eq(pretplateTable.userId, userId));
-
-      if (user.role === "muallim") {
-        const muallimGrupe = await tx.select({ id: grupeTable.id }).from(grupeTable).where(eq(grupeTable.muallimId, userId));
-        const grupaIds = muallimGrupe.map(g => g.id);
-        if (grupaIds.length > 0) {
-          await tx.update(ucenikProfiliTable).set({ grupaId: null, muallimId: null }).where(inArray(ucenikProfiliTable.grupaId, grupaIds));
-          await tx.update(ocjeneTable).set({ grupaId: null }).where(inArray(ocjeneTable.grupaId, grupaIds));
-        }
-        await tx.update(ocjeneTable).set({ muallimId: 0 }).where(eq(ocjeneTable.muallimId, userId));
-        await tx.update(priustvoTable).set({ muallimId: 0 }).where(eq(priustvoTable.muallimId, userId));
-        await tx.delete(mektebKalendarTable).where(eq(mektebKalendarTable.muallimId, userId));
-        await tx.delete(planLekcijaTable).where(eq(planLekcijaTable.muallimId, userId));
-        await tx.delete(zadaceTable).where(eq(zadaceTable.muallimId, userId));
-        await tx.delete(grupeTable).where(eq(grupeTable.muallimId, userId));
-        await tx.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, userId));
-      }
-
-      if (user.role === "roditelj") {
-        await tx.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, userId));
-      }
-
-      try { await tx.delete(posjeteTable).where(eq(posjeteTable.userId, userId)); } catch {}
-
-      await tx.delete(usersTable).where(eq(usersTable.id, userId));
-    });
-
-    invalidateUserStatusCache(userId);
+    await deleteUserWithAdminTransaction(userId);
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Delete user error");
