@@ -5865,6 +5865,7 @@ router.get("/etape/:medaljonId/banka", async (req, res) => {
         eq(ilmihalLekcijeTable.nivo, med.nivo),
         gt(ilmihalLekcijeTable.redoslijed, startPos),
         lte(ilmihalLekcijeTable.redoslijed, med.posAfterRedoslijed),
+        ne(ilmihalLekcijeTable.slug, "uvodna-rijec"),
       ))
       .orderBy(asc(ilmihalLekcijeTable.redoslijed));
     const lekcijaIds = lekcije.map((l) => l.id);

@@ -22,7 +22,7 @@ import {
   zadaceUceniciTable,
   ucenikProfiliTable,
 } from "@workspace/db/schema";
-import { eq, and, asc, desc, gte, lte, lt, sql, inArray, count, isNotNull } from "drizzle-orm";
+import { eq, ne, and, asc, desc, gte, lte, lt, sql, inArray, count, isNotNull } from "drizzle-orm";
 import { optionalAuth, requireAuth } from "../middlewares/auth.js";
 import { sendEmail } from "../lib/email.js";
 import { regeneratePripremaInHtml } from "../lib/priprema-render.js";
@@ -417,7 +417,11 @@ router.get("/ilmihal", optionalAuth, async (req, res) => {
           const poredano: typeof enriched = [];
           for (const [nv, arr] of poNivou) {
             const posMap = await getRasporedPositionsForStudent(userId, nv);
-            poredano.push(...applyEffectiveOrder(arr, posMap));
+            // Uvod Nivoa 1 ostaje ispred broja 1 i kad grupa ima vlastiti
+            // raspored; ne troši efektivnu poziciju redovnih lekcija.
+            const intro = arr.filter((l) => l.slug === "uvodna-rijec");
+            const redovne = arr.filter((l) => l.slug !== "uvodna-rijec");
+            poredano.push(...intro, ...applyEffectiveOrder(redovne, posMap));
           }
           await overlayRows(poredano, "ilmihal_lekcije", getLang(req));
           res.json(poredano);
@@ -481,6 +485,7 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
               eq(ilmihalLekcijeTable.nivo, lekcija.nivo),
               lt(ilmihalLekcijeTable.redoslijed, 9000),
               eq(ilmihalLekcijeTable.dostupnost, "svi"),
+               ne(ilmihalLekcijeTable.slug, "uvodna-rijec"),
             ));
           const rasporedPosMap = await getRasporedPositionsForStudent(decoded.userId, lekcija.nivo);
           const effMap = resolveEffectiveRedoslijed(regularLekcije, rasporedPosMap);

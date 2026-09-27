@@ -205,8 +205,9 @@ export default function IlmihalSvePage() {
     }
   }
 
-  const total = lekcije.length;
-  const done = lekcije.filter((l) => l.zavrseno).length;
+  const numberedLekcije = lekcije.filter((l) => l.slug !== "uvodna-rijec");
+  const total = numberedLekcije.length;
+  const done = numberedLekcije.filter((l) => l.zavrseno).length;
   const matchCount = isSearching
     ? filteredByNivo[1].length + filteredByNivo[2].length + filteredByNivo[3].length
     : 0;
@@ -325,13 +326,16 @@ export default function IlmihalSvePage() {
             {[1, 2, 3].map((nivo) => {
               const allItems = groupedByNivo[nivo].filter((lesson) => !isDodatakLesson(lesson));
               const items = filteredByNivo[nivo].filter((lesson) => !isDodatakLesson(lesson));
+              // Nivo 1 intro precedes lesson 1 without taking a number or
+              // shifting guest access and medaljon positions.
+              const numberedItems = allItems.filter((lesson) => lesson.slug !== "uvodna-rijec");
               const dodatakAllItems = groupedByNivo[nivo].filter(isDodatakLesson);
               const dodatakItems = filteredByNivo[nivo].filter(isDodatakLesson);
               if (allItems.length === 0 && dodatakAllItems.length === 0 && !isAdmin && !isMuallim) return null;
               // Pri aktivnoj pretrazi sakrij nivoe bez rezultata.
               if (isSearching && items.length === 0 && dodatakItems.length === 0 && !isAdmin) return null;
               const info = NIVO_INFO[nivo];
-              const nivoDone = allItems.filter((l) => l.zavrseno).length;
+              const nivoDone = numberedItems.filter((l) => l.zavrseno).length;
               const dodatakDone = dodatakAllItems.filter((l) => l.zavrseno).length;
               // Pri pretrazi: forsiraj otvoren akordion da se rezultati vide.
               const isOpen = isSearching ? true : !!openNivoi[nivo];
@@ -357,13 +361,13 @@ export default function IlmihalSvePage() {
                         {info.naslov}
                       </h2>
                       {!token && <span className="text-xs font-medium text-amber-800/80">
-                        {allItems.length} {t("lekcija")}
+                         {numberedItems.length} {t("lekcija")}
                       </span>}
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {token && (
                         <div className="text-xs sm:text-sm font-bold text-amber-800/80">
-                          {nivoDone} / {allItems.length}
+                           {nivoDone} / {numberedItems.length}
                         </div>
                       )}
                       {!isSearching && (
@@ -385,7 +389,8 @@ export default function IlmihalSvePage() {
                     <ol className="divide-y divide-amber-200/60">
                       {(() => {
                         return items.map((l) => {
-                          const realIdx = allItems.findIndex((x) => x.id === l.id);
+                           const isIntro = l.slug === "uvodna-rijec";
+                           const realIdx = isIntro ? -1 : numberedItems.findIndex((x) => x.id === l.id);
                           const isDone = !!l.zavrseno;
                           const isDodatak = l.slug.startsWith("dodatak-nivo");
                           const nedostajeUvjet = (l.uvjetiIds ?? []).some(
@@ -393,9 +398,9 @@ export default function IlmihalSvePage() {
                           );
                           // Gost-like (nelogovan / roditelj): prvih 5 lekcija.
                           // Prijavljeni učenik: samo eksplicitni uvjeti zaključavaju.
-                          const isLocked = isGuestLike
-                            ? !isDodatak && realIdx >= 5
-                            : user?.role === "ucenik" && nedostajeUvjet;
+                           const isLocked = isGuestLike
+                             ? !isIntro && !isDodatak && realIdx >= 5
+                             : user?.role === "ucenik" && nedostajeUvjet;
                           // Poruka za zaključanu lekciju ovisi o tipu korisnika:
                           // roditelj → registruj se kao poseban korisnik; gost →
                           // prijavi se; učenik → završi prethodnu.
@@ -416,7 +421,7 @@ export default function IlmihalSvePage() {
                                     : "bg-white ring-amber-200 text-amber-900"
                                 }`}
                               >
-                                {idx + 1}
+                                 {isIntro ? <BookOpen className="w-4 h-4" aria-label={t("Uvodna riječ")} /> : idx + 1}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div
@@ -469,7 +474,7 @@ export default function IlmihalSvePage() {
                           // Prikazuje se samo kad nije aktivna pretraga (da
                           // search rezultati ostanu kompaktni).
                           const showMedallionAfter =
-                            !trimmedQuery && (idx + 1) % 10 === 0;
+                             !trimmedQuery && idx >= 0 && (idx + 1) % 10 === 0;
 
                           return (
                             <Fragment key={l.id}>

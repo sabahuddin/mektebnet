@@ -391,11 +391,17 @@ export async function buildProgressSnapshot(userId: number, overrides?: { totalH
   const totalHasanat = overrides?.totalHasanatOverride ?? (progress?.totalHasanat || 0);
   const streakDays = progress?.streakDays || 0;
 
-  const allLekcije = await db.select({ id: ilmihalLekcijeTable.id, nivo: ilmihalLekcijeTable.nivo })
+  const allLekcije = await db.select({
+    id: ilmihalLekcijeTable.id,
+    nivo: ilmihalLekcijeTable.nivo,
+    slug: ilmihalLekcijeTable.slug,
+  })
     .from(ilmihalLekcijeTable);
-  const idToNivo = new Map(allLekcije.map(r => [r.id, r.nivo]));
+  const introId = allLekcije.find(r => r.slug === "uvodna-rijec")?.id;
+  const redovneLekcije = allLekcije.filter(r => r.id !== introId);
+  const idToNivo = new Map(redovneLekcije.map(r => [r.id, r.nivo]));
   const completedByNivo: Record<number, { gotov: number; ukupno: number }> = {};
-  for (const r of allLekcije) {
+  for (const r of redovneLekcije) {
     if (!completedByNivo[r.nivo]) completedByNivo[r.nivo] = { gotov: 0, ukupno: 0 };
     completedByNivo[r.nivo].ukupno++;
   }
@@ -413,7 +419,7 @@ export async function buildProgressSnapshot(userId: number, overrides?: { totalH
 
   return {
     totalHasanat,
-    completedCount: completedLessonIds.length,
+    completedCount: completedLessonIds.filter(id => id !== introId).length,
     streakDays,
     completedByNivo,
     quizCount,

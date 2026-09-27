@@ -9,6 +9,7 @@ import { List, Crown } from "lucide-react";
 
 interface Lekcija {
   id: number;
+  slug: string;
   nivo: number;
   zavrseno?: boolean;
 }
@@ -45,7 +46,7 @@ export default function IlmihalPage() {
           2: { done: 0, total: 0 },
           3: { done: 0, total: 0 },
         };
-        lekcije.forEach((l) => {
+        lekcije.filter((l) => l.slug !== "uvodna-rijec").forEach((l) => {
           if (totals[l.nivo]) totals[l.nivo].total++;
         });
 
@@ -58,7 +59,7 @@ export default function IlmihalPage() {
               token || undefined,
             );
             const doneSet = new Set(p.completedLessons ?? []);
-            lekcije.forEach((l) => {
+            lekcije.filter((l) => l.slug !== "uvodna-rijec").forEach((l) => {
               if (totals[l.nivo] && doneSet.has(l.id)) totals[l.nivo].done++;
             });
           } catch {}

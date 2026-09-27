@@ -23,7 +23,7 @@ import {
   napametUcenikOverrideTable,
   napametGrupaOverrideTable,
 } from "@workspace/db/schema";
-import { eq, and, asc, desc, count, inArray, sql, or, notInArray, exists, gte } from "drizzle-orm";
+import { eq, ne, and, asc, desc, count, inArray, sql, or, notInArray, exists, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { BADGE_CATALOG, type EarnedBadge, evaluateAndPersistBadges, buildProgressSnapshot, computeBadgeProgress } from "../lib/badges.js";
 import { streamDokument } from "../lib/dokumenti.js";
@@ -121,7 +121,10 @@ router.get("/profil", async (req, res) => {
       nivo: ilmihalLekcijeTable.nivo,
       ukupno: count(),
     }).from(ilmihalLekcijeTable)
-      .where(eq(ilmihalLekcijeTable.isPublished, true))
+      .where(and(
+        eq(ilmihalLekcijeTable.isPublished, true),
+        ne(ilmihalLekcijeTable.slug, "uvodna-rijec"),
+      ))
       .groupBy(ilmihalLekcijeTable.nivo);
 
     const completedLessonIds = (progress?.completedLessons as number[]) || [];
@@ -131,7 +134,8 @@ router.get("/profil", async (req, res) => {
     }
     if (completedLessonIds.length > 0) {
       const completedRows = await db.select({ id: ilmihalLekcijeTable.id, nivo: ilmihalLekcijeTable.nivo })
-        .from(ilmihalLekcijeTable);
+        .from(ilmihalLekcijeTable)
+        .where(ne(ilmihalLekcijeTable.slug, "uvodna-rijec"));
       const idToNivo = new Map(completedRows.map(r => [r.id, r.nivo]));
       for (const lid of completedLessonIds) {
         const nv = idToNivo.get(lid);

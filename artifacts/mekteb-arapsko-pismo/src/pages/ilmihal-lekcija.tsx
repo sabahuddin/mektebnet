@@ -228,6 +228,11 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
   const currentIdx = currentById >= 0
     ? currentById
     : lekcije.findIndex(l => l.slug === currentSlug);
+  // Nivo 1 introduction is available before lesson 1, not numbered.
+  const introIdx = lekcije.findIndex(l => l.slug === "uvodna-rijec");
+  const numberedCount = lekcije.length - (introIdx >= 0 ? 1 : 0);
+  const currentNumber = currentIdx === introIdx ? null
+    : currentIdx + 1 - (introIdx >= 0 && introIdx < currentIdx ? 1 : 0);
 
   useEffect(() => {
     if (activeRef.current && stripRef.current) {
@@ -270,7 +275,7 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
         </div>
         <div className="min-w-0 text-center">
           <h1 className="text-lg sm:text-xl font-extrabold text-foreground leading-tight line-clamp-2">{heading}</h1>
-          {currentIdx >= 0 && <span className="text-[11px] text-muted-foreground font-semibold">{currentIdx + 1} / {lekcije.length}</span>}
+          {currentIdx >= 0 && currentNumber !== null && <span className="text-[11px] text-muted-foreground font-semibold">{currentNumber} / {numberedCount}</span>}
         </div>
         <div className="flex items-center justify-end gap-1.5">
         <button
@@ -317,7 +322,11 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
                         : "bg-white border border-border/50 text-muted-foreground hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50"
                   }`}
               >
-                <span className="text-xs leading-none">{i + 1}</span>
+                <span className="text-xs leading-none">
+                  {i === introIdx
+                    ? <BookOpen className="w-3.5 h-3.5" aria-label={t("Uvodna riječ")} />
+                    : i + 1 - (introIdx >= 0 && introIdx < i ? 1 : 0)}
+                </span>
                 {isDone && !isActive && (
                   <CheckCircle2 className="absolute -top-1 -right-1 w-3 h-3 text-emerald-600 bg-white rounded-full" strokeWidth={3} />
                 )}

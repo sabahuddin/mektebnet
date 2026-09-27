@@ -12,7 +12,7 @@ import {
   etapaPolaganjaTable,
   kvizPitanjaTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, asc } from "drizzle-orm";
+import { eq, ne, and, inArray, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
 import { addHasanatReward, KRUNISANJE_REWARD } from "../lib/hasanat-rewards.js";
@@ -327,6 +327,7 @@ async function proveriGatingKrunisanja(
     .where(and(
       eq(ilmihalLekcijeTable.nivo, krunisanje.nivo),
       eq(ilmihalLekcijeTable.dostupnost, "svi"),
+      ne(ilmihalLekcijeTable.slug, "uvodna-rijec"),
     ));
   const [progressRow] = await db
     .select({ completedLessons: studentProgressTable.completedLessons })

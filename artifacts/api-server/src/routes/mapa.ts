@@ -67,6 +67,9 @@ async function handleMapaNivo(nivoRaw: unknown, req: import("express").Request, 
           // DODATAK lekcije (slug `dodatak-nivo{N}-{n}`) nisu dio mape niti
           // progresije — dodatni sadržaj dostupan samo kroz listu svih lekcija.
           notLike(ilmihalLekcijeTable.slug, "dodatak-nivo%"),
+          // Uvod Nivoa 1 je javno dostupan prije lekcije 1, ali nije ćelija
+          // mape niti smije pomjeriti pozicije/otključavanje etapa.
+          notLike(ilmihalLekcijeTable.slug, "uvodna-rijec"),
           ...(canSeeMuallimOnly ? [] : [eq(ilmihalLekcijeTable.dostupnost, "svi")]),
         ))
         .orderBy(asc(ilmihalLekcijeTable.redoslijed)),
@@ -216,6 +219,7 @@ router.post("/medaljon/:slug/claim", requireAuth, requireRole("ucenik"), async (
           eq(ilmihalLekcijeTable.nivo, medaljon.nivo),
           lt(ilmihalLekcijeTable.redoslijed, 9000),
           eq(ilmihalLekcijeTable.dostupnost, "svi"),
+          notLike(ilmihalLekcijeTable.slug, "uvodna-rijec"),
         ),
       );
     const rasporedPosMap = await getRasporedPositionsForStudent(req.user!.userId, medaljon.nivo);

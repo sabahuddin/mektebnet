@@ -58,7 +58,7 @@
 - [Nastavnički materijali nisu zadaća](nastavnicki-materijali.md) — file/url prilozi pripadaju Pripremi i ostaju samo muallimu/adminu; učenicima su dostupne samo vježbe.
 - [Bundlovani materijali i trajni uploads](bundled-materials-persistent-uploads.md) — seedovane zamjene moraju prepisati postojeći fajl u trajnom volumenu, ne samo upis u bazu.
 - [Kvizovi po etapama](kvizovi-po-etapama.md) — etapa je broj 1–7 unutar nivoa; cijeli interaktivni kviz se povezuje s medaljon-lekcijom, ne pretvara u mini-kviz.
-- [Lekcije samo za muallime i progresija](lekcije-muallimi-progresija.md) — lekcija skrivena učenicima ne smije ostati obavezna za otključavanje, etapu, medaljon ili krunisanje.
+- [Dostupnost lekcija i progresija](lekcije-muallimi-progresija.md) — ni skrivene lekcije ni javni nenumerisani uvod Nivoa 1 ne smiju pomjerati etape ili blokirati napredak.
 - [Auth hidratacija prije redirecta](auth-hidratacija-redirect.md) — zaštićene stranice moraju čekati `useAuth().isLoading`; puni reload inače nakratko tretira admina kao gosta.
 - [Nagrade za etape, bedževe i krunisanje](nagrade-za-etape-bedzeve-i-krunisanje.md) — Etape daju 80/90/100, Krunisanje 1000, a svaki novi bedž 50 kapi; sve samo prvi put.
 - [Sufara audio batch poslovi](sufara-audio-batch.md) — overwrite i FFmpeg normalizacija prelaze Replit timeout; koristi resumable foreground chunkove.

@@ -1749,6 +1749,14 @@ async function runDataBootstrap() {
              OR content_html LIKE '%lesson-accordion%'
              OR content_html LIKE '%lesson-container%');
     `);
+    // Uvod je javan, ali ostaje na poziciji 0 – bez pomjeranja redovnih
+    // lekcija ili granica etapa. Mapa/progresija ga posebno izuzimaju.
+    await db.execute(sql`
+      UPDATE ilmihal_lekcije
+      SET dostupnost = 'svi', is_published = true
+      WHERE slug = 'uvodna-rijec'
+        AND (dostupnost IS DISTINCT FROM 'svi' OR is_published IS DISTINCT FROM true);
+    `);
 
     const uvodnaNivo2Html = `<p class="lesson-text">
   Esselamu alejkum, dragi učenici i poštovani roditelji!

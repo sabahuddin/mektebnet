@@ -10,7 +10,7 @@ import {
   studentProgressTable,
   kvizPitanjaTable,
 } from "@workspace/db/schema";
-import { eq, and, inArray, desc, lte, asc, sql } from "drizzle-orm";
+import { eq, ne, and, inArray, desc, lte, asc, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { JWT_SECRET } from "../lib/jwt-secret.js";
 import {
@@ -448,6 +448,7 @@ async function proverigatingEtape(
         eq(ilmihalLekcijeTable.nivo, medaljon.nivo),
         lte(ilmihalLekcijeTable.redoslijed, medaljon.posAfterRedoslijed),
         eq(ilmihalLekcijeTable.dostupnost, "svi"),
+        ne(ilmihalLekcijeTable.slug, "uvodna-rijec"),
       ),
     );
   if (potrebne.length === 0) return null;
