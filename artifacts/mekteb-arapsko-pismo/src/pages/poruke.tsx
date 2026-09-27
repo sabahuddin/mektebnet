@@ -583,7 +583,7 @@ export default function PorukePage() {
                             {incomingCategory && (
                               <p className="mb-1 text-xs font-extrabold opacity-80">{t(incomingCategory)}</p>
                             )}
-                            <p className="leading-relaxed whitespace-pre-wrap">{p.sadrzaj}</p>
+                            <p className="leading-relaxed whitespace-pre-wrap break-words">{p.sadrzaj}</p>
                             <p className={`text-xs mt-1 ${isMoj ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                               {formatDateTime(p.createdAt)}
                             </p>
@@ -600,12 +600,12 @@ export default function PorukePage() {
                         : t("Samo glavni muallim može poslati poruku Adminu.")}
                     </div>
                   ) : (
-                    <form onSubmit={sendPoruka} className="p-3 md:p-4 border-t border-border/50 flex gap-3 shrink-0 bg-white shadow-[0_-6px_18px_rgba(0,0,0,0.03)]">
+                    <form onSubmit={sendPoruka} className="p-3 md:p-4 border-t border-border/50 flex items-end gap-3 shrink-0 bg-white shadow-[0_-6px_18px_rgba(0,0,0,0.03)]">
                       <label className="sr-only" htmlFor="poruke-composer">{t("Napiši poruku...")}</label>
-                      <input id="poruke-composer" type="text" placeholder={t("Napiši poruku...")} value={tekst}
-                        onChange={e => setTekst(e.target.value)} autoComplete="off"
-                        className="flex-1 border border-border rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-primary/40" />
-                      <Button type="submit" disabled={isSending || !tekst.trim()} className="rounded-xl px-5 shrink-0">
+                      <textarea id="poruke-composer" placeholder={t("Napiši poruku...")} value={tekst}
+                        onChange={e => setTekst(e.target.value)} rows={4}
+                        className="flex-1 min-w-0 max-h-56 resize-y border border-border rounded-xl px-4 py-3 text-base leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                      <Button type="submit" aria-label={t("Pošalji poruku")} disabled={isSending || !tekst.trim()} className="rounded-xl px-5 shrink-0">
                         {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       </Button>
                     </form>
