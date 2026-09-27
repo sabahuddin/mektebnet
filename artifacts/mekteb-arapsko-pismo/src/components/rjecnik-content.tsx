@@ -14,6 +14,7 @@
 
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { useLanguage } from "@/context/language";
 import { processRjecnik, fetchRjecnik, getRjecnikSync } from "@/lib/rjecnik";
 import { enhanceAllAudioPlayers } from "@/lib/audio-player";
 import { X } from "lucide-react";
@@ -154,16 +155,18 @@ function HtmlSegmentBlock({
 // ─────────────────────────────────────────────
 
 export function RjecnikContent({ html, className, pauseAnswers, onPauseProgressChange }: Props) {
+  const { lang } = useLanguage();
   const outerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
   const [dict, setDict] = useState<Record<string, string>>(getRjecnikSync());
 
   useEffect(() => {
-    fetchRjecnik().then((d) => setDict(d));
-  }, []);
+    if (lang === "bs") fetchRjecnik().then((d) => setDict(d));
+    else setTooltip(null);
+  }, [lang]);
 
   // Process the full raw HTML for rjecnik spans
-  const processedHtml = useMemo(() => processRjecnik(html, dict), [html, dict]);
+  const processedHtml = useMemo(() => lang === "bs" ? processRjecnik(html, dict) : html, [html, dict, lang]);
 
   // Split into segments after rjecnik processing
   const segments = useMemo(
@@ -185,6 +188,7 @@ export function RjecnikContent({ html, className, pauseAnswers, onPauseProgressC
 
   // ── Tooltip click handler ────────────────────────────────────
   const handleClick = useCallback((e: MouseEvent) => {
+    if (lang !== "bs") return;
     const el = e.target as HTMLElement;
     if (el.classList.contains("rjecnik-rijec")) {
       e.stopPropagation();
@@ -203,7 +207,7 @@ export function RjecnikContent({ html, className, pauseAnswers, onPauseProgressC
     } else if (!el.closest(".rjecnik-popup")) {
       setTooltip(null);
     }
-  }, []);
+  }, [lang]);
 
   // Attach click listener to the outer wrapper which covers all HTML segments
   useEffect(() => {

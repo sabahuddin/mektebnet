@@ -26,3 +26,5 @@ description: Kako prevesti velike lekcije bez djelimičnog prijevoda ili promjen
 **Why:** Razvojni primjerak može imati stari put do slike i ne sadržavati audio koji je naknadno dodat u produkciji. Puni overwrite bi popravio jezik, ali tiho uklonio korisnički sadržaj.
 
 **How to apply:** Prije vraćanja uporedi strukturu i vidljive tekstove oba primjerka, provjeri sačuvane medije, a nakon upisa pročitaj javni BS odgovor i postojeće prevedene jezike.
+
+**Izuzetak:** Ako je prevedeni zapis oštetio i samu strukturu BS lekcije (npr. nestala su dugmad akordiona), vraćanje samo tekstualnih čvorova nije moguće. Stariji bosanski izvor smije se vratiti u cjelini tek nakon poređenja svih medija, interaktivnih oznaka i drugih produkcijskih dodataka; postojeće produkcijske putanje treba prenijeti, napraviti backup i upis usloviti nepromijenjenim hashom oštećenog zapisa.

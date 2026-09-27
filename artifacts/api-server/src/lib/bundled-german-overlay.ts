@@ -87,6 +87,9 @@ export async function applyBundledGermanOverlays() {
       VALUES ('ilmihal_lekcije', ${lesson.id}, ${overlay.field}, 'de', ${translation}, ${overlay.sourceHash}, NOW())
       ON CONFLICT (tabela, red_id, polje, jezik)
       DO UPDATE SET prijevod = EXCLUDED.prijevod, izvor_hash = EXCLUDED.izvor_hash, updated_at = NOW()
+      -- A reviewer's later correction of this same source must survive restart.
+      -- Bundled content only replaces a translation when the source has changed.
+      WHERE content_prijevodi.izvor_hash IS DISTINCT FROM EXCLUDED.izvor_hash
     `);
     applied++;
   }
