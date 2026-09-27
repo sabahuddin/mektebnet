@@ -461,7 +461,7 @@ function textTranslationIssue(source: string, translation: string, jezik: string
   if (!translation?.trim()) return "prazan prijevod";
   if (hasAddedArabicHonorific(source, translation)) return "dodan je počasni oblik koji nije u izvorniku";
   if (jezik === "de" && hasLikelyEnglishInGerman(translation)) return "njemački prijevod sadrži previše engleskog teksta";
-  if (jezik === "de" && hasBosnianGloss(translation)) return "bosanski termin u zagradi";
+  if ((jezik === "de" || jezik === "en") && hasBosnianGloss(translation)) return "bosanski termin u zagradi";
   return null;
 }
 
@@ -562,7 +562,7 @@ export function existingQuizNeedsRepair(sourceArr: any[], translation: string, j
 
 export function htmlTranslationIssue(source: string, translation: string, jezik: string) {
   if (!translation || translation.length < Math.min(20, source.length / 4)) return "prekratak odgovor";
-  if (jezik === "de" && hasBosnianGloss(translation)) return "bosanski termin u zagradi";
+  if ((jezik === "de" || jezik === "en") && hasBosnianGloss(translation)) return "bosanski termin u zagradi";
   if (htmlTagSequence(source) !== htmlTagSequence(translation)) return "izmijenjena HTML struktura";
   const textIssue = textTranslationIssue(source, translation, jezik);
   if (textIssue) return textIssue;

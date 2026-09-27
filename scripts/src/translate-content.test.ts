@@ -11,11 +11,16 @@ import {
 } from "./translate-content";
 import { dotjeraj } from "./transkripcija.js";
 
-test("ne šalje ponovo bankovno pitanje koje prevodi termin i čuva ga u zagradi", () => {
+test("ponovo prevodi pitanje sa bosanskim terminom u njemačkom prijevodu", () => {
   const source = "Šta je šart u namazu?";
   const translation = "Was ist eine Bedingung (šart) im Gebet?";
 
-  assert.equal(existingTextNeedsRepair(source, translation, "de"), false);
+  assert.equal(existingTextNeedsRepair(source, translation, "de"), true);
+});
+
+test("ponovo prevodi pitanje sa bosanskim terminom u engleskom prijevodu", () => {
+  assert.equal(existingTextNeedsRepair("Šta je namaz?", "What is prayer (namaz)?", "en"), true);
+  assert.equal(existingTextNeedsRepair("Šta je namaz?", "What is prayer?", "en"), false);
 });
 
 test("označava potpuno nepromijenjeno bankovno pitanje za popravku", () => {
@@ -24,7 +29,7 @@ test("označava potpuno nepromijenjeno bankovno pitanje za popravku", () => {
   assert.equal(existingTextNeedsRepair(source, source, "de"), true);
 });
 
-test("ne šalje ponovo kviz_pitanja kada prijevod čuva termin dova u zagradi", () => {
+test("ponovo prevodi kviz-pitanje sa bosanskim terminom u zagradi", () => {
   const source = [
     {
       question: "Šta je dova?",
@@ -40,7 +45,7 @@ test("ne šalje ponovo kviz_pitanja kada prijevod čuva termin dova u zagradi", 
     },
   ]);
 
-  assert.equal(existingQuizNeedsRepair(source, translation, "de"), false);
+  assert.equal(existingQuizNeedsRepair(source, translation, "de"), true);
 });
 
 test("označava potpuno nepromijenjeno kviz_pitanje za popravku", () => {
@@ -176,7 +181,7 @@ test("pasus koji je ostao bosanski usred njemačke lekcije se hvata", () => {
   const polovican = [
     "<p>Haben Sie sich schon einmal gefragt, welche Sura Muslime im Laufe ihres Lebens am häufigsten aussprechen?</p>",
     "<p>Das ist Sura Al-Fatiha! Sie ist so besonders, dass wir sie tagtäglich vielfach lernen und rezitieren.</p>",
-    "<p>Naš Poslanik Muhammed, (Friede sei mit ihm), rekao je da je sura Al-Fatiha najbolja Bittgebet (dova) i da je ona majka cijelog Kur'ana. Zamislite koliko je ona važna kada je nazivamo majkom svih drugih sura!</p>",
+    "<p>Naš Poslanik Muhammed, (Friede sei mit ihm), rekao je da je sura Al-Fatiha najbolja Bittgebet i da je ona majka cijelog Kur'ana. Zamislite koliko je ona važna kada je nazivamo majkom svih drugih sura!</p>",
   ].join("");
   assert.match(String(htmlTranslationIssue(izvor, polovican, "de")), /ostao je nepreveden bosanski tekst/);
 
@@ -188,11 +193,11 @@ test("pasus koji je ostao bosanski usred njemačke lekcije se hvata", () => {
   assert.equal(htmlTranslationIssue(izvor, potpun, "de"), null);
 });
 
-test("stručni termin u zagradi ne proglašava pasus neprevedenim", () => {
-  // Granica u drugom smjeru: njemačka rečenica smije zadržati bosanski termin.
+test("odbij njemački i engleski pasus s bosanskim terminom u zagradi", () => {
   const izvor = "<p>Šta je šart u namazu i koliko ih ima?</p>";
   const prijevod = "<p>Was ist eine Bedingung (šart) im Gebet und wie viele gibt es?</p>";
-  assert.equal(htmlTranslationIssue(izvor, prijevod, "de"), null);
+  assert.equal(htmlTranslationIssue(izvor, prijevod, "de"), "bosanski termin u zagradi");
+  assert.equal(htmlTranslationIssue(izvor, "<p>What is a condition (šart) in prayer?</p>", "en"), "bosanski termin u zagradi");
 });
 
 test("transkripcija i eulogija ne razbijaju velika slova lekcije", () => {
