@@ -39,6 +39,12 @@ interface Grupa {
   sekundarniMuallimi?: { id: number; displayName: string }[];
 }
 
+interface Podgrupa {
+  id: number;
+  naziv: string;
+  ucenikIds: number[];
+}
+
 interface ArhivaClan {
   ucenikId: number;
   displayName: string;
@@ -164,6 +170,7 @@ export default function GrupaPage() {
   const [grupa, setGrupa] = useState<Grupa | null>(null);
   const [zadacaBadge, setZadacaBadge] = useState(0);
   const [studentiGrupe, setStudentiGrupe] = useState<Ucenik[]>([]);
+  const [podgrupe, setPodgrupe] = useState<Podgrupa[]>([]);
   const [sveGrupe, setSveGrupe] = useState<Grupa[]>([]);
   const [lekcijeStatus, setLekcijeStatus] = useState<Map<number, LekcijaStatus>>(new Map());
   const [interaktivniPregled, setInteraktivniPregled] = useState<InteraktivniPregledGrupe | null>(null);
@@ -189,6 +196,7 @@ export default function GrupaPage() {
     datum: new Date().toISOString().split("T")[0], napametStavkaId: "", lekcijaSlug: "",
   });
   const [napametKatalog, setNapametKatalog] = useState<NapametStavka[]>([]);
+  const [napametKatalogLoaded, setNapametKatalogLoaded] = useState(false);
   const [napametRefreshKey, setNapametRefreshKey] = useState(0);
   const [napametOdabrana, setNapametOdabrana] = useState<NapametStavka | null>(null);
   const [napametDetalji, setNapametDetalji] = useState<NapametDetalji | null>(null);
@@ -252,6 +260,7 @@ export default function GrupaPage() {
   const grupaId = parseInt(id || "0");
   const search = useSearch();
   const [aktivniModul, setAktivniModul] = useState<GrupaModul>("ucenici");
+  const napametActionHandledRef = useRef<string | null>(null);
 
   useEffect(() => {
     const modul = new URLSearchParams(search).get("modul");
@@ -276,9 +285,11 @@ export default function GrupaPage() {
 
   useEffect(() => {
     if (!token || !grupaId) return;
+    setNapametKatalogLoaded(false);
     apiRequest<{ katalog: (NapametStavka & { isVisible?: boolean })[] }>("GET", `/muallim/napamet-program?grupaId=${grupaId}`, undefined, token)
       .then(data => setNapametKatalog(data.katalog.filter(s => s.canToggleForGroup !== false)))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setNapametKatalogLoaded(true));
     Promise.all([
       apiRequest<Grupa[]>("GET", "/muallim/grupe", undefined, token),
       apiRequest<Ucenik[]>("GET", `/muallim/grupa/${grupaId}/ucenici`, undefined, token),
@@ -286,7 +297,8 @@ export default function GrupaPage() {
       apiRequest<IlmihalLekcija[]>("GET", "/muallim/lekcije-za-plan", undefined, token).catch(() => []),
       apiRequest<any[]>("GET", `/muallim/grupa/${grupaId}/zvjezdice-summary`, undefined, token).catch(() => []),
       apiRequest<{id:number;tip:string;naziv:string}[]>("GET", "/muallim/zvjezdice-kategorije", undefined, token).catch(() => []),
-    ]).then(([grupe, grupaUcenici, status, lekcije, zvData, kategorije]) => {
+      apiRequest<Podgrupa[]>("GET", `/muallim/grupe/${grupaId}/podgrupe`, undefined, token).catch(() => []),
+    ]).then(([grupe, grupaUcenici, status, lekcije, zvData, kategorije, grupaPodgrupe]) => {
       const g = grupe.find(x => x.id === grupaId);
       setGrupa(g || null);
       setSekundarniMuallimi(g?.sekundarniMuallimi ?? []);
@@ -296,6 +308,7 @@ export default function GrupaPage() {
       }
       setSveGrupe(grupe);
       setStudentiGrupe(grupaUcenici);
+      setPodgrupe(grupaPodgrupe);
       setLekcijeStatus(new Map(status.map(s => [s.ucenikId, s])));
       setIlmihalLekcije(lekcije);
       setZvjezdiceSummary(new Map((zvData as any[]).map((r: any) => [
@@ -511,11 +524,19 @@ export default function GrupaPage() {
     }
   }
 
-  async function openZadacaForOne(u: Ucenik) {
+  async function openZadacaForOne(u: Ucenik, napametItem?: NapametStavka) {
+    const sourceLesson = napametItem?.sourceLessonSlug
+      ? ilmihalLekcije.find(lekcija => lekcija.slug === napametItem.sourceLessonSlug)
+      : undefined;
     setZadacaTarget(u);
-    setZadacaModalTab("pregled");
+    setZadacaModalTab(napametItem ? "nova" : "pregled");
     setZadaceTargeta([]);
-    setNewZadaca({ opis: "", rokDo: "", lekcijaNaslov: "", lekcijaSlug: "" });
+    setNewZadaca({
+      opis: napametItem && !napametItem.sourceLessonSlug ? napametItem.naziv : "",
+      rokDo: "",
+      lekcijaNaslov: sourceLesson?.naslov ?? napametItem?.naziv ?? "",
+      lekcijaSlug: napametItem?.sourceLessonSlug || "",
+    });
     setZadMaterijali([]); setZadPriloziIds(new Set());
     setShowZadacaModal(true);
     if (!token) return;
@@ -529,6 +550,36 @@ export default function GrupaPage() {
       setZadaceTargetaLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (isLoading || !grupa || !napametKatalogLoaded) return;
+    const params = new URLSearchParams(search);
+    const action = params.get("napametAction");
+    const studentId = Number(params.get("studentId"));
+    const itemId = params.get("itemId");
+    if ((action !== "grade" && action !== "homework") || !studentId || !itemId) return;
+
+    const intentKey = `${grupaId}:${action}:${studentId}:${itemId}`;
+    if (napametActionHandledRef.current === intentKey) return;
+    const student = studentiGrupe.find(entry => entry.id === studentId);
+    const listedItem = napametKatalog.find(entry => entry.id === itemId);
+    const itemName = params.get("itemName") || listedItem?.naziv;
+    const item = listedItem ?? (itemName ? {
+      id: itemId,
+      nivo: 0,
+      naziv: itemName,
+      redoslijed: 0,
+      sourceLessonSlug: params.get("lessonSlug") || null,
+    } : undefined);
+
+    napametActionHandledRef.current = intentKey;
+    if (!student || !item) {
+      toast({ title: t("Nije moguće otvoriti Napamet akciju"), description: t("Učenik ili stavka nisu pronađeni u ovoj grupi."), variant: "destructive" });
+      return;
+    }
+    if (action === "grade") openBrzaNapametOcjena(item, student);
+    else void openZadacaForOne(student, item);
+  }, [search, isLoading, grupa, grupaId, napametKatalogLoaded, napametKatalog, studentiGrupe, ilmihalLekcije]);
 
   async function saveZadacaStatus(zadaca: UcenikZadaca) {
     if (!token || !zadacaTarget) return;
@@ -772,6 +823,15 @@ export default function GrupaPage() {
   const dostupniMuallimi = muallimiZaGrupe.filter(m =>
     m.userId !== grupa.muallimId && !sekundarniMuallimi.some(s => s.id === m.userId),
   );
+  const podgrupaPoUceniku = new Map<number, Podgrupa>();
+  podgrupe.forEach(podgrupa => podgrupa.ucenikIds.forEach(ucenikId => podgrupaPoUceniku.set(ucenikId, podgrupa)));
+  const brojBezPodgrupe = studentiGrupe.filter(ucenik => !podgrupaPoUceniku.has(ucenik.id)).length;
+  const podgrupaCardColors = [
+    "border-violet-200 bg-violet-50/20",
+    "border-sky-200 bg-sky-50/20",
+    "border-amber-200 bg-amber-50/20",
+    "border-rose-200 bg-rose-50/20",
+  ];
 
   return (
     <Layout>
@@ -973,6 +1033,30 @@ export default function GrupaPage() {
               <Users className="w-5 h-5 text-secondary" /> {t("Učenici u grupi ({n})", { n: String(studentiGrupe.length) })}
             </h3>
           </div>
+          {podgrupe.length > 0 && (
+            <div className="border-b border-border/30 bg-violet-50/30 px-4 py-3 sm:px-5" data-testid="grupa-podgrupe">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-violet-800">{t("Podgrupe")}</p>
+              <div className="flex flex-wrap gap-2">
+                {podgrupe.map((podgrupa, index) => {
+                  const clanovi = podgrupa.ucenikIds
+                    .map(ucenikId => studentiGrupe.find(ucenik => ucenik.id === ucenikId))
+                    .filter((ucenik): ucenik is Ucenik => Boolean(ucenik));
+                  return (
+                    <div key={podgrupa.id} className={`min-w-[150px] rounded-xl border px-3 py-2 ${podgrupaCardColors[index % podgrupaCardColors.length]}`}>
+                      <p className="text-sm font-extrabold text-foreground">{podgrupa.naziv} <span className="text-xs font-bold text-muted-foreground">({clanovi.length})</span></p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{clanovi.length ? clanovi.map(ucenik => ucenik.displayName).join(", ") : t("Nema učenika")}</p>
+                    </div>
+                  );
+                })}
+                <div className="min-w-[150px] rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
+                  <p className="text-sm font-extrabold text-slate-700">{t("Bez podgrupe")} <span className="text-xs font-bold text-muted-foreground">({brojBezPodgrupe})</span></p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {studentiGrupe.filter(ucenik => !podgrupaPoUceniku.has(ucenik.id)).map(ucenik => ucenik.displayName).join(", ") || t("Nema učenika")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           {studentiGrupe.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -985,9 +1069,12 @@ export default function GrupaPage() {
                 const settingsOpen = settingsOpenId === u.id;
                 const ucenje = interaktivniPregled?.ucenici.find(x => x.id === u.id);
                  const lekcije = lekcijeStatus.get(u.id);
+                const podgrupa = podgrupaPoUceniku.get(u.id);
+                const podgrupaIndex = podgrupa ? podgrupe.findIndex(entry => entry.id === podgrupa.id) : -1;
                 return (
                   <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                    className="relative bg-white border border-border rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-primary/40 transition-all">
+                    className={`relative rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/40 ${podgrupa ? podgrupaCardColors[podgrupaIndex % podgrupaCardColors.length] : "border-slate-200 bg-slate-50/30"}`}
+                    data-subgroup-id={podgrupa?.id ?? "unassigned"}>
 
                     {/* Gornji red: avatar + ime (klikabilno → profil) + zupčanik */}
                     <div className="flex items-center gap-3 mb-3">
@@ -1083,6 +1170,11 @@ export default function GrupaPage() {
                            document.body,
                          )}
                       </div>
+                    </div>
+                    <div className="mb-3">
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${podgrupa ? "border-violet-200 bg-white/80 text-violet-800" : "border-slate-200 bg-white/80 text-slate-600"}`}>
+                        {podgrupa?.naziv ?? t("Bez podgrupe")}
+                      </span>
                     </div>
 
                     {ucenje?.brojPokusaja ? (

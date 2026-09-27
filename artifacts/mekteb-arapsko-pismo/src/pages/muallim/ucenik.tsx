@@ -21,6 +21,8 @@ interface Ucenik {
   displayName: string;
   username: string;
   role: string;
+  grupaId?: number | null;
+  profil?: { grupaId?: number | null };
   lastSeenAt?: string | null;
   totalScreentimeSec?: number | null;
 }
@@ -288,6 +290,22 @@ export default function UcenikPage() {
       setNapamet(previous);
       toast({ title: t("Promjena nije sačuvana"), description: error instanceof Error ? error.message : t("Pokušaj ponovo."), variant: "destructive" });
     }
+  }
+
+  function openNapametAction(action: "grade" | "homework", item: NapametStavka) {
+    const grupaId = ucenik?.profil?.grupaId ?? ucenik?.grupaId;
+    if (!ucenik || !grupaId) {
+      toast({ title: t("Učenik nije trenutno u grupi"), description: t("Otvorite grupu učenika da biste dodali ocjenu ili zadaću."), variant: "destructive" });
+      return;
+    }
+    const params = new URLSearchParams({
+      napametAction: action,
+      studentId: String(ucenik.id),
+      itemId: item.id,
+      itemName: item.naziv,
+      lessonSlug: item.sourceLessonSlug || "",
+    });
+    setLocation(`/muallim/grupa/${grupaId}?${params.toString()}`);
   }
 
   async function odobriEtapaPokusaj(medaljonId: number) {
@@ -720,9 +738,28 @@ export default function UcenikPage() {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
-        </button>
+        <div className="mb-6 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => goBackOr(() => setLocation("/muallim"))}
+            aria-label={t("Nazad na panel")}
+            title={t("Nazad na panel")}
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            data-testid="btn-student-back-history"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          {Boolean(ucenik && (ucenik.profil?.grupaId ?? ucenik.grupaId)) && (
+            <button
+              type="button"
+              onClick={() => setLocation(`/muallim/grupa/${ucenik!.profil?.grupaId ?? ucenik!.grupaId}`)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-emerald-800 transition-colors hover:bg-emerald-50"
+              data-testid="btn-student-back-group"
+            >
+              <Users className="h-4 w-4" /> {t("Nazad na grupu")}
+            </button>
+          )}
+        </div>
 
         {isLoading ? (
           <div className="flex flex-col gap-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
@@ -1435,7 +1472,15 @@ export default function UcenikPage() {
                       <h2 className="font-extrabold text-foreground">{t("Napamet")}</h2>
                     </div>
                     <p className="text-sm text-muted-foreground mb-5">{t("Pregled stavki iz programa ove grupe i posljednjih ocjena učenika.")}</p>
-                    <NapametPregled katalog={napamet?.katalog || []} ocjene={napamet?.ocjene || []} loading={napamet === null} canManageVisibility onToggleVisibility={toggleNapametVisibility} />
+                    <NapametPregled
+                      katalog={napamet?.katalog || []}
+                      ocjene={napamet?.ocjene || []}
+                      loading={napamet === null}
+                      canManageVisibility
+                      onToggleVisibility={toggleNapametVisibility}
+                      onGrade={item => openNapametAction("grade", item)}
+                      onHomework={item => openNapametAction("homework", item)}
+                    />
                   </div>
                 )}
 

@@ -8,6 +8,19 @@ import { sendPushNotification } from "../lib/push.js";
 const router = Router();
 router.use(requireAuth);
 
+const kategorijeAdminPoruka = {
+  pitanje: "Pitanja",
+  pitanja: "Pitanja",
+  prijedlog: "Prijedlozi",
+  prijedlozi: "Prijedlozi",
+  problem: "Problemi",
+  problemi: "Problemi",
+} as const;
+
+function prepoznajKategorijuNaslova(naslov: string): string | null {
+  return kategorijeAdminPoruka[naslov.trim().toLocaleLowerCase("bs") as keyof typeof kategorijeAdminPoruka] ?? null;
+}
+
 // GET /api/poruke/unread-count — lagani endpoint koji vraća samo broj nepročitanih poruka
 router.get("/unread-count", async (req, res) => {
   try {
@@ -60,7 +73,18 @@ router.get("/", async (req, res) => {
           saKorisnikom: userMap[drugiId] || { id: drugiId, displayName: "Nepoznat" },
           zadnjaPoruka: p,
           neprocitano: 0,
+          ...(req.user!.role === "admin" ? { kategorije: [] as string[] } : {}),
         };
+      }
+      // Category is encoded in the original muallim -> admin title for backward
+      // compatibility. Keep it attached to the private conversation even when
+      // the latest message is an uncategorized admin reply.
+      if (req.user!.role === "admin" && userMap[p.posiljateljId]?.role === "muallim" &&
+          userMap[p.primateljId]?.role === "admin") {
+        const kategorija = prepoznajKategorijuNaslova(p.naslov);
+        if (kategorija && !razgovori[drugiId].kategorije.includes(kategorija)) {
+          razgovori[drugiId].kategorije.push(kategorija);
+        }
       }
       if (p.primateljId === userId && !p.procitanoAt) {
         razgovori[drugiId].neprocitano++;

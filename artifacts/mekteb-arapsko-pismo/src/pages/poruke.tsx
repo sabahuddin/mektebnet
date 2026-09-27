@@ -27,7 +27,17 @@ interface Poruka {
   naslov: string; sadrzaj: string; procitanoAt: string | null; createdAt: string;
 }
 interface Razgovor {
-  saKorisnikom: Korisnik; zadnjaPoruka: Poruka; neprocitano: number;
+  saKorisnikom: Korisnik; zadnjaPoruka: Poruka; neprocitano: number; kategorije?: string[];
+}
+
+const KATEGORIJE_ADMIN_PORUKA = ["Pitanja", "Prijedlozi", "Problemi"] as const;
+type KategorijaAdminPoruke = (typeof KATEGORIJE_ADMIN_PORUKA)[number];
+function prepoznajKategorijuNaslova(naslov: string): KategorijaAdminPoruke | null {
+  const normalizovan = naslov.trim().toLocaleLowerCase("bs");
+  if (normalizovan === "pitanje" || normalizovan === "pitanja") return "Pitanja";
+  if (normalizovan === "prijedlog" || normalizovan === "prijedlozi") return "Prijedlozi";
+  if (normalizovan === "problem" || normalizovan === "problemi") return "Problemi";
+  return null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,6 +111,7 @@ export default function PorukePage() {
   // Left panel filters
   const [grupaFilter, setGrupaFilter] = useState<string>("");
   const [leftSearch, setLeftSearch] = useState("");
+  const [adminCategoryFilter, setAdminCategoryFilter] = useState("all");
 
   // Bulk
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -187,17 +198,23 @@ export default function PorukePage() {
 
   // Left panel: always shows accordion sections grouped by role
   const leftSections = useMemo(() => {
-    type Item = { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number };
+    type Item = { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number; kategorije?: string[] };
     let items: Item[] = [];
 
     if (activeTab === "primljene") {
       items = razgovori
         .filter(r => r.zadnjaPoruka.posiljateljId !== user?.id)
-        .map(r => ({ korisnik: r.saKorisnikom, lastMsg: r.zadnjaPoruka.sadrzaj, lastTime: r.zadnjaPoruka.createdAt, unread: r.neprocitano }));
+        .map(r => ({
+          korisnik: r.saKorisnikom, lastMsg: r.zadnjaPoruka.sadrzaj, lastTime: r.zadnjaPoruka.createdAt,
+          unread: r.neprocitano, kategorije: user?.role === "admin" && r.saKorisnikom.role === "muallim" ? (r.kategorije ?? []) : undefined,
+        }));
     } else if (activeTab === "poslane") {
       items = razgovori
         .filter(r => r.zadnjaPoruka.posiljateljId === user?.id)
-        .map(r => ({ korisnik: r.saKorisnikom, lastMsg: r.zadnjaPoruka.sadrzaj, lastTime: r.zadnjaPoruka.createdAt, unread: r.neprocitano }));
+        .map(r => ({
+          korisnik: r.saKorisnikom, lastMsg: r.zadnjaPoruka.sadrzaj, lastTime: r.zadnjaPoruka.createdAt,
+          unread: r.neprocitano, kategorije: user?.role === "admin" && r.saKorisnikom.role === "muallim" ? (r.kategorije ?? []) : undefined,
+        }));
     } else if (activeTab === "nova") {
       let filtered = kontakti;
       if (grupaFilter) filtered = filtered.filter(k => getGrupe(k).includes(grupaFilter));
@@ -206,6 +223,12 @@ export default function PorukePage() {
         const r = razgovorMap.get(k.id);
         return { korisnik: k, lastMsg: r?.zadnjaPoruka.sadrzaj, lastTime: r?.zadnjaPoruka.createdAt, unread: r?.neprocitano || 0 };
       });
+    }
+
+    if (user?.role === "admin" && activeTab !== "nova" && adminCategoryFilter !== "all") {
+      items = items.filter(item => adminCategoryFilter === "ostalo"
+        ? !item.kategorije?.length
+        : item.kategorije?.includes(adminCategoryFilter));
     }
 
     // Group by role
@@ -219,7 +242,7 @@ export default function PorukePage() {
       label: t(ROLE_LABELS[r] || r),
       items: byRole[r],
     }));
-  }, [activeTab, razgovori, kontakti, razgovorMap, grupaFilter, leftSearch, user?.id, t]);
+  }, [activeTab, razgovori, kontakti, razgovorMap, grupaFilter, leftSearch, user?.id, user?.role, adminCategoryFilter, t]);
 
   // Bulk
   const grupeNaziviBulk = useMemo(() =>
@@ -367,6 +390,25 @@ export default function PorukePage() {
                     </select>
                     <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                   </div>
+                </div>
+              )}
+
+              {user.role === "admin" && activeTab !== "nova" && (
+                <div className="px-3 pt-3 pb-2 border-b border-border/30">
+                  <label className="sr-only" htmlFor="admin-poruke-category">{t("Filtriraj poruke po kategoriji")}</label>
+                  <select
+                    id="admin-poruke-category"
+                    value={adminCategoryFilter}
+                    onChange={e => { setAdminCategoryFilter(e.target.value); setAktivan(null); }}
+                    className="w-full border border-border/60 rounded-xl px-3 py-2 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white cursor-pointer"
+                    data-testid="admin-poruke-kategorija"
+                  >
+                    <option value="all">{t("Sve kategorije")}</option>
+                    {KATEGORIJE_ADMIN_PORUKA.map(category => (
+                      <option key={category} value={category}>{t(category)}</option>
+                    ))}
+                    <option value="ostalo">{t("Ostalo / bez kategorije")}</option>
+                  </select>
                 </div>
               )}
 
@@ -530,12 +572,16 @@ export default function PorukePage() {
                       </div>
                     ) : poruke.map(p => {
                       const isMoj = p.posiljateljId === user.id;
+                      const incomingCategory = user.role === "admin" && aktivan.role === "muallim" &&
+                        p.posiljateljId === aktivan.id && p.primateljId === user.id
+                        ? prepoznajKategorijuNaslova(p.naslov)
+                        : null;
                       return (
                         <div key={p.id} className={`flex ${isMoj ? "justify-end" : "justify-start"}`}>
                           <div className={`max-w-xs lg:max-w-lg px-4 py-2.5 rounded-2xl text-sm shadow-sm
                             ${isMoj ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"}`}>
-                            {["Pitanje", "Prijedlog", "Problem"].includes(p.naslov) && (
-                              <p className="mb-1 text-xs font-extrabold opacity-80">{t(p.naslov)}</p>
+                            {incomingCategory && (
+                              <p className="mb-1 text-xs font-extrabold opacity-80">{t(incomingCategory)}</p>
                             )}
                             <p className="leading-relaxed whitespace-pre-wrap">{p.sadrzaj}</p>
                             <p className={`text-xs mt-1 ${isMoj ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
@@ -598,10 +644,11 @@ function RoleSection({
   label, items, aktivan, onOpen,
 }: {
   label: string;
-  items: { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number }[];
+  items: { korisnik: Korisnik; lastMsg?: string; lastTime?: string; unread: number; kategorije?: string[] }[];
   aktivan: Korisnik | null;
   onOpen: (k: Korisnik) => void;
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(true);
   const totalUnread = items.reduce((s, i) => s + i.unread, 0);
 
@@ -644,6 +691,15 @@ function RoleSection({
             </div>
             {item.lastMsg && (
               <p className="text-xs text-muted-foreground truncate mt-1 leading-snug">{item.lastMsg}</p>
+            )}
+            {item.kategorije && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {item.kategorije.length > 0 ? item.kategorije.map(category => (
+                  <span key={category} className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{t(category)}</span>
+                )) : (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{t("Bez kategorije")}</span>
+                )}
+              </div>
             )}
           </div>
         </button>

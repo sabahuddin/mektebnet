@@ -14,6 +14,8 @@ const ids: number[] = [];
 let adminId: number;
 let teacherId: number;
 let otherTeacherId: number;
+let categorizedTeacherId: number;
+let uncategorizedTeacherId: number;
 
 async function createUser(role: "muallim" | "admin", label: string) {
   const [user] = await db.insert(usersTable).values({
@@ -48,6 +50,8 @@ async function request(path: string, token: string, method = "GET", body?: objec
 before(async () => {
   teacherId = await createUser("muallim", "teacher");
   otherTeacherId = await createUser("muallim", "other");
+  categorizedTeacherId = await createUser("muallim", "categorized");
+  uncategorizedTeacherId = await createUser("muallim", "uncategorized");
   adminId = await createUser("admin", "admin");
   await new Promise<void>(resolve => {
     server = app.listen(0, () => {
@@ -102,4 +106,35 @@ test("obični muallim piše adminu privatno, admin odgovara; drugi muallim ne vi
   const outsider = await request(`/razgovor/${adminId}`, other);
   assert.equal(outsider.status, 200);
   assert.deepEqual((await outsider.json() as { poruke: unknown[] }).poruke, []);
+});
+
+test("admin inbox classifies legacy category titles and keeps ordinary messages uncategorized", async () => {
+  const teacher = tokenFor(categorizedTeacherId, "muallim", "categorized");
+  const ordinaryTeacher = tokenFor(uncategorizedTeacherId, "muallim", "uncategorized");
+  const admin = tokenFor(adminId, "admin", "admin");
+
+  for (const naslov of ["  pItAnJa  ", "Prijedlog", "PROBLEMI"]) {
+    const sent = await request("/", teacher, "POST", { primateljId: adminId, naslov, sadrzaj: `Tekst: ${naslov}` });
+    assert.equal(sent.status, 201, await sent.clone().text());
+  }
+  const reply = await request("/", admin, "POST", {
+    primateljId: categorizedTeacherId, naslov: "Poruka", sadrzaj: "Odgovor",
+  });
+  assert.equal(reply.status, 201);
+
+  const normal = await request("/", ordinaryTeacher, "POST", {
+    primateljId: adminId, naslov: "Obavijest", sadrzaj: "Obična poruka",
+  });
+  assert.equal(normal.status, 201);
+
+  const inbox = await request("/", admin);
+  assert.equal(inbox.status, 200);
+  const conversations = await inbox.json() as {
+    saKorisnikom: { id: number };
+    kategorije?: string[];
+  }[];
+  const categorized = conversations.find(item => item.saKorisnikom.id === categorizedTeacherId);
+  const uncategorized = conversations.find(item => item.saKorisnikom.id === uncategorizedTeacherId);
+  assert.deepEqual(categorized?.kategorije?.sort(), ["Pitanja", "Prijedlozi", "Problemi"].sort());
+  assert.deepEqual(uncategorized?.kategorije, []);
 });

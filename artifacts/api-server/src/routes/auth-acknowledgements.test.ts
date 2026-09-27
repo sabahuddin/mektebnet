@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
 import type { Server } from "node:http";
 import { db } from "@workspace/db";
-import { usersTable, muallimProfiliTable, roditeljProfiliTable } from "@workspace/db/schema";
+import { usersTable, muallimProfiliTable, roditeljProfiliTable, pretplateTable } from "@workspace/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import app from "../app.js";
 import { signToken } from "../middlewares/auth.js";
@@ -114,6 +114,43 @@ test("registracija roditelja v2 odbija nedostajuće potvrde", async () => {
     }),
   });
   assert.equal(response.status, 400);
+});
+
+test("nova registracija roditelja otvara račun i porodičnu pretplatu", async () => {
+  const email = `new-parent-success.${SUFFIX}@example.test`;
+  try {
+    const response = await request("/api/auth/register-roditelj-v2", {
+      method: "POST",
+      body: JSON.stringify({
+        displayName: "Test Roditelj",
+        email,
+        billingRegion: "bih",
+        termsAccepted: true,
+        privacyAcknowledged: true,
+        parentAcknowledged: true,
+      }),
+    });
+    assert.equal(response.status, 201, await response.clone().text());
+    const result = await response.json() as { success: boolean; username: string; password: string; trialUntil: string };
+    assert.equal(result.success, true);
+    assert.ok(result.username && result.password && result.trialUntil);
+
+    const [parent] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    assert.equal(parent.role, "roditelj");
+    assert.ok(parent.parentAcknowledgedAt instanceof Date);
+    const [profile] = await db.select().from(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, parent.id));
+    const [subscription] = await db.select().from(pretplateTable).where(eq(pretplateTable.userId, parent.id));
+    assert.ok(profile);
+    assert.equal(subscription.planType, "family");
+    assert.equal(subscription.status, "pending");
+  } finally {
+    const [parent] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
+    if (parent) {
+      await db.delete(pretplateTable).where(eq(pretplateTable.userId, parent.id));
+      await db.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, parent.id));
+      await db.delete(usersTable).where(eq(usersTable.id, parent.id));
+    }
+  }
 });
 
 test("stari muallim i roditelj login vraćaju pending acknowledgements", async () => {

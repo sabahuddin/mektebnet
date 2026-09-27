@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BookOpen, Check, ChevronDown, Circle, Search, SlidersHorizontal, Eye, EyeOff } from "lucide-react";
+import { BookOpen, Check, ChevronDown, Circle, Search, SlidersHorizontal, Eye, EyeOff, Star, ClipboardList } from "lucide-react";
 import { useLanguage } from "@/context/language";
 
 export interface NapametStavka {
@@ -35,12 +35,14 @@ const NIVO_COLORS: Record<number, { icon: string; text: string }> = {
   4: { icon: "bg-violet-100 text-violet-700", text: "text-violet-800" },
 };
 
-export function NapametPregled({ katalog, ocjene, loading = false, canManageVisibility = false, onToggleVisibility }: {
+export function NapametPregled({ katalog, ocjene, loading = false, canManageVisibility = false, onToggleVisibility, onGrade, onHomework }: {
   katalog: NapametStavka[];
   ocjene: NapametOcjena[];
   loading?: boolean;
   canManageVisibility?: boolean;
   onToggleVisibility?: (item: NapametStavka) => Promise<void> | void;
+  onGrade?: (item: NapametStavka) => void;
+  onHomework?: (item: NapametStavka) => void;
 }) {
   const { t } = useLanguage();
   const [openNivo, setOpenNivo] = useState<number | null>(1);
@@ -228,11 +230,25 @@ export function NapametPregled({ katalog, ocjene, loading = false, canManageVisi
                             </span>
                           )}
                         </span>
-                        {canManageVisibility && onToggleVisibility ? (
-                          <button type="button" onClick={() => onToggleVisibility(stavka)} className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold text-slate-600 hover:border-emerald-300 hover:text-emerald-700" aria-label={stavka.isVisible ? t("Isključi stavku") : t("Uključi stavku")}>
-                            {stavka.isVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                            {stavka.isVisible ? t("Isključi") : t("Uključi")}
-                          </button>
+                        {((canManageVisibility && onToggleVisibility) || onGrade || onHomework) ? (
+                          <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                            {canManageVisibility && onToggleVisibility && (
+                              <button type="button" onClick={() => onToggleVisibility(stavka)} className="inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold text-slate-600 hover:border-emerald-300 hover:text-emerald-700" aria-label={stavka.isVisible ? t("Isključi stavku") : t("Uključi stavku")}>
+                                {stavka.isVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                {stavka.isVisible ? t("Isključi") : t("Uključi")}
+                              </button>
+                            )}
+                            {onGrade && (
+                              <button type="button" onClick={() => onGrade(stavka)} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 px-2 py-1 text-xs font-bold text-amber-700 hover:bg-amber-50" aria-label={t("Ocijeni {naziv}", { naziv: stavka.naziv })} data-testid={`napamet-ocijeni-${stavka.id}`}>
+                                <Star className="h-3.5 w-3.5" />{t("Ocijeni")}
+                              </button>
+                            )}
+                            {onHomework && (
+                              <button type="button" onClick={() => onHomework(stavka)} className="inline-flex items-center gap-1 rounded-lg border border-violet-200 px-2 py-1 text-xs font-bold text-violet-700 hover:bg-violet-50" aria-label={t("Zadaća za {naziv}", { naziv: stavka.naziv })} data-testid={`napamet-zadaca-${stavka.id}`}>
+                                <ClipboardList className="h-3.5 w-3.5" />{t("Zadaća")}
+                              </button>
+                            )}
+                          </div>
                         ) : ocjena ? (
                           <span className={`font-extrabold rounded-full px-2.5 py-1 text-sm ${ocjena.ocjena != null ? (OCJENA_COLORS[ocjena.ocjena] || "bg-muted text-foreground") : "bg-emerald-100 text-emerald-700"}`} title={`${ocjena.datum}${ocjena.napomena ? ` · ${ocjena.napomena}` : ""}`}>
                             {ocjena.ocjenaOpisna === "uradjeno"
