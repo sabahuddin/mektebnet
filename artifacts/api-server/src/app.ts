@@ -3,7 +3,12 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import path from "path";
 import { fileURLToPath } from "url";
+import jwt from "jsonwebtoken";
+import { and, eq } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { prilozi } from "@workspace/db/schema";
 import { isTokenAllowedForH5p } from "./middlewares/auth.js";
+import { JWT_SECRET } from "./lib/jwt-secret.js";
 import { normalizeBosnianDashes } from "./lib/normalize-json";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -82,9 +87,8 @@ const uploadsDir = process.env["UPLOADS_DIR"]
 console.log(`[Static] Serving /uploads from: ${uploadsDir}`);
 
 // H5P interaktivni sadržaj nije za javnost — vezan je za lekciju i hasanate.
-// Štitimo /uploads/h5p/* zahtjevom za auth (cookie ili Bearer header). Ostali
-// /uploads/* (PDF, slike, itd. korišteni iz contentHtml-a lekcije) ostaju javni
-// jer su dio renderirane lekcije i moraju biti dostupni i out-of-context.
+// Pending prilozi se dodatno štite i na direktnom /uploads putu, jer klijent
+// koji zna ime fajla ne smije zaobići provjeru vidljivosti API-ja.
 function parseCookie(header: string | undefined, name: string): string | null {
   if (!header) return null;
   for (const part of header.split(";")) {
@@ -111,8 +115,33 @@ async function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
     res.status(403).json({ error: "Pristup nije dozvoljen" });
     return;
   }
-  // Samo /h5p/... pod /uploads ide kroz auth — ostalo (npr. /pdfs/, /images/) prolazi.
-  if (firstSeg !== "h5p") return next();
+  const originalPath = req.originalUrl.split("?")[0] || "/";
+  let decodedOriginalPath = originalPath;
+  try { decodedOriginalPath = decodeURIComponent(originalPath); } catch { /* zadrži original */ }
+  let assetPath = path.posix.normalize("/" + decodedOriginalPath.replace(/\\/g, "/")).replace(/^\/+/, "");
+  assetPath = assetPath.replace(/^api\/uploads\//, "").replace(/^uploads\//, "");
+  const isH5pPath = firstSeg === "h5p" || assetPath === "h5p" || assetPath.startsWith("h5p/");
+  if (isH5pPath && !assetPath.startsWith("h5p/")) assetPath = normPath.replace(/^\/+/, "");
+
+  // Public /uploads statika ostaje nepromijenjena za odobrene i nevezane fajlove.
+  // Pending prilog se provjerava po njegovom stvarnom stored_name; H5P je
+  // direktorij pa se ID izvlači iz početnog segmenta.
+  let pendingAttachment: typeof prilozi.$inferSelect | undefined;
+  const h5pId = assetPath.match(/^h5p\/(\d+)(?:\/|$)/)?.[1];
+  if (h5pId) {
+    [pendingAttachment] = await db.select().from(prilozi).where(and(
+      eq(prilozi.id, Number(h5pId)),
+      eq(prilozi.kind, "h5p"),
+    )).limit(1);
+  } else {
+    [pendingAttachment] = await db.select().from(prilozi).where(and(
+      eq(prilozi.storedName, assetPath),
+      eq(prilozi.approved, false),
+    )).limit(1);
+  }
+  const needsAuth = isH5pPath || pendingAttachment?.approved === false;
+  if (!needsAuth) return next();
+
   const cookieToken = parseCookie(req.headers.cookie, "mekteb_h5p_session");
   const headerToken = req.headers.authorization?.startsWith("Bearer ")
     ? req.headers.authorization.slice(7)
@@ -124,6 +153,20 @@ async function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
   }
   try {
     if (await isTokenAllowedForH5p(token)) {
+      if (pendingAttachment?.approved === false) {
+        let payload: { userId?: number; role?: string };
+        try {
+          payload = jwt.verify(token, JWT_SECRET) as { userId?: number; role?: string };
+        } catch {
+          res.status(401).json({ error: "Nevažeća sesija — prijavite se ponovo" });
+          return;
+        }
+        if (payload.role !== "admin" && payload.userId !== pendingAttachment.uploadedByUserId) {
+          res.status(404).json({ error: "Fajl nije pronađen" });
+          return;
+        }
+        res.locals.pendingAttachment = true;
+      }
       next();
       return;
     }
@@ -141,7 +184,9 @@ const uploadsStatic = express.static(uploadsDir, {
   maxAge: "30d",
   immutable: true,
   setHeaders: (res) => {
-    res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+    res.setHeader("Cache-Control", res.locals.pendingAttachment
+      ? "private, no-store"
+      : "public, max-age=2592000, immutable");
   },
 });
 app.use("/uploads", requireH5pAuth, uploadsStatic);

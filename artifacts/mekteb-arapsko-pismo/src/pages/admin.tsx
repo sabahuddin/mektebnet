@@ -427,6 +427,9 @@ interface PendingPrilog {
   kind: string;
   externalUrl: string | null;
   uploadedByRole: string | null;
+  uploadedByName: string | null;
+  mektebNaziv: string | null;
+  mektebGrad: string | null;
   createdAt: string;
 }
 
@@ -464,6 +467,26 @@ function PendingPrilozi({ token }: { token: string }) {
     }
   };
 
+  const previewFile = async (id: number) => {
+    const tab = window.open("about:blank", "_blank");
+    if (!tab) {
+      toast({ title: t("Dozvoli otvaranje novog taba za pregled priloga"), variant: "destructive" });
+      return;
+    }
+    try {
+      const response = await fetch(`/api/admin/prilozi/download/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(t("Nije moguće otvoriti prilog"));
+      const url = URL.createObjectURL(await response.blob());
+      tab.location.href = url;
+      window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    } catch (err: any) {
+      tab.close();
+      toast({ title: t("Greška"), description: err?.message || t("Nije moguće otvoriti prilog"), variant: "destructive" });
+    }
+  };
+
   if (loading) return (
     <div className="bg-white border border-border/50 rounded-2xl p-5">
       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -487,18 +510,15 @@ function PendingPrilozi({ token }: { token: string }) {
       <div className="divide-y divide-border/40">
         {pending.map(p => {
           // Pregledaj URL po tipu priloga:
-          //  - file (PDF/Word/itd.) → /api/uploads/<storedName> (statički,
-          //    requireH5pAuth propušta ne-h5p putanje)
+          //  - file (PDF/Word/itd.) → /api/uploads/<storedName> (autorizovani pregled)
           //  - url → externalUrl direktno
           //  - h5p → otvori lekciju (H5P se renderuje u kontekstu lekcije)
           const lekcijaUrl = p.lekcijaSlug ? `/ilmihal/${p.lekcijaSlug}` : null;
           let previewUrl: string | null = null;
-          if (p.kind === "url" && p.externalUrl) {
+          if ((p.kind === "url" || p.kind === "embed") && p.externalUrl) {
             previewUrl = p.externalUrl;
-          } else if (p.kind === "h5p") {
+          } else if (p.kind === "h5p" || p.kind === "embed") {
             previewUrl = lekcijaUrl;
-          } else if (p.storedName) {
-            previewUrl = `/api/uploads/${p.storedName}`;
           }
           return (
           <div key={p.id} className="flex items-center gap-3 px-4 py-3">
@@ -523,13 +543,27 @@ function PendingPrilozi({ token }: { token: string }) {
                   <span className="text-red-600">{t("Lekcija obrisana (#{id})", { id: String(p.lekcijaId) })}</span>
                 )}
                 {" · "}
-                {p.uploadedByRole || "muallim"}
+                <strong>{p.uploadedByName || t("Korisnik obrisan")}</strong>
+                {" · "}
+                {p.mektebNaziv
+                  ? `${t("Džemat/mekteb")}: ${p.mektebNaziv}${p.mektebGrad ? ` (${p.mektebGrad})` : ""}`
+                  : p.uploadedByRole === "muallim" ? t("Nije dodijeljen džematu/mektebu") : (p.uploadedByRole || t("Nepoznata uloga"))}
                 {" · "}
                 {new Date(p.createdAt).toLocaleDateString("bs-BA")}
               </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              {previewUrl && (
+              {p.kind === "file" ? (
+                <button
+                  type="button"
+                  onClick={() => previewFile(p.id)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold transition-colors"
+                  data-testid={`button-pregledaj-${p.id}`}
+                  title={t("Otvori prilog u novom tabu")}
+                >
+                  <Eye className="w-3.5 h-3.5" /> {t("Pregledaj")}
+                </button>
+              ) : previewUrl && (
                 <a
                   href={previewUrl}
                   target="_blank"
@@ -574,8 +608,12 @@ interface PendingLessonEdit {
   predlozeniHtml: string;
   jezik: string;
   predlozioIme: string;
+  mektebNaziv: string | null;
+  mektebGrad: string | null;
   createdAt: string;
   novaLekcija?: boolean;
+  statusOdobrenja?: string;
+  podnesenoZaJavnuObjavu?: boolean;
 }
 
 function PendingLessonEdits({ token }: { token: string }) {
@@ -593,6 +631,7 @@ function PendingLessonEdits({ token }: { token: string }) {
   }, [token]);
 
   const handle = async (id: number, approve: boolean, visibility?: "javno" | "privatno" | "odbijeno") => {
+    const item = pending.find((entry) => entry.id === id);
     setProcessingId(id);
     try {
       await apiRequest("PUT", `/admin/izmjene-lekcija/${id}/odluka`, visibility ? { visibility } : { approve }, token);
@@ -601,12 +640,14 @@ function PendingLessonEdits({ token }: { token: string }) {
         title: visibility === "javno"
           ? t("Lekcija je objavljena svima")
           : visibility === "odbijeno"
-            ? t("Javna objava je odbijena")
+            ? item?.statusOdobrenja === "na_cekanju" ? t("Lekcija je odbijena") : t("Javna objava je odbijena")
           : visibility === "privatno"
             ? t("Lekcija je objavljena autoru i njegovim učenicima")
             : approve ? t("Izmjena odobrena") : t("Izmjena odbijena"),
         description: visibility === "odbijeno"
-          ? t("Lekcija ostaje dostupna muallimu i njegovim učenicima.")
+          ? item?.statusOdobrenja === "na_cekanju"
+            ? t("Lekcija nije objavljena i nije dostupna drugim korisnicima.")
+            : t("Lekcija ostaje dostupna muallimu i njegovim učenicima.")
           : approve ? t("Novi sadržaj lekcije je sada objavljen.") : t("Objavljena lekcija je ostala nepromijenjena."),
       });
     } catch (err: any) {
@@ -624,7 +665,7 @@ function PendingLessonEdits({ token }: { token: string }) {
     return (
       <div className="flex items-center gap-3 rounded-2xl border border-border/50 bg-white p-5">
         <Check className="h-5 w-5 shrink-0 text-emerald-500" />
-        <span className="text-sm text-muted-foreground">{t("Nema privatnih lekcija za javnu objavu niti izmjena koje čekaju odobrenje.")}</span>
+        <span className="text-sm text-muted-foreground">{t("Nema lekcija niti izmjena koje čekaju odobrenje.")}</span>
       </div>
     );
   }
@@ -651,6 +692,9 @@ function PendingLessonEdits({ token }: { token: string }) {
                 </a>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {t("Predložio:")} <strong>{item.predlozioIme}</strong>
+                  {" · "}{item.mektebNaziv
+                    ? `${t("Džemat/mekteb")}: ${item.mektebNaziv}${item.mektebGrad ? ` (${item.mektebGrad})` : ""}`
+                    : t("Nije dodijeljen džematu/mektebu")}
                   {" · "}{t("Nivo")} {item.lekcijaNivo}
                   {" · "}{t("Jezik:")} <strong>{(LANG_LABELS as Record<string, string>)[item.jezik] || item.jezik.toUpperCase()}</strong>
                   {" · "}{new Date(item.createdAt).toLocaleString("bs-BA")}
@@ -658,9 +702,9 @@ function PendingLessonEdits({ token }: { token: string }) {
               </div>
               <div className="flex flex-wrap gap-2">
                 {item.novaLekcija ? <>
-                  <Button size="sm" onClick={() => handle(item.id, true, "javno")} disabled={processingId === item.id} className="bg-emerald-600 hover:bg-emerald-700">
+                  <Button size="sm" onClick={() => handle(item.id, true, item.podnesenoZaJavnuObjavu ? "javno" : "privatno")} disabled={processingId === item.id} className="bg-emerald-600 hover:bg-emerald-700">
                     {processingId === item.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
-                    {t("Objavi svima")}
+                    {item.podnesenoZaJavnuObjavu ? t("Objavi svima") : t("Odobri za učenike")}
                   </Button>
                    <Button size="sm" variant="outline" onClick={() => handle(item.id, false, "odbijeno")} disabled={processingId === item.id} className="border-red-200 text-red-700 hover:bg-red-50">
                      <X className="mr-1 h-4 w-4" /> {t("Odbij")}

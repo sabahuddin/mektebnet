@@ -194,10 +194,8 @@ export default function IlmihalSvePage() {
         contentHtml: `<h1>${newTitle.trim()}</h1><p>Unesite sadržaj nove lekcije.</p>`,
       }, token);
       toast({
-        title: t("Lekcija je kreirana"),
-        description: publicReview
-          ? t("Lekcija je dostupna vama i vašim učenicima. Poslana je adminu na odobravanje za sve.")
-          : t("Lekcija je dostupna samo vama i vašim učenicima."),
+        title: t("Lekcija je poslana adminu na odobravanje"),
+        description: t("Dok je na čekanju, samo vi i admin je možete pregledati. Učenicima će biti dostupna tek nakon odobrenja."),
       });
       setLocation(`/ilmihal/${result.slug}`);
     } catch (error: any) {

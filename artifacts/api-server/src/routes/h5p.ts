@@ -1,8 +1,15 @@
 import { Router, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { prilozi, h5pPokusajiTable, studentProgressTable } from "@workspace/db/schema";
+import {
+  prilozi,
+  h5pPokusajiTable,
+  studentProgressTable,
+  ilmihalLekcijeTable,
+  ucenikProfiliTable,
+} from "@workspace/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { canReadLesson } from "../lib/lesson-visibility.js";
 import {
   lockUntilForAttempt,
   multiplierForAttempt,
@@ -16,6 +23,18 @@ interface DbExecResult<T = Record<string, unknown>> {
 }
 async function exec<T = Record<string, unknown>>(query: ReturnType<typeof sql>): Promise<DbExecResult<T>> {
   return (await db.execute(query)) as unknown as DbExecResult<T>;
+}
+
+async function canReadAttachmentLesson(user: NonNullable<Request["user"]>, lessonId: number): Promise<boolean> {
+  const [lesson] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lessonId));
+  if (!lesson) return false;
+  const [studentProfile] = user.role === "ucenik"
+    ? await db.select({ muallimId: ucenikProfiliTable.muallimId })
+      .from(ucenikProfiliTable)
+      .where(eq(ucenikProfiliTable.userId, user.userId))
+      .limit(1)
+    : [];
+  return canReadLesson(user, lesson, studentProfile?.muallimId);
 }
 
 // POST /api/h5p/result — "server-side" scoring + reward.
@@ -71,7 +90,11 @@ router.post("/result", requireAuth, requireRole("ucenik"), async (req: Request, 
     // 1. Validacija: prilog mora postojati i biti kind='h5p'
     const [prilog] = await db.select().from(prilozi).where(eq(prilozi.id, priloziId));
     if (!prilog) { res.status(404).json({ error: "Prilog nije pronađen" }); return; }
+    if (!prilog.approved) { res.status(404).json({ error: "Prilog nije pronađen" }); return; }
     if (prilog.kind !== "h5p") { res.status(400).json({ error: "Prilog nije H5P vježba" }); return; }
+    if (!await canReadAttachmentLesson(req.user!, prilog.lekcijaId)) {
+      res.status(404).json({ error: "Prilog nije pronađen" }); return;
+    }
 
     // Tačan rezultat zaključava sljedeći pokušaj na 48 sati. Provjera je
     // serverska jer disabled dugme u browseru nije sigurnosna granica.
@@ -193,6 +216,18 @@ router.get("/attempts/:priloziId", requireAuth, async (req: Request, res: Respon
     const userId = req.user!.userId;
     const priloziId = parseInt(String(req.params.priloziId));
     if (!Number.isFinite(priloziId)) { res.status(400).json({ error: "Nevažeći priloziId" }); return; }
+    const [prilog] = await db.select({
+      id: prilozi.id,
+      kind: prilozi.kind,
+      approved: prilozi.approved,
+      lessonId: prilozi.lekcijaId,
+    }).from(prilozi).where(eq(prilozi.id, priloziId));
+    if (!prilog || prilog.kind !== "h5p" || !prilog.approved) {
+      res.status(404).json({ error: "Prilog nije pronađen" }); return;
+    }
+    if (!await canReadAttachmentLesson(req.user!, prilog.lessonId)) {
+      res.status(404).json({ error: "Prilog nije pronađen" }); return;
+    }
     const rows = await db.select().from(h5pPokusajiTable)
       .where(and(
         eq(h5pPokusajiTable.userId, userId),

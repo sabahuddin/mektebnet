@@ -880,7 +880,14 @@ router.put("/prilozi/:id", async (req, res) => {
 router.get("/prilozi/:lekcijaId", async (req, res) => {
   try {
     const lekcijaId = parseInt(req.params.lekcijaId);
-    const files = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcijaId)).orderBy(asc(prilozi.redoslijed), desc(prilozi.createdAt));
+    const allFiles = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcijaId)).orderBy(asc(prilozi.redoslijed), desc(prilozi.createdAt));
+    const role = req.user?.role;
+    const userId = req.user?.userId;
+    const files = role === "admin"
+      ? allFiles
+      : allFiles.filter(file => file.approved || (
+        role === "muallim" && userId !== undefined && file.uploadedByUserId === userId
+      ));
     res.json(files.map(f => ({
       ...f,
       url: f.kind === "url" ? (f.externalUrl || "") : `/uploads/${f.storedName}`,
@@ -912,6 +919,9 @@ router.get("/prilozi/download/:id", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "Nevažeći ID" });
     const [file] = await db.select().from(prilozi).where(eq(prilozi.id, id));
     if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });
+    if (!file.approved && decoded.role !== "admin" && file.uploadedByUserId !== decoded.userId) {
+      return res.status(404).json({ error: "Prilog nije pronađen" });
+    }
     const filePath = path.join(uploadsDir, file.storedName);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: "Fajl nije pronađen na serveru" });
     const stat = fs.statSync(filePath);
@@ -946,10 +956,16 @@ router.get("/pending-prilozi", async (req, res) => {
       kind: prilozi.kind,
       externalUrl: prilozi.externalUrl,
       uploadedByRole: prilozi.uploadedByRole,
+      uploadedByName: usersTable.displayName,
+      mektebNaziv: mektebiTable.naziv,
+      mektebGrad: mektebiTable.grad,
       createdAt: prilozi.createdAt,
     })
       .from(prilozi)
       .leftJoin(ilmihalLekcijeTable, eq(ilmihalLekcijeTable.id, prilozi.lekcijaId))
+      .leftJoin(usersTable, eq(usersTable.id, prilozi.uploadedByUserId))
+      .leftJoin(muallimProfiliTable, eq(muallimProfiliTable.userId, usersTable.id))
+      .leftJoin(mektebiTable, eq(mektebiTable.id, muallimProfiliTable.mektebId))
       .where(eq(prilozi.approved, false))
       .orderBy(desc(prilozi.createdAt));
     res.json(pending);
@@ -2885,11 +2901,13 @@ router.post("/ilmihal", async (req, res) => {
       kvizPitanja: isMuallim ? null : kviz as any,
       dostupnost: isMuallim ? "autorovi_ucenici" : (dostupnost === "muallimi" ? "muallimi" : "svi"),
       autorMuallimId: isMuallim ? req.user!.userId : null,
-      statusOdobrenja: "odobreno",
-      isPublished: true,
+      statusOdobrenja: isMuallim ? "na_cekanju" : "odobreno",
+      isPublished: !isMuallim,
       podnesenoZaJavnuObjavu: wantsPublicReview,
     }).returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug });
-    res.status(isMuallim ? 201 : 200).json({ success: true, id: row.id, slug: row.slug, privateLesson: isMuallim });
+    res.status(isMuallim ? 201 : 200).json({
+      success: true, id: row.id, slug: row.slug, pendingApproval: isMuallim,
+    });
   } catch (err) {
     req.log.error({ err }, "POST /ilmihal error");
     res.status(500).json({ error: "Greška pri kreiranju lekcije" });
@@ -2914,10 +2932,14 @@ router.get("/izmjene-lekcija", async (req, res) => {
           WHEN i.jezik = 'bs' THEN l.content_html
           ELSE COALESCE(cp.prijevod, l.content_html)
         END AS "trenutniHtml",
-        u.display_name AS "predlozioIme"
+        u.display_name AS "predlozioIme",
+        m.naziv AS "mektebNaziv",
+        m.grad AS "mektebGrad"
       FROM izmjene_lekcija i
       INNER JOIN ilmihal_lekcije l ON l.id = i.lekcija_id
       INNER JOIN users u ON u.id = i.predlozio_id
+      LEFT JOIN muallim_profili mp ON mp.user_id = u.id
+      LEFT JOIN mektebi m ON m.id = mp.mekteb_id
       LEFT JOIN content_prijevodi cp
         ON cp.tabela = 'ilmihal_lekcije'
         AND cp.red_id = i.lekcija_id
@@ -2938,12 +2960,19 @@ router.get("/izmjene-lekcija", async (req, res) => {
         l.nivo AS "lekcijaNivo",
         '' AS "trenutniHtml",
         u.display_name AS "predlozioIme",
-        true AS "novaLekcija"
+        m.naziv AS "mektebNaziv",
+        m.grad AS "mektebGrad",
+        true AS "novaLekcija",
+        l.status_odobrenja AS "statusOdobrenja",
+        l.podneseno_za_javnu_objavu AS "podnesenoZaJavnuObjavu"
       FROM ilmihal_lekcije l
       INNER JOIN users u ON u.id = l.autor_muallim_id
-      WHERE l.status_odobrenja = 'odobreno'
-        AND l.dostupnost = 'autorovi_ucenici'
-        AND l.podneseno_za_javnu_objavu = true
+      LEFT JOIN muallim_profili mp ON mp.user_id = u.id
+      LEFT JOIN mektebi m ON m.id = mp.mekteb_id
+      WHERE l.status_odobrenja = 'na_cekanju'
+        OR (l.status_odobrenja = 'odobreno'
+          AND l.dostupnost = 'autorovi_ucenici'
+          AND l.podneseno_za_javnu_objavu = true)
       ORDER BY l.created_at ASC
     `);
     res.json([...nove.rows, ...result.rows]);
@@ -2966,27 +2995,52 @@ router.put("/izmjene-lekcija/:id/odluka", async (req, res) => {
     if (id < 0) {
       const lessonId = -id;
       const visibility = String(req.body?.visibility || "");
-      if (visibility !== "javno" && visibility !== "odbijeno") {
-        res.status(400).json({ error: "Neispravna odluka za javnu objavu" });
+      if (!["javno", "privatno", "odbijeno"].includes(visibility)) {
+        res.status(400).json({ error: "Neispravna odluka za novu lekciju" });
         return;
       }
-      const [row] = await db.update(ilmihalLekcijeTable).set(visibility === "javno" ? {
-        statusOdobrenja: "odobreno",
-        isPublished: true,
-        dostupnost: "svi",
-        podnesenoZaJavnuObjavu: false,
-        locked: true,
-        lockedAt: new Date(),
-        lockedNote: "Muallimska lekcija objavljena svima",
-      } : {
-        statusOdobrenja: "odobreno",
-        isPublished: true,
-        dostupnost: "autorovi_ucenici",
-        podnesenoZaJavnuObjavu: false,
-      }).where(and(
+      // Ranije privatne lekcije su već odobrene i dostupne učenicima.
+      // Odbijanje zahtjeva za javnu objavu ne smije povući to odobrenje.
+      if (visibility === "odbijeno") {
+        const [legacy] = await db.update(ilmihalLekcijeTable).set({
+          podnesenoZaJavnuObjavu: false,
+        }).where(and(
+          eq(ilmihalLekcijeTable.id, lessonId),
+          eq(ilmihalLekcijeTable.statusOdobrenja, "odobreno"),
+          eq(ilmihalLekcijeTable.dostupnost, "autorovi_ucenici"),
+          eq(ilmihalLekcijeTable.podnesenoZaJavnuObjavu, true),
+        )).returning({ id: ilmihalLekcijeTable.id });
+        if (legacy) {
+          res.json({ success: true, visibility });
+          return;
+        }
+      }
+      const [row] = await db.update(ilmihalLekcijeTable).set(
+        visibility === "odbijeno"
+          ? {
+              statusOdobrenja: "odbijeno",
+              isPublished: false,
+              podnesenoZaJavnuObjavu: false,
+            }
+          : {
+              statusOdobrenja: "odobreno",
+              isPublished: true,
+              dostupnost: visibility === "javno" ? "svi" : "autorovi_ucenici",
+              podnesenoZaJavnuObjavu: false,
+              ...(visibility === "javno" ? {
+                locked: true,
+                lockedAt: new Date(),
+                lockedNote: "Muallimska lekcija objavljena svima",
+              } : {}),
+            },
+      ).where(and(
         eq(ilmihalLekcijeTable.id, lessonId),
         eq(ilmihalLekcijeTable.dostupnost, "autorovi_ucenici"),
-        eq(ilmihalLekcijeTable.podnesenoZaJavnuObjavu, true),
+        ...(visibility === "javno"
+          ? [sql`(status_odobrenja = 'na_cekanju' OR
+              (status_odobrenja = 'odobreno' AND podneseno_za_javnu_objavu = true))`]
+          : [eq(ilmihalLekcijeTable.statusOdobrenja, "na_cekanju")]),
+        ...(visibility === "javno" ? [eq(ilmihalLekcijeTable.podnesenoZaJavnuObjavu, true)] : []),
       )).returning({ id: ilmihalLekcijeTable.id });
       if (!row) {
         res.status(404).json({ error: "Prijedlog nije pronađen ili je već obrađen" });
@@ -3072,6 +3126,11 @@ router.put("/ilmihal/:id", async (req, res) => {
     const editorRole = req.user?.role;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
+    if (editorRole === "muallim" &&
+        (existing.statusOdobrenja === "odbijeno" ||
+          (existing.statusOdobrenja === "na_cekanju" && existing.autorMuallimId !== req.user!.userId))) {
+      return res.status(403).json({ error: "Nemate pristup ovoj lekciji" });
+    }
     const updates: Record<string, any> = {};
     if (contentHtml !== undefined) {
       const submittedHtml = typeof contentHtml === "string" ? contentHtml : "";
@@ -3114,7 +3173,8 @@ router.put("/ilmihal/:id", async (req, res) => {
       const { regeneratePripremaInHtml } = await import("../lib/priprema-render.js");
       const normalizedHtml = normalizeSurahNames(regeneratePripremaInHtml(safeHtml));
       if (editorRole === "muallim") {
-        if (existing.autorMuallimId === req.user!.userId && existing.dostupnost === "autorovi_ucenici") {
+        if (existing.autorMuallimId === req.user!.userId
+          && existing.statusOdobrenja === "na_cekanju" && language === "bs") {
           await db.update(ilmihalLekcijeTable)
             .set({ contentHtml: normalizedHtml })
             .where(eq(ilmihalLekcijeTable.id, id));

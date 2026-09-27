@@ -43,7 +43,7 @@ import {
   embedCompletionsTable,
   pushTokensTable,
 } from "@workspace/db/schema";
-import { eq, and, or, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
+import { eq, ne, and, or, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { sendPushNotification } from "../lib/push.js";
 import { notificationLang, parentNotification, type NotificationLang } from "../lib/parent-notifications.js";
@@ -4280,7 +4280,14 @@ router.get("/lekcije-za-plan", async (req, res) => {
       slug: ilmihalLekcijeTable.slug,
       predmet: ilmihalLekcijeTable.predmet,
       dostupnost: ilmihalLekcijeTable.dostupnost,
-    }).from(ilmihalLekcijeTable).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
+    }).from(ilmihalLekcijeTable).where(and(
+      eq(ilmihalLekcijeTable.statusOdobrenja, "odobreno"),
+      eq(ilmihalLekcijeTable.isPublished, true),
+      or(
+        ne(ilmihalLekcijeTable.dostupnost, "autorovi_ucenici"),
+        eq(ilmihalLekcijeTable.autorMuallimId, req.user!.userId),
+      ),
+    )).orderBy(asc(ilmihalLekcijeTable.nivo), asc(ilmihalLekcijeTable.redoslijed));
 
     const izvorniNaslovPoId = new Map(lekcije.map((lekcija) => [lekcija.id, lekcija.naslov]));
     await overlayRows(lekcije, "ilmihal_lekcije", getLang(req));
