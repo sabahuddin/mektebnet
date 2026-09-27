@@ -1695,11 +1695,8 @@ async function runDataBootstrap() {
   //      Nivo 1: 'lekcija-01' (LEKCIJA 1: IMANSKI ŠARTI), 'tesbih' (sve malim slovima)
   //      Nivo 2: 'amentu-billahi' (CAPS, redoslijed=105 — duplikat 'mentu-billahi'),
   //              've-melaiketihi' (CAPS, redoslijed=155 — duplikat 've-melaikethi')
-  //   2. Nivo 1 'uvodna-rijec' — zamjena starog HTML-a (sa PRIPREMA-START akordionom
-  //      i btn-wow kvizom) sa kratkim motivacionim tekstom. Idempotentno: UPDATE
-  //      se izvršava SAMO ako stari HTML još uvijek sadrži PRIPREMA marker.
-  //   3. Nivo 2 'uvodna-rijec-nivo-2' i Nivo 3 'uvodna-rijec-nivo-3' — INSERT ON
-  //      CONFLICT (slug) DO NOTHING. Postavljaju se na redoslijed=0. Locked=true
+  //   2. Nivo 2 'uvodna-rijec-nivo-2' i Nivo 3 'uvodna-rijec-nivo-3' — INSERT ON
+  //      CONFLICT (slug) DO NOTHING. Postavljaju se na redoslijed=-10. Locked=true
   //      odmah da budu zaštićene od auto-skripti.
   try {
     await db.execute(sql`
@@ -1708,47 +1705,8 @@ async function runDataBootstrap() {
          OR (nivo = 2 AND slug IN ('amentu-billahi', 've-melaiketihi'));
     `);
 
-    // Note: NE wrap-ovati u <div class="lesson-container"> niti koristiti <h1>!
-    // CSS u index.css (.ilmihal-content .lesson-container i h1:first-child)
-    // ima `display: none` jer React parsuje strukturu klasično za akordion-bazirane lekcije.
-    // Naša jednostavna uvodna riječ koristi RjecnikContent fallback render — pa direktno
-    // p/div elementi koji su djeca .ilmihal-content moraju biti na root nivou.
-    // Naslov "Uvodna riječ" se već prikazuje kao naslov stranice iznad (lekcija.naslov).
-    const uvodnaNivo1Html = `<p class="lesson-text">
-  Esselamu alejkum, draga djeco! Dobro došli u mekteb i u svoj prvi <strong>Ilmihal</strong>. Ova knjiga bit će vaš drug i vodič kroz prelijepi svijet naše vjere islama.
-</p>
-<p class="lesson-text">
-  Zajedno ćemo učiti o našem Stvoritelju, Allahu, dž.š., o našem Poslaniku Muhammedu, sallallahu alejhi ve sellem, i o tome kako da postanemo dobri, čestiti i sretni ljudi.
-</p>
-<div class="info-box">
-  Mekteb nije samo mjesto gdje učimo lekcije. To je mjesto gdje sklapamo nova prijateljstva, gdje se smijemo i gdje učimo kako da jedni drugima budemo podrška na putu dobra.
-</div>
-<p class="lesson-text">
-  Roditelji, hvala vam što ste poveli svoju djecu na ovaj lijepi put. Vaša podrška, lijepa riječ i zajedničko ponavljanje naučenog kod kuće znače djeci više nego što mislite.
-</p>
-<p class="lesson-text">
-  Neka nam ovi prvi koraci budu hairli i sretni. Bismillah, krećemo!
-</p>
-<div class="arabic-card">
-  <p style="font-style: italic; color: var(--primary); font-weight: 700;">
-    "Traženje znanja je obaveza svakog muslimana i muslimanke."
-  </p>
-  <p style="font-size: 0.9rem; margin-top: 10px; color: #94a3b8;">(Hadis)</p>
-</div>`;
-
-    await db.execute(sql`
-      UPDATE ilmihal_lekcije
-      SET content_html = ${uvodnaNivo1Html},
-          locked = true,
-          locked_at = COALESCE(locked_at, NOW()),
-          locked_note = COALESCE(locked_note, 'Boot cleanup: cleaned old PRIPREMA accordion + kviz button')
-      WHERE nivo = 1
-        AND slug = 'uvodna-rijec'
-        AND (content_html LIKE '%PRIPREMA-START%'
-             OR content_html LIKE '%hero-box%'
-             OR content_html LIKE '%lesson-accordion%'
-             OR content_html LIKE '%lesson-container%');
-    `);
+    // Sadržaj uvodnih lekcija se uređuje u editoru. Ne prepisuj ga pri
+    // pokretanju servera: hero-box i lesson-container su legitimne izmjene.
     // Uvod je javan, ali ostaje na poziciji 0 – bez pomjeranja redovnih
     // lekcija ili granica etapa. Mapa/progresija ga posebno izuzimaju.
     await db.execute(sql`
@@ -1832,26 +1790,7 @@ async function runDataBootstrap() {
         AND redoslijed != -10;
     `);
 
-    // Idempotentni UPDATE za Nivo 2 i Nivo 3 uvodne riječi — ako su prethodno unijete
-    // sa starim wrapped HTML-om (lesson-container/h1 koji bi bili display:none zbog
-    // .ilmihal-content CSS pravila), prepisuju se sa čistim flat HTML-om.
-    // Match samo ako sadrži stari wrapper — drugi restart neće raditi UPDATE jer marker više neće postojati.
-    await db.execute(sql`
-      UPDATE ilmihal_lekcije
-      SET content_html = ${uvodnaNivo2Html}
-      WHERE nivo = 2
-        AND slug = 'uvodna-rijec-nivo-2'
-        AND content_html LIKE '%lesson-container%';
-    `);
-    await db.execute(sql`
-      UPDATE ilmihal_lekcije
-      SET content_html = ${uvodnaNivo3Html}
-      WHERE nivo = 3
-        AND slug = 'uvodna-rijec-nivo-3'
-        AND content_html LIKE '%lesson-container%';
-    `);
-
-    logger.info("Ilmihal cleanup: 4 duplicate lessons deleted, Nivo 1 uvodna-rijec replaced (if old), Nivo 2 + Nivo 3 uvodne riječi inserted (redoslijed=-10)");
+    logger.info("Ilmihal cleanup: duplicate lessons removed, Nivo 2 + Nivo 3 introductions inserted if missing; existing introduction content preserved");
   } catch (e) {
     logger.error({ err: e }, "Ilmihal cleanup failed (non-fatal)");
   }
