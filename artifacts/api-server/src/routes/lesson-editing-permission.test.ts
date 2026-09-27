@@ -84,10 +84,31 @@ before(async () => {
 
 after(async () => {
   if (server) await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  if (lessonId) await db.execute(sql`DELETE FROM content_prijevodi WHERE tabela = 'ilmihal_lekcije' AND red_id = ${lessonId}`);
   if (lessonId) await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lessonId));
   if (adminId && teacherId) {
     await db.delete(usersTable).where(inArray(usersTable.id, [adminId, teacherId]));
   }
+});
+
+test("admin edits the German title without changing the Bosnian source", async () => {
+  const put = (language: string, naslov: string) => request(`/api/admin/ilmihal/${lessonId}`, adminToken(), {
+    method: "PUT",
+    body: JSON.stringify({ language, naslov }),
+  });
+  const german = await put("de", "Die Probelektion");
+  assert.equal(german.status, 200, await german.text());
+  const [source] = await db.select({ naslov: ilmihalLekcijeTable.naslov })
+    .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lessonId));
+  assert.equal(source.naslov, "Testna priprema");
+  const bs = await request(`/api/content/ilmihal/${lessonSlug}`, adminToken(), { headers: { "X-Lang": "bs" } });
+  const de = await request(`/api/content/ilmihal/${lessonSlug}`, adminToken(), { headers: { "X-Lang": "de" } });
+  assert.equal(((await bs.json()) as { naslov: string }).naslov, "Testna priprema");
+  assert.equal(((await de.json()) as { naslov: string }).naslov, "Die Probelektion");
+  assert.equal((await put("invalid", "Should not write")).status, 400);
+  const [stillSource] = await db.select({ naslov: ilmihalLekcijeTable.naslov })
+    .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lessonId));
+  assert.equal(stillSource.naslov, "Testna priprema");
 });
 
 test("muallim canEditLessons defaults to enabled", async () => {

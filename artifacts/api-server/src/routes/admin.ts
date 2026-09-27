@@ -3181,6 +3181,9 @@ router.put("/ilmihal/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const { contentHtml, naslov, kvizPitanja, redoslijed, forceUnlock, predmet, uvjetiIds, dostupnost } = req.body;
     const requestedLanguage = String(req.body?.language || "bs").toLowerCase();
+    if (requestedLanguage !== "bs" && !["sq", "de", "en", "tr", "ar"].includes(requestedLanguage)) {
+      return res.status(400).json({ error: "Nepoznat jezik" });
+    }
     const language = ["sq", "de", "en", "tr", "ar"].includes(requestedLanguage) ? requestedLanguage : "bs";
     const editorRole = req.user?.role;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
@@ -3189,6 +3192,23 @@ router.put("/ilmihal/:id", async (req, res) => {
         (existing.statusOdobrenja === "odbijeno" ||
           (existing.statusOdobrenja === "na_cekanju" && existing.autorMuallimId !== req.user!.userId))) {
       return res.status(403).json({ error: "Nemate pristup ovoj lekciji" });
+    }
+    if (naslov !== undefined && language !== "bs") {
+      if (contentHtml !== undefined || kvizPitanja !== undefined || redoslijed !== undefined
+        || predmet !== undefined || uvjetiIds !== undefined || dostupnost !== undefined) {
+        return res.status(400).json({ error: "Prevedeni naziv sačuvajte odvojeno od ostalih izmjena" });
+      }
+      if (editorRole !== "admin") return res.status(403).json({ error: "Samo admin može mijenjati naziv lekcije" });
+      const translatedTitle = typeof naslov === "string" ? naslov.trim() : "";
+      if (!translatedTitle) return res.status(400).json({ error: "Naziv ne smije biti prazan" });
+      const sourceHash = createHash("sha256").update(existing.naslov).digest("hex");
+      await db.execute(sql`
+        INSERT INTO content_prijevodi (tabela, red_id, polje, jezik, prijevod, izvor_hash, updated_at)
+        VALUES ('ilmihal_lekcije', ${id}, 'naslov', ${language}, ${translatedTitle}, ${sourceHash}, NOW())
+        ON CONFLICT (tabela, red_id, polje, jezik)
+        DO UPDATE SET prijevod = EXCLUDED.prijevod, izvor_hash = EXCLUDED.izvor_hash, updated_at = NOW()
+      `);
+      return res.json({ success: true, naslov: translatedTitle });
     }
     const updates: Record<string, any> = {};
     if (contentHtml !== undefined) {

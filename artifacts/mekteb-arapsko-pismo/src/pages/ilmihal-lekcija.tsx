@@ -3562,8 +3562,10 @@ export default function IlmihalLekcijaPage() {
     }
     setSavingNaslov(true);
     try {
-      await apiRequest("PUT", `/admin/ilmihal/${lekcija.id}`, { naslov: novi }, token);
-      setLekcija(prev => prev ? { ...prev, naslov: novi } : prev);
+      const saved = await apiRequest<{ success: boolean; naslov?: string }>(
+        "PUT", `/admin/ilmihal/${lekcija.id}`, { naslov: novi, language: lang }, token,
+      );
+      setLekcija(prev => prev ? { ...prev, naslov: saved.naslov ?? novi } : prev);
       setEditingNaslov(false);
       toast({ title: t("Naziv ažuriran"), description: t("Lekcija sada nosi naziv: {novi}", { novi }) });
     } catch (e: any) {

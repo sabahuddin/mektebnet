@@ -201,8 +201,7 @@ Prevedi sa BOSANSKOG na ${targetName}.
 Pravila:
 - Zadrži islamske/arapske termine i vlastita imena prirodno za ciljni jezik (npr. Allah, Kur'an, sura, ajet, ezan, salavat, mekteb, muallim, ilmihal, abdest).
 ${transkripcijaPravilo(targetName)}
-- Za stručni islamski termin koji ima prirodan njemački ekvivalent, napiši njemački izraz pa bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ovo ne primjenjuj na nazive sura/dova, arapske transliteracije i vlastita imena.
-- Generički izraz "dova/dove" NIJE naziv dove: na njemačkom piši "Bittgebet (dova)" ili gramatički odgovarajući oblik. "Odijevanje" je običan bosanski izraz: prevedi ga kao "Kleidung (odijevanje)" kada je potreban stručni kontekst, nikada ga ne ostavljaj samog.
+- Prevedi bosanske riječi i stručne termine kad postoji prirodan izraz na ciljnom jeziku. Ne dodaji bosanski izvorni termin u zagradi kao objašnjenje (npr. njemački: "Bittgebet", a ne "Bittgebet (dova)"; "Kleidung", a ne "Kleidung (odijevanje)"). Sačuvaj samo ustaljena arapska imena i transkripcije u pravopisu ciljnog jezika.
 - Prevedi svu običnu bosansku formulaciju, i kada je pisana velikim slovima ili je bosanski prijevod dove, ajeta ili citata. Netaknuto ostaje samo arapsko pismo; latinična transkripcija arapskog prati pravopis ciljnog jezika.
 - Zadrži arapski tekst (ajeti, dove) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Ne dodaji arapsko pismo, salavat/salam simbole ni počasne izraze kojih nema u izvorniku.\n- Postojeću eulogiju za Poslanika i vjerovjesnike ("s.a.v.s.", "a.s.", "alejhis-selam") napiši punim izrazom ciljnog jezika u zagradi: engleski "(peace be upon him)", njemački "(Friede sei mit ihm)". Arapski znak ﷺ NE koristi — ni kad stoji u izvorniku.\n- Eulogiju uz Allahovo ime ("dž.š.", "dželle šanuhu") napiši kao apoziciju, bez zagrada: engleski "Allah, the Almighty,", njemački "Allah, der Erhabene,". "r.a." (za ashabe) ostavi kako jeste.
@@ -230,7 +229,7 @@ async function translateTexts(items: string[], targetName: string, forceTranslat
         // prijevoda istog redoslijeda i dužine pa zip-ujemo s našim originalima.
         content:
           `${forceTranslation
-            ? "Prethodni pokušaj je pogrešno ostavio ovaj bosanski tekst nepreveden. Prevedi ga sada POTPUNO na ciljni jezik, čak i ako je pisan velikim slovima. Ne zadržavaj bosansku rečenicu. Ako je to stručni islamski termin poput dove, šarta ili namaza, napiši prirodni termin na ciljnom jeziku i zadrži bosanski izraz samo u zagradi — ne vraćaj isti bosanski termin samostalno. Iznimka je samo arapsko pismo; latiničnu transkripciju arapskog prenesi u pravopis ciljnog jezika umjesto da je ostaviš u bosanskom obliku. "
+            ? "Prethodni pokušaj je pogrešno ostavio ovaj bosanski tekst nepreveden. Prevedi ga sada POTPUNO na ciljni jezik, čak i ako je pisan velikim slovima. Ne zadržavaj bosansku rečenicu niti dodaji bosanski izraz u zagradi kao objašnjenje. Iznimka je samo arapsko pismo i ustaljena imena; latiničnu transkripciju arapskog prenesi u pravopis ciljnog jezika. "
             : ""}Prevedi svaki string iz ulaznog niza. Vrati JSON objekt oblika {"prijevodi": [...]} ` +
           `gdje je "prijevodi" niz prijevoda ISTE DUŽINE i ISTOG REDOSLIJEDA kao ulazni niz ` +
           `(prijevodi[i] je prijevod od ulaz[i]). Prevedi po značenju i kad izvorni tekst sadrži ` +
@@ -269,12 +268,11 @@ Stroga pravila:
 - Prevedi SVAKU običnu bosansku rečenicu; ne ostavljaj vidljivi bosanski tekst nepreveden. Prije slanja odgovora provjeri da cijeli rezultat sadrži isti broj i redoslijed HTML tagova kao ulaz.
 - Zadrži arapski tekst (ajeti, dove, kaligrafija) NETAKNUT — ne prevodi i ne transliteriraj ga.
 - Bosanski prijevod ajeta, dove ili citata MORAŠ prevesti na njemački, čak i kada je cijeli tekst pisan velikim slovima. Netaknuto ostaje samo arapsko pismo; latinična transkripcija arapskog prati pravopis ciljnog jezika.
-- Zadrži islamske/arapske termine kako jesu.
+- Prevedi bosanske riječi i stručne termine kada postoji prirodan izraz na ciljnom jeziku; ustaljena arapska imena i transkripcije slijede pravopis ciljnog jezika.
 ${transkripcijaPravilo(targetName)}
 - Ne dodaji arapsko pismo, salavat/salam simbole ni počasne izraze kojih nema u izvorniku.\n- Postojeću eulogiju za Poslanika i vjerovjesnike ("s.a.v.s.", "a.s.", "alejhis-selam") napiši punim izrazom ciljnog jezika u zagradi: engleski "(peace be upon him)", njemački "(Friede sei mit ihm)". Arapski znak ﷺ NE koristi — ni kad stoji u izvorniku.\n- Eulogiju uz Allahovo ime ("dž.š.", "dželle šanuhu") napiši kao apoziciju, bez zagrada: engleski "Allah, the Almighty,", njemački "Allah, der Erhabene,". "r.a." (za ashabe) ostavi kako jeste.
 - Ako je ciljni jezik njemački, sav prevedivi tekst mora biti na njemačkom; ne vraćaj engleske rečenice niti miješaj engleski u njemački prijevod.
-- Za stručni islamski termin s prirodnim njemačkim ekvivalentom koristi njemački izraz uz bosanski izvorni termin u zagradi, npr. "Voraussetzung oder Bedingung (šart)". Ne radi to za nazive sura/dova, arapske transliteracije ni vlastita imena.
-- Generički izraz "dova/dove" prevedi kao "Bittgebet (dova)" (ili odgovarajući njemački padež); to nije naziv pojedinačne dove. "Odijevanje" prevedi kao "Kleidung (odijevanje)" i ne ostavljaj ga samog na bosanskom.
+- Ne dodaji bosanski izvorni termin u zagradi kao objašnjenje (npr. njemački: "Bittgebet", a ne "Bittgebet (dova)"; "Kleidung", a ne "Kleidung (odijevanje)"). Zagrade iz izvornika sačuvaj, ali prevedi njihov bosanski sadržaj.
 - NE umotavaj odgovor u markdown (bez \`\`\`). Vrati ČISTO HTML, ništa drugo.`;
 
 async function translateHtml(html: string, targetName: string, jezik: string): Promise<string> {
@@ -463,7 +461,14 @@ function textTranslationIssue(source: string, translation: string, jezik: string
   if (!translation?.trim()) return "prazan prijevod";
   if (hasAddedArabicHonorific(source, translation)) return "dodan je počasni oblik koji nije u izvorniku";
   if (jezik === "de" && hasLikelyEnglishInGerman(translation)) return "njemački prijevod sadrži previše engleskog teksta";
+  if (jezik === "de" && hasBosnianGloss(translation)) return "bosanski termin u zagradi";
   return null;
+}
+
+const BOSNIAN_GLOSS = /\((dova|dove|šart|odijevanje|abdest|namaz)\)/giu;
+
+function hasBosnianGloss(translation: string): boolean {
+  return translation.match(BOSNIAN_GLOSS) !== null;
 }
 
 /**
@@ -510,10 +515,8 @@ function hasLikelyUntranslatedBosnian(source: string, translation: string, jezik
 export function existingTextNeedsRepair(source: string, translation: string, jezik: string) {
   if (textTranslationIssue(source, translation, jezik)) return true;
 
-  // Stručni termini se namjerno mogu zadržati na bosanskom u zagradi
-  // (npr. "Bedingung (šart)"). Sam broj bošnjačkih slova nije pouzdan
-  // signal kvara za tekstualna pitanja; popravljamo samo kada je cijela
-  // prepoznatljiva bosanska proza ostala nepromijenjena.
+  // Sam broj bošnjačkih slova nije pouzdan signal za kratka pitanja:
+  // vlastita imena i arapske transliteracije mogu ostati u ciljnome jeziku.
   return source.trim() === translation.trim()
     && !isProtectedArabicContent(source)
     && !isProtectedIslamicName(source)
@@ -523,11 +526,8 @@ export function existingTextNeedsRepair(source: string, translation: string, jez
 function existingQuizTextNeedsRepair(source: string, translation: string, jezik: string) {
   if (textTranslationIssue(source, translation, jezik)) return true;
 
-  // U kvizovima je dopušteno da njemački prijevod sačuva stručni bosanski
-  // termin u zagradi, npr. "Bedingung (šart)". Opći prag po slovima
-  // ž/đ/ć zato pogrešno vraća takav potpuno ispravan prijevod u red za
-  // beskrajnu ponovnu obradu. Ipak, potpuno nepromijenjena bosanska proza
-  // ostaje signal da prijevod treba popraviti.
+  // Sam znak ž/đ/ć može biti i u vlastitom imenu; potpuno nepromijenjena
+  // bosanska proza ipak traži popravak.
   return source.trim() === translation.trim()
     && !isProtectedArabicContent(source)
     && !isProtectedIslamicName(source)
@@ -562,6 +562,7 @@ export function existingQuizNeedsRepair(sourceArr: any[], translation: string, j
 
 export function htmlTranslationIssue(source: string, translation: string, jezik: string) {
   if (!translation || translation.length < Math.min(20, source.length / 4)) return "prekratak odgovor";
+  if (jezik === "de" && hasBosnianGloss(translation)) return "bosanski termin u zagradi";
   if (htmlTagSequence(source) !== htmlTagSequence(translation)) return "izmijenjena HTML struktura";
   const textIssue = textTranslationIssue(source, translation, jezik);
   if (textIssue) return textIssue;

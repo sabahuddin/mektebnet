@@ -18,15 +18,16 @@ Dodatni signal: `len_ratio` pravog prijevoda — de/sq/tr ~1.05–1.15 duži, ar
 ## Iznimka: kratka pitanja i kanonski termini
 
 Za **kratke kviz-stringove** ne tretiraj samo prisustvo `ž/đ/ć` ili jednakost izvora i prijevoda
-kao grešku. Njemački smije imati stručni termin u zagradi (npr. `Bedingung (šart)`), a nazivi
-sura/dova, arapske transliteracije i ustaljeni nazivi namaza (npr. Fatiha, Kunut-dova,
-Subhaneke, Sabah namaz) smiju ostati isti.
+kao grešku. Nazivi sura/dova, arapske transliteracije i ustaljeni nazivi namaza
+(npr. Fatiha, Kunut-dova, Subhaneke, Sabah namaz) smiju ostati isti. Ali nemoj
+dodavati bosanski termin u zagradi kao objašnjenje njemačke riječi – korisnik
+je izričito prijavio da to smatra neprevedenim tekstom.
 
 **Why:** Opći marker-prag vraća već valjane kratke prijevode u beskonačnu bulk obradu.
 
 **How to apply:** Za kratke tekstove popravljaj potpuno nepromijenjenu **bosansku prozu**, ali
 izuzmi arapsko pismo i eksplicitnu listu kanonskih naziva. Ponovni pokušaj za stvarno
-nepreveden stručni termin mora tražiti ciljni izraz uz bosanski termin u zagradi. Koristi
+nepreveden stručni termin traži samo ciljni izraz, bez dodane bosanske zagrade. Koristi
 read-only listu poslova prije `--force`, da se ne prevode ponovo već ispravni redovi.
 
 ## HTML QA: imena i URL-ovi nisu bosanska proza
