@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import bcrypt from "bcryptjs";
 import type { Server } from "node:http";
 import { db } from "@workspace/db";
-import { usersTable, muallimProfiliTable, roditeljProfiliTable, pretplateTable } from "@workspace/db/schema";
+import { usersTable, muallimProfiliTable, roditeljProfiliTable, ucenikProfiliTable, pretplateTable } from "@workspace/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import app from "../app.js";
 import { signToken } from "../middlewares/auth.js";
@@ -143,12 +143,48 @@ test("nova registracija roditelja otvara račun i porodičnu pretplatu", async (
     assert.ok(profile);
     assert.equal(subscription.planType, "family");
     assert.equal(subscription.status, "pending");
+    assert.equal(subscription.iznos, 30);
+    assert.equal(subscription.valuta, "BAM");
   } finally {
     const [parent] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
     if (parent) {
       await db.delete(pretplateTable).where(eq(pretplateTable.userId, parent.id));
       await db.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, parent.id));
       await db.delete(usersTable).where(eq(usersTable.id, parent.id));
+    }
+  }
+});
+
+test("nova registracija pojedinca bilježi 15 BAM u BiH i 15 EUR u dijaspori", async () => {
+  for (const [region, valuta] of [["bih", "BAM"], ["dijaspora", "EUR"]] as const) {
+    const email = `new-student-${region}.${SUFFIX}@example.test`;
+    try {
+      const response = await request("/api/auth/register-ucenik", {
+        method: "POST",
+        body: JSON.stringify({
+          displayName: "Test Učenik",
+          email,
+          godine: 16,
+          billingRegion: region,
+          termsAccepted: true,
+          privacyAcknowledged: true,
+        }),
+      });
+      assert.equal(response.status, 201, await response.clone().text());
+      const [student] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+      assert.equal(student.role, "ucenik");
+      const [subscription] = await db.select().from(pretplateTable).where(eq(pretplateTable.userId, student.id));
+      assert.equal(subscription.planType, "individual");
+      assert.equal(subscription.status, "pending");
+      assert.equal(subscription.iznos, 15);
+      assert.equal(subscription.valuta, valuta);
+    } finally {
+      const [student] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
+      if (student) {
+        await db.delete(pretplateTable).where(eq(pretplateTable.userId, student.id));
+        await db.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, student.id));
+        await db.delete(usersTable).where(eq(usersTable.id, student.id));
+      }
     }
   }
 });

@@ -1969,7 +1969,7 @@ const billingOverrideHandler = async (req: any, res: any) => {
           planType: expectedPlan,
           status: "pending",
           licencesPurchased: account.role === "roditelj" ? 4 : 1,
-          iznos: account.role === "roditelj" ? 30 : 20,
+          iznos: account.role === "roditelj" ? 30 : 15,
           valuta: "EUR",
         }).returning();
       }

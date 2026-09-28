@@ -619,7 +619,7 @@ router.post("/register-ucenik", async (req, res) => {
       await tx.insert(pretplateTable).values({
         userId: user.id,
         planType: "individual",
-        iznos: 20,
+        iznos: 15,
         valuta: region === "bih" ? "BAM" : "EUR",
         status: "pending",
         licencesPurchased: 1,
@@ -927,10 +927,11 @@ router.get("/subscription", requireAuth, async (req, res) => {
           .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id))
           .limit(1)
       : [];
-    const defaultAmount = planType === "family" ? 30 : planType === "individual" ? 20 : null;
     const expectedAmount = planType === "family"
       ? 30
-      : subscription?.iznos ?? defaultAmount;
+      : planType === "individual"
+        ? 15
+        : subscription?.iznos ?? null;
     const currency = subscription
       ? subscription.valuta === "BAM" ? "BAM" : "EUR"
       : null;

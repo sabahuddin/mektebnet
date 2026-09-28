@@ -21,11 +21,11 @@ import {
 } from "lucide-react";
 
 // Cijena za pojedinačnu (učeničku) pretplatu — fiksno godišnje.
-const UCENIK_PRICE_BIH = "20 BAM (10 €)";
-const UCENIK_PRICE_EUR = "20 €";
+const UCENIK_PRICE_BIH = "15 BAM (8 €)";
+const UCENIK_PRICE_EUR = "15 €";
 
 // Porodična (roditeljska) — jedinstvena cijena za do 4 djece.
-const RODITELJ_PRICE_BIH = "30 KM";
+const RODITELJ_PRICE_BIH = "30 BAM (15 €)";
 const RODITELJ_PRICE_EUR = "30 €";
 
 const DRZAVE = [
