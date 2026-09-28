@@ -110,7 +110,7 @@ export default function PitanjaPrijedloziTab() {
   };
 
   return (
-    <section className="space-y-5" data-testid="muallim-pitanja-prijedlozi">
+    <section className="min-w-0 max-w-full space-y-5 overflow-x-clip" data-testid="muallim-pitanja-prijedlozi">
       <div className="rounded-2xl border border-border/60 bg-white p-5 sm:p-6">
         <h2 className="flex items-center gap-2 text-xl font-extrabold text-foreground">
           <MessageSquare className="h-5 w-5 text-primary" /> {t("Pitanja i prijedlozi")}
@@ -183,16 +183,16 @@ export default function PitanjaPrijedloziTab() {
           ) : messages.length === 0 ? (
             <p className="mt-4 text-sm text-muted-foreground">{t("Nema poruka. Pošaljite prvo pitanje ili prijedlog.")}</p>
           ) : (
-            <div className="mt-4 max-h-[32rem] space-y-3 overflow-y-auto" aria-live="polite">
+            <div className="mt-4 max-h-[32rem] min-w-0 space-y-3 overflow-y-auto overflow-x-hidden" aria-live="polite">
               {messages.map(message => {
                 const own = message.posiljateljId === user?.id;
                 return (
                   <div key={message.id} className={`flex ${own ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[90%] rounded-2xl px-4 py-3 text-sm sm:max-w-[75%] ${own ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                    <div className={`min-w-0 max-w-[90%] rounded-2xl px-4 py-3 text-sm sm:max-w-[75%] ${own ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
                       <p className="mb-1 text-xs font-bold opacity-80">
                         {own ? t(message.naslov) : t("Odgovor administratora")}
                       </p>
-                      <p className="whitespace-pre-wrap break-words">{message.sadrzaj}</p>
+                      <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.sadrzaj}</p>
                       <time className="mt-2 block text-[11px] opacity-70" dateTime={message.createdAt}>
                         {new Date(message.createdAt).toLocaleString()}
                       </time>

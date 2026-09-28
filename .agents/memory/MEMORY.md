@@ -88,3 +88,4 @@
 - [Opis i lekcija u planu časa](plan-casa-opis-i-lekcija.md) — slobodan opis i povezana lekcija su odvojeni; slobodan unos mora ostati čitljiv u starijim prikazima.
 - [Način evidencije prisustva](prisustvo-nacin-evidencije.md) — promjena broja časova ne briše staru evidenciju; raniji višesatni zapisi moraju ostati vidljivi i kad grupa pređe na dnevni unos.
 - [Uske tabele prisustva](prisustvo-tabela-sirina.md) — tabela može imati skrivenu horizontalnu širinu zbog unutrašnjih kontrola i kada su sve kolone naizgled vidljive.
+- [iPad horizontalno pomjeranje](ipad-horizontal-scroll.md) — zaključaj horizontalni pomak korijena na html i body; gustu navigaciju skloni prije širine iPada, bez zabrane lokalnog scrolla.

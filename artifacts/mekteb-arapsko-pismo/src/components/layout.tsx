@@ -243,7 +243,7 @@ export function Layout({ children }: LayoutProps) {
             <img src="/logo-mekteb.png" alt="Mekteb" className="h-10 w-auto group-hover:scale-105 transition-transform" />
           </Link>
 
-          <nav className="hidden xl:flex items-center gap-1 min-w-0">
+          <nav className="hidden 2xl:flex flex-1 items-center gap-1 min-w-0 overflow-x-auto">
             {mainNavLinks.map((link) => {
               // Glavna navigacija sa ikonom i nazivom modula (ranije bila samo
               // ikona, ali korisnici nisu prepoznavali šta je šta).
@@ -281,7 +281,7 @@ export function Layout({ children }: LayoutProps) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
 
             <div className="hidden sm:block">
               <LanguageSwitcher />
@@ -339,7 +339,7 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Brza prečica na poruke — vidljiva na mobilnom kad ima nepročitanih */}
             {user && unreadPoruke > 0 && (
-              <Link href="/poruke" className="xl:hidden relative p-2 rounded-xl hover:bg-muted transition-colors" aria-label={t("{count} nepročitanih poruka", { count: String(unreadPoruke) })}>
+              <Link href="/poruke" className="2xl:hidden relative p-2 rounded-xl hover:bg-muted transition-colors" aria-label={t("{count} nepročitanih poruka", { count: String(unreadPoruke) })}>
                 <MessageSquare className="w-6 h-6 text-primary" />
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-sm leading-none">
                   {unreadPoruke > 99 ? "99+" : unreadPoruke}
@@ -350,7 +350,7 @@ export function Layout({ children }: LayoutProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="xl:hidden min-h-11 min-w-11 text-primary rounded-xl"
+              className="2xl:hidden min-h-11 min-w-11 text-primary rounded-xl"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={mobileOpen ? t("Zatvori meni") : t("Otvori meni")}
               aria-expanded={mobileOpen}
@@ -372,7 +372,7 @@ export function Layout({ children }: LayoutProps) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
             id="mobile-main-menu"
-            className="xl:hidden fixed top-16 inset-x-0 bottom-0 z-40 bg-white border-t border-border/50 flex flex-col"
+            className="2xl:hidden fixed top-16 inset-x-0 bottom-0 z-40 bg-white border-t border-border/50 flex flex-col"
           >
             {/* Gornja traka: jezik + zvuk */}
             <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 shrink-0">
