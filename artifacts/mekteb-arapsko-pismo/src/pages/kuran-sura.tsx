@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AyahFlow, type FlowAyah } from "@/components/quran/ayah-flow";
 import { AudioBar } from "@/components/quran/audio-bar";
 import { useQuranAudio, useReciter, type PlayItem } from "@/hooks/use-quran-audio";
+import { useFatihaVoice } from "@/hooks/use-fatiha-voice";
+import { Mic, Square, Loader2 } from "lucide-react";
 import {
   fetchSurah,
   revelationLabel,
@@ -40,6 +42,7 @@ export default function KuranSuraPage() {
   );
 
   const audio = useQuranAudio(items, reciterId);
+  const voice = useFatihaVoice();
 
   useEffect(() => {
     const reqId = ++reqIdRef.current;
@@ -91,6 +94,53 @@ export default function KuranSuraPage() {
           </div>
         )}
 
+        {surahNum === 1 && !isLoading && meta && (
+          <section className="mb-3 rounded-2xl border border-primary/20 bg-primary/5 p-4" aria-label="Probno praćenje učenja">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-extrabold text-foreground">Uči uz mikrofon <span className="text-xs font-semibold text-muted-foreground">(probno)</span></h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Uči El-Fatihu redom. Prepoznati ajet će se označiti, bez snimanja i slanja glasa.
+                </p>
+              </div>
+              <button
+                type="button"
+                data-testid="fatiha-voice-toggle"
+                disabled={voice.state === "stopping"}
+                onClick={() => {
+                  if (voice.isActive) voice.stop();
+                  else {
+                    audio.stop();
+                    voice.start();
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50"
+                aria-pressed={voice.isActive}
+              >
+                {voice.state === "loading" || voice.state === "stopping"
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : voice.isActive ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {voice.isActive ? "Zaustavi" : voice.state === "ready" || voice.state === "done" ? "Pokreni mikrofon" : "Pripremi model"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs font-semibold text-primary" role="status" aria-live="polite">
+              {voice.state === "loading" && "Preuzimam model za prepoznavanje (oko 88 MB pri prvom pokretanju)…"}
+              {voice.state === "ready" && "Model je spreman. Pritisni „Pokreni mikrofon“ kada si spreman/spremna."}
+              {voice.state === "permission" && "Čekam dozvolu za mikrofon…"}
+              {voice.state === "listening" && (voice.activeKey
+                ? `Slušam – prepoznat ajet ${voice.activeKey.split(":")[1]}.`
+                : "Slušam – započni učiti El-Fatihu.")}
+              {voice.state === "stopping" && "Završavam prepoznavanje…"}
+              {voice.state === "done" && "Učenje je zaustavljeno. Rezultat je probni i nije ocjena učenja."}
+            </p>
+            {voice.error && <p className="text-xs text-destructive font-semibold mt-2" role="alert">{voice.error}</p>}
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Glas se obrađuje na uređaju. Model se preuzima s interneta; ovo nije provjera tedžvida.
+              {" "}<a href="https://huggingface.co/muhdur/tilawi-fastconformer-quran" target="_blank" rel="noopener noreferrer" className="underline">O modelu i licenci</a>
+            </p>
+          </section>
+        )}
+
         {/* Ajeti */}
         {isLoading ? (
           <div className="space-y-4">
@@ -108,8 +158,8 @@ export default function KuranSuraPage() {
             )}
             <AyahFlow
               ayahs={flowAyahs}
-              activeKey={audio.activeKey}
-              onAyahClick={(a) => audio.playItem(a)}
+              activeKey={voice.isActive || (voice.state === "done" && !audio.activeKey) ? voice.activeKey : audio.activeKey}
+              onAyahClick={(a) => { if (voice.isActive) voice.stop(); audio.playItem(a); }}
             />
           </div>
         )}
@@ -142,7 +192,7 @@ export default function KuranSuraPage() {
       </div>
 
       {/* Sticky audio kontrole */}
-      {!isLoading && meta && (
+      {!isLoading && meta && !voice.isActive && (
         <AudioBar
           isPlaying={audio.isPlaying}
           onToggle={audio.togglePlay}
