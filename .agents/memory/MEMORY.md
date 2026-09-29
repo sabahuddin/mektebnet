@@ -89,4 +89,3 @@
 - [Način evidencije prisustva](prisustvo-nacin-evidencije.md) — promjena broja časova ne briše staru evidenciju; raniji višesatni zapisi moraju ostati vidljivi i kad grupa pređe na dnevni unos.
 - [Uske tabele prisustva](prisustvo-tabela-sirina.md) — tabela može imati skrivenu horizontalnu širinu zbog unutrašnjih kontrola i kada su sve kolone naizgled vidljive.
 - [iPad horizontalno pomjeranje](ipad-horizontal-scroll.md) — zaključaj horizontalni pomak korijena na html i body; gustu navigaciju skloni prije širine iPada, bez zabrane lokalnog scrolla.
-- [Glasovni Kur'an i licence modela](quran-voice-model-licensing.md) — licenca jezgre ne pokriva utege modela; NPL ograničava naplatu funkcije, pa je probni režim zasnovan na CC BY modelu.

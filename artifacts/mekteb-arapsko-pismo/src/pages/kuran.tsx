@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
 import { useLanguage } from "@/context/language";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QuranPrompterCard } from "@/components/quran/quran-prompter-card";
 import { BookOpen, Search, ChevronLeft } from "lucide-react";
 import {
   fetchSurahList,
@@ -64,6 +65,8 @@ export default function KuranPage() {
             ﷽
           </div>
         </div>
+
+        <QuranPrompterCard />
 
         {/* Pretraga + ulaz u Mushaf (po stranici) */}
         <div className="flex flex-col sm:flex-row gap-3 mb-5">
