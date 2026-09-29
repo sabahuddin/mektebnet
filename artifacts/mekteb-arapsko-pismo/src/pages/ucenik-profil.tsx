@@ -206,19 +206,38 @@ function MyScreentimeCard() {
   const { token } = useAuth();
   const { t } = useLanguage();
   const [data, setData] = useState<{ totalScreentimeSec: number; lastSeenAt: string | null } | null>(null);
+  const [quran, setQuran] = useState<{ last7DaysSeconds: number; totalSeconds: number } | null>(null);
+  const [quranError, setQuranError] = useState(false);
   useEffect(() => {
     if (!token) return;
     apiRequest<{ totalScreentimeSec: number; lastSeenAt: string | null }>("GET", "/aktivnost/me", undefined, token)
       .then(setData).catch(() => {});
+    apiRequest<{ last7DaysSeconds: number; totalSeconds: number }>("GET", "/aktivnost/quran/me", undefined, token)
+      .then(setQuran).catch(() => setQuranError(true));
   }, [token]);
   return (
-    <div className="flex items-center gap-3 bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl p-4 mb-4" data-testid="card-moje-vrijeme">
-      <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center shrink-0">
-        <Clock className="w-5 h-5 text-teal-700" />
+    <div className="grid gap-3 sm:grid-cols-2 mb-4">
+      <div className="flex items-center gap-3 bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl p-4" data-testid="card-moje-vrijeme">
+        <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center shrink-0">
+          <Clock className="w-5 h-5 text-teal-700" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[11px] font-bold text-teal-700/80 uppercase tracking-wide">{t("Moje vrijeme na platformi")}</div>
+          <div className="text-xl font-extrabold text-teal-800 leading-tight">{formatScreentimeShort(data?.totalScreentimeSec)}</div>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-[11px] font-bold text-teal-700/80 uppercase tracking-wide">{t("Moje vrijeme na platformi")}</div>
-        <div className="text-xl font-extrabold text-teal-800 leading-tight">{formatScreentimeShort(data?.totalScreentimeSec)}</div>
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4" data-testid="card-moje-vrijeme-kuran">
+        <div className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">{t("Vrijeme u Kur'anu")}</div>
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <div>
+            <div className="text-lg font-extrabold text-emerald-800">{quranError ? t("Nije dostupno") : quran ? formatScreentimeShort(quran.last7DaysSeconds) : "…"}</div>
+            <div className="text-xs text-emerald-700/80">{t("Zadnjih 7 dana")}</div>
+          </div>
+          <div>
+            <div className="text-lg font-extrabold text-emerald-800">{quranError ? t("Nije dostupno") : quran ? formatScreentimeShort(quran.totalSeconds) : "…"}</div>
+            <div className="text-xs text-emerald-700/80">{t("Ukupno")}</div>
+          </div>
+        </div>
       </div>
     </div>
   );

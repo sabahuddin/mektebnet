@@ -27,6 +27,11 @@ interface Ucenik {
   totalScreentimeSec?: number | null;
 }
 
+interface QuranVrijeme {
+  last7DaysSeconds: number;
+  totalSeconds: number;
+}
+
 interface Prisustvo {
   id: number;
   datum: string;
@@ -190,6 +195,8 @@ export default function UcenikPage() {
   const params = new URLSearchParams(search);
   const hasH5pId = params.has("h5pPrilogId");
   const [ucenik, setUcenik] = useState<Ucenik | null>(null);
+  const [quranVrijeme, setQuranVrijeme] = useState<QuranVrijeme | null>(null);
+  const [quranVrijemeError, setQuranVrijemeError] = useState(false);
   const [prisustvo, setPrisustvo] = useState<Prisustvo[]>([]);
   const [ocjene, setOcjene] = useState<Ocjena[]>([]);
   const [napamet, setNapamet] = useState<{ katalog: NapametStavka[]; ocjene: NapametOcjena[] } | null>(null);
@@ -276,6 +283,17 @@ export default function UcenikPage() {
           }).catch(() => {});
       }
     }).catch(() => {}).finally(() => setIsLoading(false));
+  }, [token, id]);
+
+  useEffect(() => {
+    if (!token || !id) return;
+    let cancelled = false;
+    setQuranVrijeme(null);
+    setQuranVrijemeError(false);
+    apiRequest<QuranVrijeme>("GET", `/muallim/ucenik/${id}/quran-vrijeme`, undefined, token)
+      .then(data => { if (!cancelled) setQuranVrijeme(data); })
+      .catch(() => { if (!cancelled) setQuranVrijemeError(true); });
+    return () => { cancelled = true; };
   }, [token, id]);
 
   async function toggleNapametVisibility(item: NapametStavka) {
@@ -909,6 +927,20 @@ export default function UcenikPage() {
                               : <>{t("Zadnji put:")} {new Date(ucenik.lastSeenAt).toLocaleString("bs-BA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</>}
                           </div>
                         )}
+                      </div>
+                      <div className="bg-white border border-border/50 rounded-2xl p-4" data-testid="card-quran-7-dana">
+                        <BookOpen className="w-5 h-5 text-teal-600 mb-2" />
+                        <div className="text-2xl font-extrabold text-teal-600">
+                          {quranVrijemeError ? t("Nije dostupno") : quranVrijeme ? formatScreentime(quranVrijeme.last7DaysSeconds) : "…"}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium">{t("Kur'an – zadnjih 7 dana")}</div>
+                      </div>
+                      <div className="bg-white border border-border/50 rounded-2xl p-4" data-testid="card-quran-ukupno">
+                        <BookOpen className="w-5 h-5 text-emerald-600 mb-2" />
+                        <div className="text-2xl font-extrabold text-emerald-600">
+                          {quranVrijemeError ? t("Nije dostupno") : quranVrijeme ? formatScreentime(quranVrijeme.totalSeconds) : "…"}
+                        </div>
+                        <div className="text-sm text-muted-foreground font-medium">{t("Kur'an – ukupno")}</div>
                       </div>
                       {/* Zvjezdice stat */}
                       <div className="bg-white border border-border/50 rounded-2xl p-4">

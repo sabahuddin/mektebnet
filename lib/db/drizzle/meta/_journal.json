@@ -99,6 +99,13 @@
       "when": 1788900000000,
       "tag": "0016_explicit_public_lesson_submission",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790701585902,
+      "tag": "0017_quran_vrijeme_dnevno",
+      "breakpoints": true
     }
   ]
 }

@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
+import { getQuranVrijeme } from "../lib/quran-vrijeme.js";
 import {
   usersTable,
   muallimProfiliTable,
@@ -5518,6 +5519,36 @@ router.get("/ucenik/:id/h5p-pokusaji", async (req, res) => {
     res.json({ pokusaji, prilozi: priloziOut, naseVjezbePokusaji });
   } catch (err) {
     console.error("Ucenik H5P pokusaji error:", err);
+    res.status(500).json({ error: "Greška servera" });
+  }
+});
+
+// Vrijeme u Kur'anu vidi samo muallim koji ima pristup ovom učeniku:
+// vlasnik, glavni muallim istog mekteba ili dodijeljeni muallim grupe.
+router.get("/ucenik/:id/quran-vrijeme", async (req, res) => {
+  const ucenikId = Number(req.params.id);
+  if (!Number.isSafeInteger(ucenikId) || ucenikId <= 0) {
+    res.status(400).json({ error: "ID učenika nevalidan" });
+    return;
+  }
+  try {
+    const [profil] = await db.select({ grupaId: ucenikProfiliTable.grupaId })
+      .from(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, ucenikId));
+    if (!profil) { res.status(404).json({ error: "Učenik nije pronađen" }); return; }
+
+    if (req.user!.role !== "admin") {
+      const ownerOrPrincipal = await getManageableUcenikProfile(req.user!.userId, ucenikId);
+      const group = !ownerOrPrincipal && profil.grupaId
+        ? await verifyGrupaAccess(profil.grupaId, req.user!.userId, req.user!.role)
+        : null;
+      if (!ownerOrPrincipal && !group) {
+        res.status(403).json({ error: "Učenik nije vaš" });
+        return;
+      }
+    }
+    res.json(await getQuranVrijeme(ucenikId));
+  } catch (err) {
+    req.log.error({ err }, "GET student Quran time failed");
     res.status(500).json({ error: "Greška servera" });
   }
 });

@@ -8,7 +8,7 @@
 - [E2E testiranje zaštićenih ruta](e2e-jwt-testing.md) — dev DB nema aktivnog glavnog muallima; potpiši HS256 JWT ručno umjesto logina (sandbox nema process.env).
 - [API-server test harness](api-server-test-harness.md) — automatizovani testovi su node:test + tsx; importuj app, listen(0), signToken auth, seed/cleanup dev DB.
 - [Mekteb dokumenti — privatni fajlovi](mekteb-dokumenti-access.md) — "samo-za-mekteb" PDF ne ide na javni /uploads; blokirani poddirektorij + autorizovana ruta + openAuthorizedFile.
-- [API-server schema i dev reload](api-server-schema-i-reload.md) — nove kolone idu kao idempotentni ALTER IF NOT EXISTS u residual-schema u index.ts (NE drizzle-kit push); api-server dev treba restart_workflow nakon backend izmjena.
+- [API-server schema i dev reload](api-server-schema-i-reload.md) — Drizzle migracija je primarna; parcijalni prod traži ciljani idempotentni catch-up; dev backend treba restart.
 - [Jedan roditelj — atomska brava](jedan-roditelj-atomika.md) — app-level provjera nije dovoljna; invariant mora imati parcijalni unique indeks i 409 mapiranje.
 - [Kur'an font, RTL i bismilla](kuran-font-rtl.md) — islam.ba "hafs"; Sljedeća=lijevo; bismilla samo na početku sure; jednaka visina zaglavlja za sure i stranice.
 - [Kur'anski mali znakovi](kuranski-mali-znakovi.md) — ne tumači svaki sitni znak kao mim za stajanje; provjeri kodnu tačku i kanonski Uthmani tekst prije izmjene.

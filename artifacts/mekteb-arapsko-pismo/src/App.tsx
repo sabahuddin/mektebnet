@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/auth";
 import { useHeartbeat } from "@/hooks/useHeartbeat";
+import { useQuranTimeHeartbeat } from "@/hooks/use-quran-time-heartbeat";
 import { LanguageProvider, useLanguage } from "@/context/language";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { PushPrompt } from "@/components/push-prompt";
@@ -258,6 +259,17 @@ function HeartbeatMount() {
   return null;
 }
 
+function QuranTimeMount() {
+  const [location] = useLocation();
+  const { user, token } = useAuth();
+  useQuranTimeHeartbeat(
+    (location === "/kuran" || location.startsWith("/kuran/")) &&
+      user?.role === "ucenik" && !user.pendingAcknowledgements?.length,
+    token,
+  );
+  return null;
+}
+
 /**
  * Sadržaj iz baze (lekcije, kvizovi, knjige, rječnik, igre...) dohvaća se preko
  * `apiRequest` u `useEffect`-ima koji ovise o ID-u resursa, a NE o jeziku — pa
@@ -290,6 +302,7 @@ function AppRoutes() {
       base={import.meta.env.BASE_URL.replace(/\/$/, "")}
       hook={useMektebLocation}
     >
+      <QuranTimeMount />
       <AcknowledgementGate pending={Boolean(user?.pendingAcknowledgements?.length)} lang={lang} />
     </WouterRouter>
   );

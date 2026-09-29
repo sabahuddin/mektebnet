@@ -7,4 +7,5 @@ export * from "./learning";
 export * from "./notifications";
 export * from "./static-vjezbe";
 export * from "./bilten-muallimi";
+export * from "./quran-time";
 
