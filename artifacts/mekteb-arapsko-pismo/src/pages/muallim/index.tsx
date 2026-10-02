@@ -3046,15 +3046,9 @@ export default function MuallimPanel() {
                                     </td>
                                     <td className="px-3 py-3">
                                       {u.prisustvoPct !== null ? (
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                            <div className={`h-full rounded-full ${u.prisustvoPct >= 80 ? "bg-emerald-500" : u.prisustvoPct >= 50 ? "bg-amber-500" : "bg-red-500"}`}
-                                              style={{ width: `${u.prisustvoPct}%` }} />
-                                          </div>
-                                          <span className={`text-sm font-bold ${u.prisustvoPct >= 80 ? "text-emerald-600" : u.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>
-                                            {u.prisustvoPct}%
-                                          </span>
-                                        </div>
+                                        <span className={`text-sm font-bold ${u.prisustvoPct >= 80 ? "text-emerald-600" : u.prisustvoPct >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                                          {u.prisustvoPct}%
+                                        </span>
                                       ) : <span className="text-sm text-muted-foreground">—</span>}
                                     </td>
                                     <td className="px-3 py-3 text-sm font-medium text-emerald-600">{u.prisutanCount}</td>
