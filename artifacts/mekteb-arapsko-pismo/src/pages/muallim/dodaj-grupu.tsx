@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import { Layout } from "@/components/layout";
 import { goBackOr } from "@/lib/back-navigation";
+import { PanelGrupeLink, TeacherTopNav } from "@/components/teacher-top-nav";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { ArrowLeft, GraduationCap, User } from "lucide-react";
@@ -155,10 +156,18 @@ export default function DodajGrupuPage() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto">
+      <div className={isEdit ? "mx-auto grid max-w-5xl items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(250px,1fr)]" : "max-w-2xl mx-auto"}>
+        {isEdit && editId && <aside className="xl:order-2 xl:sticky xl:top-24"><TeacherTopNav /></aside>}
+        <div className="min-w-0 xl:order-1">
+        {isEdit && editId ? (
+          <div className="mb-5 space-y-2">
+            <PanelGrupeLink grupaId={editId} />
+          </div>
+        ) : (
         <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
           <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
         </button>
+        )}
 
         <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="w-12 h-12 bg-gradient-to-br from-secondary to-emerald-600 rounded-2xl flex items-center justify-center shadow-md">
@@ -316,6 +325,7 @@ export default function DodajGrupuPage() {
         )}
         </div>
         )}
+        </div>
       </div>
     </Layout>
   );

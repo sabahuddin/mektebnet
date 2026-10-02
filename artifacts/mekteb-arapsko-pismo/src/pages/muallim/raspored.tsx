@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { goBackOr } from "@/lib/back-navigation";
+import { PanelGrupeLink, TeacherTopNav } from "@/components/teacher-top-nav";
 import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 
 interface Grupa {
@@ -161,12 +162,7 @@ export default function MuallimRasporedPage() {
     <Layout>
       <div className="sticky top-16 z-30 -mx-3 px-3 py-2.5 sm:-mx-4 sm:px-4 bg-gradient-to-r from-violet-50 via-white to-violet-50 border-b border-violet-200/70 shadow-sm mb-5 sm:mb-6">
         <div className="max-w-6xl mx-auto flex items-center gap-3">
-          <button
-            onClick={() => goBackOr(() => setLocation(`/muallim/grupa/${grupaId}`))}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-violet-200 text-violet-700 hover:bg-violet-100 font-bold text-sm transition-colors shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
-          </button>
+          <PanelGrupeLink grupaId={grupaId} />
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <ListOrdered className="w-4 h-4 text-violet-700 shrink-0" />
             <span className="font-extrabold text-foreground truncate">{t("Raspored lekcija")} · {grupaNaziv}</span>

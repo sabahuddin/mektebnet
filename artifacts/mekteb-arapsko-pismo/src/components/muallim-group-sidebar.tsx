@@ -11,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useLanguage } from "@/context/language";
+import { TeacherTopNav, type TeacherTopNavProps } from "@/components/teacher-top-nav";
 
 export type GroupModuleKey =
   | "ucenici"
@@ -29,12 +30,14 @@ interface MuallimGroupSidebarProps {
   grupaId: number;
   activeModule?: GroupModuleKey;
   zadacaBadge?: number;
+  navProps?: TeacherTopNavProps;
 }
 
 export function MuallimGroupSidebar({
   grupaId,
   activeModule,
   zadacaBadge = 0,
+  navProps,
 }: MuallimGroupSidebarProps) {
   const { t } = useLanguage();
   const modules = [
@@ -51,8 +54,10 @@ export function MuallimGroupSidebar({
   ];
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-white/80 p-2.5 sm:p-3">
-      <p className="px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli")}</p>
+    <div className="min-w-0">
+    <TeacherTopNav {...navProps} />
+    <div className="rounded-2xl border border-border/50 bg-white/80 p-2 sm:p-2.5">
+      <p className="px-2 pb-1.5 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli")}</p>
       <nav className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:flex xl:flex-col xl:gap-1.5">
         {modules.map((module) => (
           <Link
@@ -74,6 +79,7 @@ export function MuallimGroupSidebar({
           </Link>
         ))}
       </nav>
+    </div>
     </div>
   );
 }

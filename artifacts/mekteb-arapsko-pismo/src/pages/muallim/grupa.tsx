@@ -22,6 +22,7 @@ import { quranPageFromSlug } from "@/lib/quran-assignment";
 import type { NapametStavka } from "@/components/NapametPregled";
 import { PlanLekcijaModul } from "@/components/plan-lekcija-modul";
 import { NapametLokalniProgramEditor } from "@/components/NapametLokalniProgramEditor";
+import { PanelGrupeLink } from "@/components/teacher-top-nav";
 import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 
 interface Grupa {
@@ -840,13 +841,7 @@ export default function GrupaPage() {
           h-16 (top-16), pa naša traka sjeda odmah ispod njega. */}
       <div className="sticky top-16 z-30 -mx-3 px-3 py-2.5 sm:-mx-4 sm:px-4 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 border-b border-emerald-200/70 shadow-sm mb-5 sm:mb-6">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button
-            onClick={() => goBackOr(() => setLocation("/muallim?tab=grupe"))}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-bold text-sm transition-colors shrink-0"
-            data-testid="btn-nazad-na-panel"
-          >
-            <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
-          </button>
+          <PanelGrupeLink grupaId={grupa.id} />
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <GraduationCap className="w-4 h-4 text-emerald-700 shrink-0" />
             <span className="font-extrabold text-foreground truncate">{grupa.naziv}</span>

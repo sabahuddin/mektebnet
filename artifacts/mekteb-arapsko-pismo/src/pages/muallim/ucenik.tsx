@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { isOnline, formatScreentime } from "@/lib/utils";
 import { goBackOr } from "@/lib/back-navigation";
 import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
+import { UcenikLekcije } from "@/components/ucenik-lekcije";
+import { TeacherTopNav, PanelGrupeLink } from "@/components/teacher-top-nav";
 
 interface Ucenik {
   id: number;
@@ -308,6 +310,20 @@ export default function UcenikPage() {
       setNapamet(previous);
       toast({ title: t("Promjena nije sačuvana"), description: error instanceof Error ? error.message : t("Pokušaj ponovo."), variant: "destructive" });
     }
+  }
+
+  async function refreshLessonActions(kind: "grade" | "homework") {
+    if (!token) return;
+    if (kind === "homework") {
+      setZadace(await apiRequest<ZadacaPregled[]>("GET", `/muallim/ucenik/${id}/zadace`, undefined, token));
+      return;
+    }
+    const [grades, memorization] = await Promise.all([
+      apiRequest<Ocjena[]>("GET", `/muallim/ocjene/${id}`, undefined, token),
+      apiRequest<{ katalog: NapametStavka[]; ocjene: NapametOcjena[] }>("GET", `/muallim/napamet/${id}`, undefined, token),
+    ]);
+    setOcjene(grades);
+    setNapamet(memorization);
   }
 
   function openNapametAction(action: "grade" | "homework", item: NapametStavka) {
@@ -684,7 +700,7 @@ export default function UcenikPage() {
     "07": "Jul", "08": "Aug", "09": "Sep", "10": "Okt", "11": "Nov", "12": "Dec",
   };
 
-  const validModules = ["pregled", "prisustvo", "ocjene", "zadace", "napamet", "kvizovi", "statistika", "interaktivno", "roditelji", "postavke", "etape"];
+  const validModules = ["pregled", "prisustvo", "ocjene", "zadace", "lekcije", "napamet", "kvizovi", "statistika", "interaktivno", "roditelji", "postavke", "etape"];
   // H5P vježbe više nemaju svoj modul — sadržaj je u Statistici vježbi. Stari
   // linkovi (modul=h5p, h5pPrilogId) zato vode tamo.
   let rawModule = params.get("modul") || (hasH5pId ? "statistika" : "pregled");
@@ -708,6 +724,7 @@ export default function UcenikPage() {
     { key: "prisustvo", label: t("Prisustvo"), icon: CalendarCheck },
     { key: "ocjene", label: t("Ocjene"), icon: Star },
     { key: "zadace", label: t("Zadaće"), icon: ClipboardList, badge: utokuCount },
+    { key: "lekcije", label: t("Lekcije"), icon: BookOpen },
     { key: "napamet", label: t("Napamet"), icon: BookOpen },
     { key: "kvizovi", label: t("Kvizovi"), icon: CheckCircle2 },
     { key: "statistika", label: t("Statistika vježbi"), icon: TrendingUp },
@@ -722,6 +739,7 @@ export default function UcenikPage() {
   function UcenikSidebar() {
     return (
       <div className="rounded-2xl border border-border/50 bg-white/80 p-2.5 sm:p-3">
+        <TeacherTopNav />
         <p className="px-2 pb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">{t("Moduli")}</p>
         <nav className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:flex lg:flex-col lg:gap-1.5" aria-label={t("Navigacija modula")}>
           {modules.map((module) => {
@@ -768,14 +786,7 @@ export default function UcenikPage() {
             <ArrowLeft className="w-4 h-4" />
           </button>
           {Boolean(ucenik && (ucenik.profil?.grupaId ?? ucenik.grupaId)) && (
-            <button
-              type="button"
-              onClick={() => setLocation(`/muallim/grupa/${ucenik!.profil?.grupaId ?? ucenik!.grupaId}`)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-emerald-800 transition-colors hover:bg-emerald-50"
-              data-testid="btn-student-back-group"
-            >
-              <Users className="h-4 w-4" /> {t("Nazad na grupu")}
-            </button>
+            <PanelGrupeLink grupaId={(ucenik!.profil?.grupaId ?? ucenik!.grupaId)!} />
           )}
         </div>
 
@@ -1495,6 +1506,12 @@ export default function UcenikPage() {
                       </>
                     )}
                   </div>
+                )}
+
+                {activeModule === "lekcije" && (
+                  <UcenikLekcije key={ucenik.id} studentId={ucenik.id} studentName={ucenik.displayName}
+                    groupId={ucenik.profil?.grupaId ?? ucenik.grupaId ?? null}
+                    grades={ocjene} readOnly={Boolean(params.get("muallimId"))} onSaved={refreshLessonActions} />
                 )}
 
                 {activeModule === "napamet" && (

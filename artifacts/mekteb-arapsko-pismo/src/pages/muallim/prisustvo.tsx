@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { goBackOr } from "@/lib/back-navigation";
+import { PanelGrupeLink, TeacherTopNav } from "@/components/teacher-top-nav";
 import { MuallimGroupSidebar } from "@/components/muallim-group-sidebar";
 
 type Status = "prisutan" | "odsutan" | "zakasnio" | "opravdan";
@@ -167,9 +168,7 @@ export default function PrisustvoPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto">
-        <button onClick={() => goBackOr(() => setLocation("/muallim"))} className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium mb-6 text-sm transition-colors">
-          <ArrowLeft className="w-4 h-4" /> {t("Nazad na panel")}
-        </button>
+        <div className="mb-4"><PanelGrupeLink grupaId={parseInt(grupaId)} /></div>
 
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-md">

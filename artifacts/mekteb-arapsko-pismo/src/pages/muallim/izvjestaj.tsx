@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { goBackOr } from "@/lib/back-navigation";
+import { PanelGrupeLink } from "@/components/teacher-top-nav";
 import { ArrowLeft, Printer, Loader2, Users, CalendarCheck, Star, Award, BookOpen, CheckSquare, Square, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -289,6 +290,7 @@ export default function MuallimIzvjestajPage() {
       <div className={grupaId ? "max-w-6xl mx-auto grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)] items-start" : ""}>
       <div className="print-worksheet max-w-4xl mx-auto print-root min-w-0">
         <div className="no-print mb-6 flex items-center justify-between gap-3 flex-wrap">
+          {grupaId ? <PanelGrupeLink grupaId={grupaId} /> : (
           <button
             onClick={() => goBackOr(() => setLocation("/muallim"))}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-medium text-sm transition-colors"
@@ -296,6 +298,7 @@ export default function MuallimIzvjestajPage() {
           >
             <ArrowLeft className="w-4 h-4" /> {t("Nazad")}
           </button>
+          )}
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Button
               onClick={handleExportExcel}
