@@ -6578,12 +6578,22 @@ router.put("/zadace/:id", async (req, res) => {
 
     let canonicalSlug: string | null = null;
     if (typeof lekcijaSlug === "string" && lekcijaSlug.trim()) {
-      const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov, dostupnost: ilmihalLekcijeTable.dostupnost })
-        .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, lekcijaSlug.trim()));
-      if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
-        res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
+      const slug = lekcijaSlug.trim();
+      const quranPageMatch = /^kuran-stranica-([1-9]\d*)$/.exec(slug);
+      const quranPage = quranPageMatch && Number(quranPageMatch[1]) <= 604 ? Number(quranPageMatch[1]) : null;
+      if (quranPage) {
+        if (String(lekcijaNaslov || "").trim() !== `Kur'an - stranica ${quranPage}`) {
+          res.status(400).json({ error: "Odabrana stranica Kur'ana nije ispravna" }); return;
+        }
+        canonicalSlug = `kuran-stranica-${quranPage}`;
+      } else {
+        const [lekcija] = await db.select({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug, naslov: ilmihalLekcijeTable.naslov, dostupnost: ilmihalLekcijeTable.dostupnost })
+          .from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.slug, slug));
+        if (!lekcija || lekcija.naslov !== String(lekcijaNaslov || "").trim()) {
+          res.status(400).json({ error: "Odabrana lekcija nije ispravna" }); return;
+        }
+        canonicalSlug = lekcija.slug;
       }
-      canonicalSlug = lekcija.slug;
     } else if (typeof lekcijaNaslov === "string" && lekcijaNaslov.trim()) {
       const lekcije = await db.select({ slug: ilmihalLekcijeTable.slug })
         .from(ilmihalLekcijeTable)
@@ -6617,7 +6627,7 @@ router.put("/zadace/:id", async (req, res) => {
       }
       const [row] = await tx.update(zadaceTable).set({
         naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug: canonicalSlug,
-        lekcijaTip: canonicalSlug ? "ilmihal" : lekcijaTip, isActive,
+        lekcijaTip: canonicalSlug?.startsWith("kuran-stranica-") ? "kuran" : canonicalSlug ? "ilmihal" : lekcijaTip, isActive,
         ...(tipDodjele !== undefined || Array.isArray(ucenikIds)
           ? {
               podgrupaId: tipDodjele === "podgrupa" ? podgrupaId : null,

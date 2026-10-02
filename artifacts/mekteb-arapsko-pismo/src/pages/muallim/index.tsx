@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { PlanLekcijaModul, MAX_CASOVA, nazivVrste } from "@/components/plan-lekcija-modul";
 import { goBackOr } from "@/lib/back-navigation";
 import { calendarLabel } from "@/lib/calendar-label";
-import { lessonHref } from "@/lib/quran-assignment";
+import { lessonHref, quranPageFromSlug } from "@/lib/quran-assignment";
 import { apiRequest, getApiBase, openAuthorizedFile } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import {
@@ -1078,7 +1078,7 @@ export default function MuallimPanel() {
         rokDo: zadRokDo || null,
         lekcijaNaslov: izvorniNaslov || null,
         lekcijaSlug: zadLekcijaSlug || null,
-        lekcijaTip: zadLekcijaSlug ? "ilmihal" : null,
+        lekcijaTip: zadLekcijaSlug ? (quranPageFromSlug(zadLekcijaSlug) ? "kuran" : "ilmihal") : null,
          tipDodjele: zadDodjela,
          podgrupaId: zadDodjela === "podgrupa" ? zadPodgrupaId : null,
          ucenikIds: zadDodjela === "pojedinacno" ? Array.from(zadUcenikIds) : [],
@@ -3832,6 +3832,7 @@ export default function MuallimPanel() {
                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
                             <LekcijaPicker
                                lekcije={dostupneLekcije}
+                               includeQuranPages
                               value={zadLekcija}
                               onChange={setZadLekcija}
                               onSelectLesson={lekcija => {

@@ -619,13 +619,41 @@ test("muallim može zadati i ocijeniti Kur'ansku stranicu bez ilmihal lekcije", 
 
   const homework = await teacherPost("/api/muallim/zadace", {
     grupaId: groupId, naslov: title, lekcijaNaslov: title,
-    lekcijaSlug: "kuran-stranica-7", lekcijaTip: "kuran", ucenikIds: [studentId],
+    lekcijaSlug: "kuran-stranica-7", lekcijaTip: "kuran", tipDodjele: "svi", ucenikIds: [],
   });
   const savedHomework = await homework.json() as { id: number; lekcijaSlug: string; lekcijaTip: string };
   assert.equal(homework.status, 201, JSON.stringify(savedHomework));
   quranHomeworkId = savedHomework.id;
   assert.equal(savedHomework.lekcijaSlug, "kuran-stranica-7");
   assert.equal(savedHomework.lekcijaTip, "kuran");
+
+  for (const token of [studentToken, otherStudentToken]) {
+    const response = await studentGet("/api/ucenik/zadace", {}, token);
+    assert.equal(response.status, 200);
+    const zadace = await response.json() as Array<{ id: number; lekcijaSlug: string }>;
+    assert.equal(zadace.find(z => z.id === quranHomeworkId)?.lekcijaSlug, "kuran-stranica-7");
+  }
+
+  const edit = await teacherPut(`/api/muallim/zadace/${quranHomeworkId}`, {
+    naslov: "Kur'an - stranica 8", lekcijaNaslov: "Kur'an - stranica 8",
+    lekcijaSlug: "kuran-stranica-8", lekcijaTip: "kuran",
+    tipDodjele: "pojedinacno", ucenikIds: [studentId, otherStudentId],
+  });
+  const edited = await edit.json() as { lekcijaSlug: string; lekcijaTip: string; isTargeted: boolean };
+  assert.equal(edit.status, 200, JSON.stringify(edited));
+  assert.equal(edited.lekcijaSlug, "kuran-stranica-8");
+  assert.equal(edited.lekcijaTip, "kuran");
+  assert.equal(edited.isTargeted, true);
+  for (const token of [studentToken, otherStudentToken]) {
+    const response = await studentGet("/api/ucenik/zadace", {}, token);
+    assert.equal(response.status, 200);
+    const zadace = await response.json() as Array<{ id: number; lekcijaSlug: string }>;
+    assert.equal(zadace.find(z => z.id === quranHomeworkId)?.lekcijaSlug, "kuran-stranica-8");
+  }
+  const invalidEdit = await teacherPut(`/api/muallim/zadace/${quranHomeworkId}`, {
+    naslov: title, lekcijaNaslov: title, lekcijaSlug: "kuran-stranica-605",
+  });
+  assert.equal(invalidEdit.status, 400);
 
   const invalid = await teacherPost("/api/muallim/zadace", {
     grupaId: groupId, naslov: title, lekcijaNaslov: title, lekcijaSlug: "kuran-stranica-605",
