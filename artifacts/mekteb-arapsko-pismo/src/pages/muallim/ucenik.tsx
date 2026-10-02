@@ -17,6 +17,7 @@ import { goBackOr } from "@/lib/back-navigation";
 import { NapametPregled, type NapametStavka, type NapametOcjena } from "@/components/NapametPregled";
 import { UcenikLekcije } from "@/components/ucenik-lekcije";
 import { TeacherTopNav, PanelGrupeLink } from "@/components/teacher-top-nav";
+import { ParentMessageForm } from "@/components/parent-message-form";
 
 interface Ucenik {
   id: number;
@@ -722,19 +723,16 @@ export default function UcenikPage() {
   const modules = [
     { key: "pregled", label: t("Pregled"), icon: User },
     { key: "prisustvo", label: t("Prisustvo"), icon: CalendarCheck },
-    { key: "ocjene", label: t("Ocjene"), icon: Star },
-    { key: "zadace", label: t("Zadaće"), icon: ClipboardList, badge: utokuCount },
     { key: "lekcije", label: t("Lekcije"), icon: BookOpen },
-    { key: "napamet", label: t("Napamet"), icon: BookOpen },
     { key: "kvizovi", label: t("Kvizovi"), icon: CheckCircle2 },
+    { key: "napamet", label: t("Napamet"), icon: BookOpen },
+    { key: "zadace", label: t("Zadaća"), icon: ClipboardList, badge: utokuCount },
+    { key: "ocjene", label: t("Ocjene"), icon: Star },
     { key: "statistika", label: t("Statistika vježbi"), icon: TrendingUp },
     { key: "interaktivno", label: t("Učenje u lekcijama"), icon: BookOpen },
     { key: "roditelji", label: t("Roditelji"), icon: Users, badge: roditelji.length },
-    { key: "postavke", label: t("Nalog i Lozinka"), icon: KeyRound },
+    { key: "postavke", label: t("Nalog"), icon: KeyRound },
   ];
-  if (etapaPokusaji.length > 0) {
-    modules.push({ key: "etape", label: t("Etapni ispiti"), icon: Medal });
-  }
 
   function UcenikSidebar() {
     return (
@@ -1538,6 +1536,7 @@ export default function UcenikPage() {
                     <h2 className="font-extrabold text-foreground flex items-center gap-2 mb-4">
                       <ClipboardList className="w-5 h-5 text-primary" /> {t("Rezultati kvizova")}
                     </h2>
+                    {etapaPokusaji.length > 0 && <Button type="button" variant="outline" className="mb-4 gap-2 rounded-xl font-bold" onClick={() => setModule("etape")}><Medal className="h-4 w-4" />{t("Etapni ispiti")}</Button>}
                     {kvizRezultati.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-6 bg-muted/20 rounded-xl">{t("Učenik još nije radio kvizove")}</p>
                     ) : (
@@ -1631,7 +1630,7 @@ export default function UcenikPage() {
                                   <div className="min-w-0">
                                     <span className="font-extrabold text-foreground text-base block truncate">{r.displayName}</span>
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                      <span className="font-mono text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">{r.username}</span>
+                                      <span className="min-w-0 break-all font-mono text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">{r.username}</span>
                                       <button
                                         type="button"
                                         title={t("Kopiraj korisničko ime")}
@@ -1643,7 +1642,7 @@ export default function UcenikPage() {
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex max-w-full flex-wrap items-center gap-2">
                                   <span className={`text-xs font-extrabold px-3 py-1 rounded-full ${
                                     r.status === "approved" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" :
                                     r.status === "pending" ? "bg-amber-100 text-amber-700 border border-amber-200" :
@@ -1691,6 +1690,9 @@ export default function UcenikPage() {
                                   )}
                                 </div>
                               </div>
+                              {r.status === "approved" && !params.get("muallimId") && (
+                                <ParentMessageForm key={`${id}-${r.id}`} parentId={r.id} parentName={r.displayName} />
+                              )}
                               {resetRoditeljPass?.id === r.id && (
                                 <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
                                   <div className="flex items-center gap-2 flex-wrap">

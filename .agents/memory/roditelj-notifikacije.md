@@ -12,6 +12,12 @@ Roditelj (odobrena `roditelj_ucenik` veza, status "approved") dobija in-app poru
 
 **Prisustvo NAMJERNO ne šalje obavijest** (`POST /muallim/prisustvo`).
 
+Direktna poruka iz učenikovog modula „Roditelji” namijenjena je samo izabranom odobrenom roditelju, ne svim roditeljima tog učenika ili grupe. Muallim mora imati odobrenog roditelja u svom opsegu kontakata.
+
+**Why:** Korisnik je tražio formu slanja poruke „tom roditelju”; privatna poruka ne smije postati grupna obavijest ili omogućiti kontakt s nepovezanim roditeljima.
+
+**How to apply:** Zadržati pojedinačnog primatelja i istu autorizaciju kao u izboru kontakata; ne zamjenjivati ovu akciju masovnim slanjem.
+
 **Why:** korisnik je eksplicitno tražio da prisustvo bude samo evidencija — roditelji
 bi inače dobijali obavijest svaki put kad muallim spremi prisustvo. Ako neko ubuduće
 "popravi" ovo misleći da je propust, to je regresija, ne bug.

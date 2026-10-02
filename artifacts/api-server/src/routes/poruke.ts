@@ -134,15 +134,19 @@ router.get("/razgovor/:userId", async (req, res) => {
 // POST /api/poruke — pošalji poruku
 router.post("/", async (req, res) => {
   try {
-    const { primateljId, naslov, sadrzaj } = req.body;
-    if (!primateljId || !sadrzaj) {
+    const { primateljId, naslov, sadrzaj } = req.body ?? {};
+    const targetId = typeof primateljId === "number"
+      ? primateljId
+      : typeof primateljId === "string" && /^\d+$/.test(primateljId.trim())
+        ? Number(primateljId.trim())
+        : Number.NaN;
+    if (!Number.isInteger(targetId) || targetId <= 0 || typeof sadrzaj !== "string" || !sadrzaj.trim()) {
       res.status(400).json({ error: "primateljId i sadrzaj su obavezni" });
       return;
     }
 
     const userId = req.user!.userId;
     const role = req.user!.role;
-    const targetId = parseInt(primateljId);
 
     const [target] = await db.select({ id: usersTable.id, role: usersTable.role })
       .from(usersTable).where(eq(usersTable.id, targetId));
@@ -152,7 +156,10 @@ router.post("/", async (req, res) => {
     if (role === "admin") {
       allowed = true;
     } else if (role === "muallim") {
-      if (["roditelj", "ucenik"].includes(target.role)) {
+      if (target.role === "roditelj") {
+        const contacts = await izracunajKontakte(userId, role);
+        allowed = contacts.some(contact => contact.id === targetId && contact.role === "roditelj");
+      } else if (target.role === "ucenik") {
         allowed = true;
       } else if (target.role === "admin") {
         // Svaki muallim može privatno poslati pitanje ili prijedlog adminu.

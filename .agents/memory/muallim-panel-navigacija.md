@@ -9,6 +9,10 @@ Pretraga, „Moje grupe” i „Mekteb” pripadaju vrhu desnog menija, a ne vel
 
 U učenikovom meniju „Lekcije” prikazuje tri taba za nivoe 1, 2 i 3, s mogućnošću zadavanja zadaće i ocjene direktno iz tog prikaza.
 
+Korisnikov tačan redoslijed učenikovog desnog menija: Pregled, Prisustvo, Lekcije, Kvizovi, Napamet, Zadaća, Ocjene, Statistika vježbi, Učenje u lekcijama, Roditelji, Nalog. U „Roditelji” traži formu za direktnu poruku tom roditelju.
+
+**Why:** Korisnik je izričito naveo ovaj redoslijed i naziv „Nalog” te zatražio slanje poruke iz roditeljskog modula učenika.
+
 **Why:** Korisnik je rekao da mu u grupnoj statistici gotovo 50% prostora nepotrebno objašnjava gdje je i izričito tražio ovaj raspored i akcije.
 
 **How to apply:** Ne vraćati široke navigacijske kartice ili putanje iznad sadržaja grupe; zadržati stalnu dostupnost povratka na grupu i vlastite grupe.
