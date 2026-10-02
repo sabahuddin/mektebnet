@@ -7,6 +7,8 @@ import {
   mektebiTable,
   muallimProfiliTable,
   pretplateTable,
+  roditeljProfiliTable,
+  roditeljUcenikTable,
   ucenikProfiliTable,
   usersTable,
 } from "@workspace/db/schema";
@@ -25,8 +27,11 @@ let mektebId: number;
 let onlineStudentId: number;
 let onlineTeacherId: number;
 let onlineMektebId: number;
+let schoolCoveredStudentId: number;
+let familyParentId: number;
+let familyCoveredStudentId: number;
 
-async function createUser(role: "admin" | "ucenik" | "muallim", label: string): Promise<number> {
+async function createUser(role: "admin" | "ucenik" | "muallim" | "roditelj", label: string): Promise<number> {
   const [user] = await db.insert(usersTable).values({
     username: `${label}.${SUFFIX}`,
     displayName: `${label} ${SUFFIX}`,
@@ -71,6 +76,9 @@ before(async () => {
   mixedStudentId = await createUser("ucenik", "mixed-student");
   onlineStudentId = await createUser("ucenik", "online-student");
   onlineTeacherId = await createUser("muallim", "online-teacher");
+  schoolCoveredStudentId = await createUser("ucenik", "school-covered-student");
+  familyParentId = await createUser("roditelj", "family-parent");
+  familyCoveredStudentId = await createUser("ucenik", "family-covered-student");
   const [mekteb] = await db.insert(mektebiTable).values({
     naziv: `Billing override mekteb ${SUFFIX}`,
     billingPaket: "do100",
@@ -90,7 +98,17 @@ before(async () => {
     { userId: raceStudentId, mektebId },
     { userId: mixedStudentId },
     { userId: onlineStudentId, muallimId: onlineTeacherId },
+    { userId: schoolCoveredStudentId, mektebId },
+    { userId: familyCoveredStudentId },
   ]);
+  await db.insert(roditeljProfiliTable).values({ userId: familyParentId });
+  await db.insert(roditeljUcenikTable).values({
+    roditeljId: familyParentId,
+    ucenikId: familyCoveredStudentId,
+    status: "approved",
+    approvedAt: new Date(),
+    approvedBy: adminId,
+  });
   await db.update(usersTable)
     .set({ trialUntil: new Date("2027-12-01T00:00:00Z") })
     .where(eq(usersTable.id, onlineStudentId));
@@ -111,6 +129,21 @@ before(async () => {
     activatedAt: new Date("2025-01-01T00:00:00Z"),
     expiresAt: new Date("2026-01-01T00:00:00Z"),
   });
+  await db.insert(pretplateTable).values([
+    { userId: schoolCoveredStudentId, planType: "individual", status: "pending", licencesPurchased: 1 },
+    { userId: familyCoveredStudentId, planType: "individual", status: "pending", licencesPurchased: 1 },
+    {
+      userId: familyParentId,
+      planType: "family",
+      status: "active",
+      licencesPurchased: 4,
+      iznos: 30,
+      valuta: "EUR",
+      paidAt: new Date("2025-01-01T00:00:00Z"),
+      activatedAt: new Date("2025-01-01T00:00:00Z"),
+      expiresAt: new Date("2026-01-01T00:00:00Z"),
+    },
+  ]);
   await db.insert(pretplateTable).values([
     {
       userId: mixedStudentId,
@@ -145,8 +178,18 @@ before(async () => {
 
 after(async () => {
   await new Promise<void>((resolve) => server?.close(() => resolve()));
-  const userIds = [adminId, paidStudentId, pendingStudentId, raceStudentId, mixedStudentId, onlineStudentId, onlineTeacherId].filter(Boolean);
+  const userIds = [
+    adminId, paidStudentId, pendingStudentId, raceStudentId, mixedStudentId,
+    onlineStudentId, onlineTeacherId, schoolCoveredStudentId, familyParentId, familyCoveredStudentId,
+  ].filter(Boolean);
   await db.delete(pretplateTable).where(inArray(pretplateTable.userId, userIds));
+  if (familyParentId && familyCoveredStudentId) {
+    await db.delete(roditeljUcenikTable).where(and(
+      eq(roditeljUcenikTable.roditeljId, familyParentId),
+      eq(roditeljUcenikTable.ucenikId, familyCoveredStudentId),
+    ));
+  }
+  if (familyParentId) await db.delete(roditeljProfiliTable).where(eq(roditeljProfiliTable.userId, familyParentId));
   await db.delete(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, userIds));
   if (onlineTeacherId) await db.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, onlineTeacherId));
   await db.delete(usersTable).where(inArray(usersTable.id, userIds));
@@ -193,7 +236,8 @@ test("admin move keeps an active own subscription and makes auth coverage self",
 });
 
 test("online džemat nije mektebska naplata samostalno registrovanog učenika", async () => {
-  const response = await request("/api/admin/korisnici", tokenFor(adminId, "admin", "admin"));
+  const adminToken = tokenFor(adminId, "admin", "admin");
+  const response = await request("/api/admin/korisnici", adminToken);
   assert.equal(response.status, 200);
   const student = (await response.json() as Array<{
     id: number; role: string; billingCoverage: string; billingPlan: string;
@@ -210,6 +254,82 @@ test("online džemat nije mektebska naplata samostalno registrovanog učenika", 
   assert.equal(subscription.coverage, "self");
   assert.equal(subscription.planType, "individual");
   assert.equal(subscription.canRenew, true);
+
+  const [initialSubscription] = await db.select().from(pretplateTable)
+    .where(eq(pretplateTable.userId, onlineStudentId));
+  assert.equal(initialSubscription.status, "pending");
+  const metadataSaved = await request(`/api/admin/korisnik/${onlineStudentId}/pretplata`, adminToken, {
+    method: "PUT",
+    body: JSON.stringify({ paid: false, metadataOnly: true, iznos: 15, valuta: "BAM" }),
+  });
+  assert.equal(metadataSaved.status, 200);
+  const metadata = await metadataSaved.json() as { status: string; iznos: number; valuta: string };
+  assert.equal(metadata.status, "pending");
+  assert.equal(metadata.iznos, 15);
+  assert.equal(metadata.valuta, "BAM");
+
+  const activated = await request(`/api/admin/korisnik/${onlineStudentId}/pretplata`, adminToken, {
+    method: "PUT",
+    body: JSON.stringify({ paid: true, metadataOnly: false, iznos: 15, valuta: "BAM" }),
+  });
+  assert.equal(activated.status, 200);
+  const activatedResult = await activated.json() as {
+    id: number; status: string; iznos: number; valuta: string;
+    paidAt: string; activatedAt: string; expiresAt: string;
+  };
+  assert.equal(activatedResult.id, initialSubscription.id);
+  assert.equal(activatedResult.status, "active");
+  assert.equal(activatedResult.iznos, 15);
+  assert.equal(activatedResult.valuta, "BAM");
+  assert.ok(activatedResult.paidAt);
+  assert.ok(activatedResult.activatedAt);
+  assert.equal(activatedResult.expiresAt.slice(0, 10), "2028-12-01");
+
+  const [account] = await db.select().from(usersTable).where(eq(usersTable.id, onlineStudentId));
+  assert.equal(account.billingOverride, null);
+  assert.equal(account.trialUntil?.toISOString(), "2027-12-01T00:00:00.000Z");
+  const [persistedPayment] = await db.select().from(pretplateTable)
+    .where(eq(pretplateTable.userId, onlineStudentId));
+  assert.equal(persistedPayment.id, initialSubscription.id);
+  assert.equal(persistedPayment.status, "active");
+  assert.equal(persistedPayment.iznos, 15);
+  assert.equal(persistedPayment.valuta, "BAM");
+  assert.ok(persistedPayment.paidAt);
+  assert.ok(persistedPayment.expiresAt);
+
+  const refreshedProfile = await request("/api/auth/subscription", tokenFor(onlineStudentId, "ucenik", "online-student"));
+  assert.equal(refreshedProfile.status, 200);
+  const refreshed = await refreshedProfile.json() as {
+    coverage: string; planType: string; subscription: { status: string; iznos: number; valuta: string } | null;
+  };
+  assert.equal(refreshed.coverage, "self");
+  assert.equal(refreshed.planType, "individual");
+  assert.equal(refreshed.subscription?.status, "active");
+  assert.equal(refreshed.subscription?.iznos, 15);
+  assert.equal(refreshed.subscription?.valuta, "BAM");
+});
+
+test("activation ne naplaćuje učenika koji je stvarno pokriven mektebom ili porodičnim pretplatnikom", async () => {
+  const adminToken = tokenFor(adminId, "admin", "admin");
+  const listed = await request("/api/admin/korisnici", adminToken);
+  assert.equal(listed.status, 200);
+  const users = await listed.json() as Array<{ id: number; billingCoverage: string | null }>;
+  assert.equal(users.find((user) => user.id === schoolCoveredStudentId)?.billingCoverage, "mekteb");
+  assert.equal(users.find((user) => user.id === familyCoveredStudentId)?.billingCoverage, "family");
+
+  for (const userId of [schoolCoveredStudentId, familyCoveredStudentId]) {
+    const [before] = await db.select().from(pretplateTable)
+      .where(eq(pretplateTable.userId, userId));
+    assert.equal(before.status, "pending");
+    const response = await request(`/api/admin/korisnik/${userId}/pretplata`, adminToken, {
+      method: "PUT",
+      body: JSON.stringify({ paid: true, metadataOnly: false, iznos: 15, valuta: "BAM" }),
+    });
+    assert.ok([403, 409].includes(response.status), `expected a coverage conflict for user ${userId}`);
+    const after = await db.select().from(pretplateTable).where(eq(pretplateTable.userId, userId));
+    assert.equal(after.length, 1);
+    assert.deepEqual(after[0], before);
+  }
 });
 
 test("admin move creates one pending subscription and is idempotent", async () => {

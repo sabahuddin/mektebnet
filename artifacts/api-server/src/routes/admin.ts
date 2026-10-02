@@ -2042,25 +2042,6 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
         ));
       coveredUserIds.push(...children.map((c) => c.userId));
     } else {
-      const [familyLink] = await db.select({ id: roditeljUcenikTable.id })
-        .from(roditeljUcenikTable)
-        .where(and(
-          eq(roditeljUcenikTable.ucenikId, userId),
-          eq(roditeljUcenikTable.status, "approved"),
-        ))
-        .limit(1);
-      const [profile] = await db.select().from(ucenikProfiliTable)
-        .where(eq(ucenikProfiliTable.userId, userId));
-      const [teacherProfile] = profile?.muallimId
-        ? await db.select({ mektebId: muallimProfiliTable.mektebId })
-            .from(muallimProfiliTable)
-            .where(eq(muallimProfiliTable.userId, profile.muallimId))
-            .limit(1)
-        : [];
-      if ((familyLink || profile?.mektebId || teacherProfile?.mektebId) && account.billingOverride !== "self") {
-        res.status(409).json({ error: "Ovaj učenik je već pokriven porodičnom ili mektebskom pretplatom" });
-        return;
-      }
       planType = "individual";
       licencesPurchased = 1;
     }
@@ -2105,7 +2086,7 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
       // Trial cleanup takes the same user lock before checking and deleting a
       // pending subscription. Serialize activation with cleanup so a payment
       // can never race the final eligibility check.
-      const [lockedAccount] = await tx.select({ id: usersTable.id }).from(usersTable)
+      const [lockedAccount] = await tx.select().from(usersTable)
         .where(eq(usersTable.id, userId)).for("update");
       if (!lockedAccount) throw new Error("ACCOUNT_REMOVED");
       const [lockedLatest] = await tx.select().from(pretplateTable)
@@ -2113,6 +2094,36 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
         .orderBy(desc(pretplateTable.createdAt), desc(pretplateTable.id)).limit(1);
       if (lockedLatest?.id !== latest?.id || lockedLatest?.status !== latest?.status) {
         throw new Error("SUBSCRIPTION_CHANGED");
+      }
+      if (planType === "individual" && lockedAccount.billingOverride !== "self") {
+        const [familyLink] = await tx.select({ roditeljId: roditeljUcenikTable.roditeljId })
+          .from(roditeljUcenikTable)
+          .where(and(eq(roditeljUcenikTable.ucenikId, userId), eq(roditeljUcenikTable.status, "approved")))
+          .limit(1);
+        const [profile] = await tx.select().from(ucenikProfiliTable)
+          .where(eq(ucenikProfiliTable.userId, userId));
+        const [teacherProfile] = profile?.muallimId
+          ? await tx.select({ mektebId: muallimProfiliTable.mektebId }).from(muallimProfiliTable)
+              .where(eq(muallimProfiliTable.userId, profile.muallimId)).limit(1)
+          : [];
+        const mektebId = profile?.mektebId ?? teacherProfile?.mektebId ?? null;
+        const [mekteb] = mektebId
+          ? await tx.select({ naziv: mektebiTable.naziv }).from(mektebiTable)
+              .where(eq(mektebiTable.id, mektebId)).limit(1)
+          : [];
+        const [parentFamilySubscription] = familyLink
+          ? await tx.select({ id: pretplateTable.id }).from(pretplateTable)
+              .where(and(eq(pretplateTable.userId, familyLink.roditeljId), eq(pretplateTable.planType, "family")))
+              .limit(1)
+          : [];
+        // Match list/profile precedence: Online džemat is organizational,
+        // not the payer of independently registered individual subscriptions.
+        const independentlyRegisteredOnline = mekteb?.naziv.trim().toLocaleLowerCase("bs") === "online džemat"
+          && lockedLatest?.planType === "individual"
+          && Boolean(lockedAccount.trialUntil || lockedLatest.status === "active" || lockedLatest.paidAt);
+        if (parentFamilySubscription || ((familyLink || mektebId) && !independentlyRegisteredOnline)) {
+          throw new Error("SUBSCRIPTION_COVERED");
+        }
       }
       let subscription;
       if (metadataOnly) {
@@ -2187,6 +2198,10 @@ router.put("/korisnik/:id/pretplata", async (req, res) => {
     for (const id of coveredUserIds) invalidateUserStatusCache(id);
     res.json(saved);
   } catch (err) {
+    if (err instanceof Error && err.message === "SUBSCRIPTION_COVERED") {
+      res.status(409).json({ error: "Ovaj učenik je već pokriven porodičnom ili mektebskom pretplatom" });
+      return;
+    }
     if (err instanceof Error && err.message === "INVALID_DATE_RANGE") {
       res.status(400).json({ error: "Kraj licence mora biti nakon početka" });
       return;

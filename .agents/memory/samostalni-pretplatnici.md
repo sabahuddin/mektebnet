@@ -17,6 +17,10 @@ Pravilo: džematski vezani muallimi, učenici i roditelji ostaju u „Korisnici�
 
 Online džemat je organizacijska grupa u koju idu samostalno registrovani korisnici, ne dokaz da džemat plaća njihovu pretplatu. Uz vlastiti pojedinačni/porodični plan i trag samostalne registracije, njihov prikaz mora ostati u Pretplatnici. Ako plan ne postoji, samo članstvo u Online džematu nije dovoljno za prikaz pretplate.
 
+Samostalno registrovana osoba ima 30 dana besplatnog korištenja; kada plati, admin aktivira njenu vlastitu pretplatu. Organizacijska veza s Online džematom ne smije blokirati tu aktivaciju. Stvarno porodično ili mektebsko pokriće i dalje sprečava dvostruku naplatu, osim izričite odluke o vlastitoj naplati.
+
+**Why:** Korisnik je opisao ovaj tok; aktivacija je vraćala grešku iako je isti samostalni račun već pravilno prikazan među pojedinačnim pretplatnicima.
+
 **Why:** Plaćeni pojedinci povezani s muallimom Online džemata pogrešno su prikazani kao „pokriveni mektebom“, iako im je vlastita uplata evidentirana. Samo promjena admin liste bez usklađivanja korisničkog profila dala bi kontradiktorne informacije.
 
 **How to apply:** Provjeri isti prioritet u admin listi, korisničkom profilu i akcijama naplate. Ne mijenjaj ulogu, historiju uplata, muallima ni vezu s grupom samo radi ispravke prikaza.
