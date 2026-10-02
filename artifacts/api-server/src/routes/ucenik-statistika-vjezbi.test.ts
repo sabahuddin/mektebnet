@@ -9,16 +9,24 @@ import {
   grupeTable,
   h5pPokusajiTable,
   ilmihalLekcijeTable,
+  korisnikNapredakTable,
+  kvizoviTable,
+  kvizRezultatiTable,
   medaljoniTable,
   mektebiTable,
   muallimProfiliTable,
   prilozi,
+  priustvoTable,
+  ocjeneTable,
   staticVjezbaPokusajiTable,
+  studentMedaljoniTable,
+  studentProgressTable,
   ucenikProfiliTable,
   usersTable,
 } from "@workspace/db/schema";
 import app from "../app.js";
 import { signToken } from "../middlewares/auth.js";
+import type { GroupStatisticsDetails } from "../lib/group-statistics-details.js";
 
 const SUFFIX = `stat-vjezbi-${Date.now()}`;
 
@@ -34,6 +42,7 @@ let h5pPrilogId: number;
 let nasaVjezbaPrilogId: number;
 let vanjskaVjezbaPrilogId: number;
 let medaljonId: number;
+let kvizId: number;
 let token: string;
 let straniToken: string;
 
@@ -124,6 +133,32 @@ before(async () => {
     { studentId: String(ucenikId), medaljonId, brojTacnih: 5, brojPitanja: 10, procenat: 50, polozeno: false, pokusajBr: 1 },
     { studentId: String(ucenikId), medaljonId, brojTacnih: 9, brojPitanja: 10, procenat: 90, polozeno: true, pokusajBr: 2 },
   ]);
+  await db.insert(studentProgressTable).values({
+    studentId: String(ucenikId), completedLessons: [lekcijaId, lekcijaId, -1],
+  });
+  await db.insert(korisnikNapredakTable).values({
+    userId: ucenikId, contentType: "ilmihal", contentId: lekcijaId, zavrsen: true,
+  });
+  await db.insert(studentMedaljoniTable).values({ studentId: String(ucenikId), medaljonId });
+  const [kviz] = await db.insert(kvizoviTable).values({
+    naslov: `Kviz ${SUFFIX}`, slug: `kviz-${SUFFIX}`, nivo: 1,
+  }).returning({ id: kvizoviTable.id });
+  kvizId = kviz.id;
+  await db.insert(kvizRezultatiTable).values([
+    { userId: ucenikId, kvizId, kvizNaslov: `Kviz ${SUFFIX}`, tacniOdgovori: 5, ukupnoPitanja: 10, procenat: 50, bodovi: 5 },
+    { userId: ucenikId, kvizId, kvizNaslov: `Kviz ${SUFFIX}`, tacniOdgovori: 9, ukupnoPitanja: 10, procenat: 90, bodovi: 9 },
+  ]);
+  const datum = new Date().toISOString().slice(0, 10);
+  await db.insert(ocjeneTable).values([
+    { ucenikId, grupaId, muallimId, kategorija: "Ilmihal", predmet: "Ilmihal", ocjena: 5, datum, lekcijaNaziv: `Lekcija ${SUFFIX}` },
+    { ucenikId, grupaId, muallimId, kategorija: "Kur'an", predmet: "Kur'an", ocjena: null, ocjenaOpisna: "uradjeno", datum },
+    { ucenikId, grupaId, muallimId, kategorija: "Ilmihal", ocjena: 1, datum: "2020-09-01" },
+  ]);
+  await db.insert(priustvoTable).values([
+    { ucenikId, grupaId, muallimId, datum, cas: 1, status: "prisutan" },
+    { ucenikId, grupaId, muallimId, datum, cas: 2, status: "odsutan" },
+    { ucenikId, grupaId, muallimId, datum: "2020-09-01", cas: 1, status: "prisutan" },
+  ]);
 
   token = signToken({ userId: muallimId, username: `muallim.${SUFFIX}`, role: "muallim", displayName: "Muallim" });
   straniToken = signToken({ userId: straniMuallimId, username: `strani.${SUFFIX}`, role: "muallim", displayName: "Strani" });
@@ -144,7 +179,14 @@ after(async () => {
     await db.delete(staticVjezbaPokusajiTable).where(eq(staticVjezbaPokusajiTable.userId, ucenikId));
     await db.delete(embedCompletionsTable).where(eq(embedCompletionsTable.studentId, String(ucenikId)));
     await db.delete(etapaPolaganjaTable).where(eq(etapaPolaganjaTable.studentId, String(ucenikId)));
+    await db.delete(studentMedaljoniTable).where(eq(studentMedaljoniTable.studentId, String(ucenikId)));
+    await db.delete(studentProgressTable).where(eq(studentProgressTable.studentId, String(ucenikId)));
+    await db.delete(korisnikNapredakTable).where(eq(korisnikNapredakTable.userId, ucenikId));
+    await db.delete(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, ucenikId));
+    await db.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, ucenikId));
+    await db.delete(priustvoTable).where(eq(priustvoTable.ucenikId, ucenikId));
   }
+  if (kvizId) await db.delete(kvizoviTable).where(eq(kvizoviTable.id, kvizId));
   const prilogIds = [h5pPrilogId, nasaVjezbaPrilogId, vanjskaVjezbaPrilogId].filter(Boolean);
   if (prilogIds.length) await db.delete(prilozi).where(inArray(prilozi.id, prilogIds));
   if (medaljonId) await db.delete(medaljoniTable).where(eq(medaljoniTable.id, medaljonId));
@@ -267,6 +309,79 @@ test("statistika tuđe grupe nije dostupna", async () => {
     headers: { Authorization: `Bearer ${straniToken}` },
   });
   assert.equal(odgovor.status, 403);
+  const detalji = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/statistika`, {
+    headers: { Authorization: `Bearer ${straniToken}` },
+  });
+  assert.equal(detalji.status, 403);
+});
+
+test("šest sekcija grupe ima stvarne detalje, bez duplih lekcija i etapa", async () => {
+  const response = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/statistika`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  assert.equal(response.status, 200);
+  const result = await response.json() as {
+    detaljiUcenika: GroupStatisticsDetails[];
+    ucenici: Array<{
+      prisustvoPct: number; ukupnoPrisustvo: number; ukupnaProsjecna: number;
+      brojOcjena: number; prosjecneOcjene: Record<string, { prosjek: number }>;
+    }>;
+  };
+  assert.equal(result.detaljiUcenika.length, 1);
+  const d = result.detaljiUcenika[0];
+  assert.equal(d.id, ucenikId);
+  assert.deepEqual(d.lekcije.map(l => l.id), [lekcijaId]);
+  assert.equal(d.kvizovi.length, 2);
+  assert.equal(new Set(d.kvizovi.map(k => k.kvizId)).size, 1);
+  assert.equal(d.kvizovi[0].nivo, 1);
+  assert.equal(d.kvizovi[0].naslov, `Kviz ${SUFFIX}`);
+  assert.equal(d.ocjene.length, 2);
+  assert.equal(d.ocjene.filter(o => o.ocjena !== null).length, 1);
+  assert.equal(d.ocjene.filter(o => o.ocjenaOpisna === "uradjeno").length, 1);
+  assert.equal(d.etape.length, 1);
+  assert.equal(d.etape[0].brojPokusaja, 2);
+  assert.equal(d.etape[0].polozeno, true);
+  assert.equal(d.etape[0].najboljiProcenat, 90);
+  assert.equal(d.medaljoni.length, 1);
+  assert.equal(d.medaljoni[0].medaljonId, medaljonId);
+  assert.ok(d.medaljoni[0].datum);
+  assert.equal(result.ucenici[0].prisustvoPct, 50);
+  assert.equal(result.ucenici[0].ukupnoPrisustvo, 2);
+  assert.equal(result.ucenici[0].ukupnaProsjecna, 5);
+  assert.equal(result.ucenici[0].brojOcjena, 2);
+  assert.equal(result.ucenici[0].prosjecneOcjene["Kur'an"], undefined);
+});
+
+test("arhivirani učenik nije u detaljima, aktivan bez aktivnosti ima prazne sekcije", async () => {
+  const ids: number[] = [];
+  try {
+    for (const isArchived of [false, true]) {
+      const [user] = await db.insert(usersTable).values({
+        username: `prazni-${isArchived}-${SUFFIX}`, displayName: "Prazni učenik",
+        passwordHash: "x", role: "ucenik", isActive: true,
+      }).returning({ id: usersTable.id });
+      ids.push(user.id);
+      await db.insert(ucenikProfiliTable).values({ userId: user.id, muallimId, mektebId, grupaId, isArchived });
+      if (isArchived) await db.insert(studentProgressTable).values({
+        studentId: String(user.id), completedLessons: [lekcijaId],
+      });
+    }
+    const response = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/statistika`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.equal(response.status, 200);
+    const result = await response.json() as { detaljiUcenika: GroupStatisticsDetails[] };
+    assert.deepEqual(result.detaljiUcenika.map(d => d.id).sort((a, b) => a - b), [ucenikId, ids[0]].sort((a, b) => a - b));
+    assert.deepEqual(result.detaljiUcenika.find(d => d.id === ids[0]), {
+      id: ids[0], lekcije: [], kvizovi: [], ocjene: [], etape: [], medaljoni: [],
+    });
+  } finally {
+    if (ids.length) {
+      await db.delete(studentProgressTable).where(inArray(studentProgressTable.studentId, ids.map(String)));
+      await db.delete(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, ids));
+      await db.delete(usersTable).where(inArray(usersTable.id, ids));
+    }
+  }
 });
 
 test("tuđi učenik nije dostupan", async () => {

@@ -6,6 +6,7 @@ import fs from "fs";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { getQuranVrijeme } from "../lib/quran-vrijeme.js";
+import { getGroupStatisticsDetails } from "../lib/group-statistics-details.js";
 import {
   usersTable,
   muallimProfiliTable,
@@ -4477,10 +4478,10 @@ function prazanZbirVjezbi() {
   };
 }
 
-async function getGrupaFullStats(grupaId: number) {
+async function getGrupaFullStats(grupaId: number, includeLearningDetails = false) {
   const profili = await db.select().from(ucenikProfiliTable)
     .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
-  if (profili.length === 0) return { ucenici: [] as any[], ukupnoCasova: 0, svaDatumi: [], mjesecniPregled: [], grupaPrisustvoPct: null, grupaProsjekOcjena: null, aktivnihProslejSedmice: 0, ukupnoKvizova: 0, ukupnoBodovaGrupa: 0, prosjekBodovaGrupa: 0, prisustvoPoDatumu: [] as any[], zvjezdicePozitivne: 0, zvjezdiceNegativne: 0 };
+  if (profili.length === 0) return { ucenici: [] as any[], detaljiUcenika: [], ukupnoCasova: 0, svaDatumi: [], mjesecniPregled: [], grupaPrisustvoPct: null, grupaProsjekOcjena: null, aktivnihProslejSedmice: 0, ukupnoKvizova: 0, ukupnoBodovaGrupa: 0, prosjekBodovaGrupa: 0, prisustvoPoDatumu: [] as any[], zvjezdicePozitivne: 0, zvjezdiceNegativne: 0 };
 
   const ucenikIds = profili.map(p => p.userId);
   const users = await db.select({ id: usersTable.id, displayName: usersTable.displayName })
@@ -4505,6 +4506,9 @@ async function getGrupaFullStats(grupaId: number) {
         .where(inArray(kvizRezultatiTable.userId, ucenikIds))
     : [];
   const zvjezdiceMap = await getZvjezdiceZaUcenike(ucenikIds);
+  const detaljiUcenika = includeLearningDetails
+    ? await getGroupStatisticsDetails(ucenikIds, kvizRezultati, sveOcjene)
+    : [];
 
   // Svaki čas ima zasebnu kolonu; datum sam ne može razlikovati dva zapisa.
   const svaDatumi = [...new Set(svoPrisustvo.map(p => `${p.datum}#${p.cas}`))].sort();
@@ -4541,6 +4545,7 @@ async function getGrupaFullStats(grupaId: number) {
     }
     const prosjecneOcjene: Record<string, { prosjek: number; broj: number }> = {};
     for (const [predmet, vals] of Object.entries(predmeti)) {
+      if (!vals.length) continue;
       prosjecneOcjene[predmet] = {
         prosjek: Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10,
         broj: vals.length,
@@ -4626,7 +4631,7 @@ async function getGrupaFullStats(grupaId: number) {
   const zvjezdicePozitivne = ucenici.reduce((a, u) => a + u.zvjezdicePozitivne, 0);
   const zvjezdiceNegativne = ucenici.reduce((a, u) => a + u.zvjezdiceNegativne, 0);
 
-  return { ucenici, ukupnoCasova, svaDatumi, mjesecniPregled, grupaPrisustvoPct, grupaProsjekOcjena, aktivnihProslejSedmice, ukupnoKvizova, ukupnoBodovaGrupa, prosjekBodovaGrupa, prisustvoPoDatumu, zvjezdicePozitivne, zvjezdiceNegativne };
+  return { ucenici, detaljiUcenika, ukupnoCasova, svaDatumi, mjesecniPregled, grupaPrisustvoPct, grupaProsjekOcjena, aktivnihProslejSedmice, ukupnoKvizova, ukupnoBodovaGrupa, prosjekBodovaGrupa, prisustvoPoDatumu, zvjezdicePozitivne, zvjezdiceNegativne };
 }
 
 router.get("/grupa/:id/statistika", async (req, res) => {
@@ -4634,7 +4639,7 @@ router.get("/grupa/:id/statistika", async (req, res) => {
     const grupaId = parseInt(req.params.id);
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
-    const stats = await getGrupaFullStats(grupaId);
+    const stats = await getGrupaFullStats(grupaId, true);
     res.json(stats);
   } catch (err) {
     console.error("Statistika error:", err);
