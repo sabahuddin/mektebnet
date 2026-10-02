@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { BookOpen, ClipboardList, Loader2, Search, Star } from "lucide-react";
+import { BookOpen, Check, ClipboardList, Loader2, Search, Star } from "lucide-react";
 import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { apiRequest } from "@/lib/api";
@@ -39,6 +39,8 @@ export function UcenikLekcije({ studentId, studentName, groupId, readOnly = fals
   const { t } = useLanguage();
   const { toast } = useToast();
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [completedLessonIds, setCompletedLessonIds] = useState<number[]>([]);
+  const [progressError, setProgressError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
@@ -56,13 +58,44 @@ export function UcenikLekcije({ studentId, studentName, groupId, readOnly = fals
     setLoading(true);
     setError(false);
     setLessons([]);
+    setCompletedLessonIds([]);
+    setProgressError(false);
     if (!token) return;
+    let progressRequest = 0;
+    async function refreshProgress() {
+      const request = ++progressRequest;
+      try {
+        const data = await apiRequest<{ completedLessonIds: number[] }>("GET", `/muallim/ucenik/${studentId}/statistika-vjezbi`, undefined, token);
+        if (!Array.isArray(data.completedLessonIds)) throw new Error("Missing lesson progress");
+        if (!cancelled && request === progressRequest) {
+          setCompletedLessonIds(data.completedLessonIds);
+          setProgressError(false);
+        }
+      } catch {
+        if (!cancelled && request === progressRequest) {
+          setCompletedLessonIds([]);
+          setProgressError(true);
+        }
+      }
+    }
+    void refreshProgress();
     apiRequest<Lesson[]>("GET", "/muallim/lekcije-za-plan", undefined, token)
       .then(data => { if (!cancelled) setLessons(data.filter(l => [1, 2, 3].includes(l.nivo) && Boolean(l.slug))); })
       .catch(() => { if (!cancelled) setError(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [token, retry]);
+    const refreshVisibleProgress = () => {
+      if (!document.hidden) void refreshProgress();
+    };
+    window.addEventListener("focus", refreshVisibleProgress);
+    document.addEventListener("visibilitychange", refreshVisibleProgress);
+    const interval = window.setInterval(refreshVisibleProgress, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshVisibleProgress);
+      document.removeEventListener("visibilitychange", refreshVisibleProgress);
+    };
+  }, [token, studentId, retry]);
 
   useEffect(() => {
     setAction(null);
@@ -124,6 +157,7 @@ export function UcenikLekcije({ studentId, studentName, groupId, readOnly = fals
   return (
     <section className="min-w-0 space-y-4 rounded-2xl border border-border/50 bg-white p-4 sm:p-5" data-testid="section-lekcije-ucenik">
       <h2 className="flex items-center gap-2 font-extrabold"><BookOpen className="h-5 w-5 text-primary" />{t("Lekcije")}</h2>
+      {progressError && <p role="alert" className="text-sm text-red-700">{t("Napredak lekcija nije moguće učitati.")} <button type="button" className="font-bold underline" onClick={() => setRetry(v => v + 1)}>{t("Pokušaj ponovo")}</button></p>}
       <div className="grid grid-cols-3 gap-2" role="tablist" aria-label={t("Nivoi lekcija")}>
         {[1, 2, 3].map(n => (
           <button key={n} type="button" role="tab" aria-selected={level === n} onClick={() => setLevel(n)}
@@ -154,14 +188,22 @@ export function UcenikLekcije({ studentId, studentName, groupId, readOnly = fals
                 {gradeLabel && <p className="mt-1 text-xs font-bold text-primary">{t("Posljednja ocjena")}: {gradeLabel}</p>}
                 {lesson.dostupnost === "muallimi" && <p className="mt-0.5 text-xs text-muted-foreground">{t("Samo za muallime")}</p>}
               </div>
-              {canWrite && <div className="flex shrink-0 items-center gap-2">
+              <div className="flex max-w-full flex-wrap items-center gap-2">
+                {completedLessonIds.includes(lesson.id) && (
+                  <span role="img" aria-label={t("Završeno")} title={t("Završeno")} data-testid={`lesson-completed-${lesson.id}`}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-emerald-100 text-emerald-700">
+                    <Check className="h-5 w-5" strokeWidth={3} aria-hidden="true" />
+                  </span>
+                )}
+              {canWrite && <>
                 <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-xl" onClick={() => open("homework", lesson)} disabled={lesson.dostupnost === "muallimi"} data-testid={`btn-lekcija-zadaca-${lesson.id}`}>
                   <ClipboardList className="h-4 w-4" />{t("Zadaća")}
                 </Button>
                 <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-xl" onClick={() => open("grade", lesson)} data-testid={`btn-lekcija-ocjena-${lesson.id}`}>
                   <Star className="h-4 w-4" />{t("Ocjena")}
                 </Button>
-              </div>}
+              </>}
+              </div>
             </li>
             );
           })}

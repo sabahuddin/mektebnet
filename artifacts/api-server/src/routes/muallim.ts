@@ -44,6 +44,7 @@ import {
   etapaPokusajOdobrenjaTable,
   embedCompletionsTable,
   pushTokensTable,
+  studentProgressTable,
 } from "@workspace/db/schema";
 import { eq, ne, and, or, inArray, desc, asc, sql, count, gte } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
@@ -5571,6 +5572,28 @@ router.get("/ucenik/:id/statistika-vjezbi", async (req, res) => {
     const profil = await getManageableUcenikProfile(req.user!.userId, ucenikId);
     if (!profil && req.user!.role !== "admin") { res.status(403).json({ error: "Učenik nije vaš" }); return; }
 
+    const [progressRow] = await db.select({ completedLessons: studentProgressTable.completedLessons })
+      .from(studentProgressTable)
+      .where(eq(studentProgressTable.studentId, String(ucenikId)));
+    const completedLessonIds = new Set<number>();
+    const lessonsArr = progressRow?.completedLessons as unknown;
+    if (Array.isArray(lessonsArr)) {
+      for (const lessonId of lessonsArr) {
+        if (typeof lessonId === "number") completedLessonIds.add(lessonId);
+      }
+    }
+    const legacyCompletions = await db.select({
+      contentId: korisnikNapredakTable.contentId,
+      zavrsen: korisnikNapredakTable.zavrsen,
+    }).from(korisnikNapredakTable)
+      .where(and(
+        eq(korisnikNapredakTable.userId, ucenikId),
+        eq(korisnikNapredakTable.contentType, "ilmihal"),
+      ));
+    for (const completion of legacyCompletions) {
+      if (completion.zavrsen) completedLessonIds.add(completion.contentId);
+    }
+
     const prosjek = (vrijednosti: number[]) =>
       vrijednosti.length ? Math.round(vrijednosti.reduce((a, b) => a + b, 0) / vrijednosti.length) : null;
 
@@ -5716,6 +5739,7 @@ router.get("/ucenik/:id/statistika-vjezbi", async (req, res) => {
     }).sort((a, b) => a.nivo - b.nivo || a.naziv.localeCompare(b.naziv, "bs"));
 
     res.json({
+      completedLessonIds: [...completedLessonIds],
       h5p: {
         vjezbe: h5pStavke.length,
         pokusaji: h5pPokusaji.length,

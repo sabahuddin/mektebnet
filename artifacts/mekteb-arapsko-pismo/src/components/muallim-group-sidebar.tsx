@@ -50,7 +50,7 @@ export function MuallimGroupSidebar({
     { key: "statistika" as const, label: t("Statistika"), icon: TrendingUp, href: `/muallim?tab=statistika&grupaId=${grupaId}` },
     { key: "izvjestaji" as const, label: t("Izvještaji"), icon: FileText, href: `/muallim/izvjestaj/grupa/${grupaId}` },
     { key: "roditelji" as const, label: t("Roditelji"), icon: Heart, href: `/muallim?tab=roditelji&grupaId=${grupaId}` },
-    { key: "podesavanja" as const, label: t("Podešavanja"), icon: Settings, href: `/muallim/grupa/${grupaId}/uredi` },
+    { key: "podesavanja" as const, label: t("Podešavanja"), icon: Settings, href: `/muallim/grupa/${grupaId}?modul=podesavanja` },
   ];
 
   return (

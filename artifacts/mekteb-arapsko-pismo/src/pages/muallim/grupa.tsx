@@ -159,7 +159,7 @@ interface NapametDetalji {
   nisuOcijenjeni: Array<{ id: number; displayName: string; isVisible: boolean }>;
 }
 
-type GrupaModul = "ucenici" | "napamet" | "greske" | "plan";
+type GrupaModul = "ucenici" | "napamet" | "greske" | "plan" | "podesavanja";
 
 export default function GrupaPage() {
   const { id } = useParams<{ id: string }>();
@@ -265,7 +265,7 @@ export default function GrupaPage() {
 
   useEffect(() => {
     const modul = new URLSearchParams(search).get("modul");
-    if (modul === "napamet" || modul === "greske" || modul === "plan") {
+    if (modul === "napamet" || modul === "greske" || modul === "plan" || modul === "podesavanja") {
       setAktivniModul(modul);
       if (modul === "greske") void loadInteraktivniPregled();
     } else {
@@ -889,54 +889,71 @@ export default function GrupaPage() {
           </div>
         )}
 
-         {aktivniModul === "ucenici" && (
-           <section className="bg-white border border-border/50 rounded-2xl p-4 sm:p-5 mb-5" data-testid="grupa-muallimi">
-             <div className="flex items-center justify-between gap-3">
-               <h2 className="flex items-center gap-2 font-extrabold text-foreground">
-                 <Users className="h-5 w-5 text-primary" /> {t("Muallimi grupe")} ({1 + sekundarniMuallimi.length}/3)
-               </h2>
-               {canManageMuallimi && sekundarniMuallimi.length < 2 && dostupniMuallimi.length > 0 && (
-                 <button type="button" onClick={() => setShowAddSecMuallim(v => !v)}
-                   className="flex items-center gap-1 text-sm font-bold text-primary hover:underline"
-                   data-testid="button-dodaj-muallima-grupi">
-                   <Plus className="h-4 w-4" /> {t("Dodaj muallima grupi")}
-                 </button>
+         {aktivniModul === "podesavanja" && (
+           <section className="space-y-4" data-testid="grupa-podesavanja">
+             <div className="flex flex-wrap items-center justify-between gap-3">
+               <div>
+                 <h2 className="flex items-center gap-2 text-lg font-extrabold text-foreground">
+                   <Settings className="h-5 w-5 text-primary" /> {t("Podešavanja grupe")}
+                 </h2>
+                 <p className="text-sm text-muted-foreground">{grupa.naziv}</p>
+               </div>
+               {canEditGrupa && (
+                 <Link href={`/muallim/grupa/${grupa.id}/uredi`}
+                   className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-3 py-2 text-sm font-bold text-foreground hover:bg-muted/50"
+                   data-testid="btn-uredi-grupu-podesavanja">
+                   <Pencil className="h-4 w-4" /> {t("Uredi grupu")}
+                 </Link>
                )}
              </div>
-             <p className="mt-1 text-xs text-muted-foreground">{t("Muallimi mogu raditi s istom grupom učenika.")}</p>
-             <div className="mt-3 flex flex-wrap gap-2">
-               <span className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-900" data-testid="muallim-odgovorni">
-                 {t("Odgovorni muallim")}: {muallimiZaGrupe.find(m => m.userId === grupa.muallimId)?.displayName ?? grupa.muallimDisplayName ?? t("Muallim")}
-               </span>
-               {sekundarniMuallimi.map(m => (
-                 <span key={m.id} className="flex items-center gap-2 rounded-xl bg-primary/5 px-3 py-2 text-sm font-bold" data-testid={`muallim-dodatni-${m.id}`}>
-                   {m.displayName}
-                   {canManageMuallimi && (
-                     <button type="button" aria-label={`${t("Ukloni muallima iz grupe")}: ${m.displayName}`}
-                       data-testid={`button-ukloni-muallima-${m.id}`}
-                       disabled={removingSecMuallimId !== null}
-                       onClick={() => void removeSekundarniMuallim(m.id, m.displayName)}
-                       className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50">
-                       <X className="h-3.5 w-3.5" /> {t("Ukloni iz grupe")}
-                     </button>
-                   )}
-                 </span>
-               ))}
-             </div>
-             {showAddSecMuallim && canManageMuallimi && sekundarniMuallimi.length < 2 && (
-               <div className="mt-4 flex flex-wrap items-center gap-2">
-                 <select value={addSecMuallimId} onChange={e => setAddSecMuallimId(e.target.value ? Number(e.target.value) : "")}
-                   aria-label={t("Odaberi muallima")} data-testid="select-dodatni-muallim"
-                   className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2 text-sm">
-                   <option value="">{t("Odaberi muallima")}</option>
-                   {dostupniMuallimi.map(m => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}
-                 </select>
-                 <Button type="button" disabled={addingSecMuallim || !addSecMuallimId}
-                   onClick={() => void addSekundarniMuallim()} data-testid="button-potvrdi-dodatnog-muallima">
-                   {addingSecMuallim ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Dodaj")}
-                 </Button>
+             <section className="bg-white border border-border/50 rounded-2xl p-4 sm:p-5" data-testid="grupa-muallimi">
+               <div className="flex items-center justify-between gap-3">
+                 <h3 className="flex items-center gap-2 font-extrabold text-foreground">
+                   <Users className="h-5 w-5 text-primary" /> {t("Muallimi grupe")} ({1 + sekundarniMuallimi.length}/3)
+                 </h3>
+                 {canManageMuallimi && sekundarniMuallimi.length < 2 && dostupniMuallimi.length > 0 && (
+                   <button type="button" onClick={() => setShowAddSecMuallim(v => !v)}
+                     className="flex items-center gap-1 text-sm font-bold text-primary hover:underline"
+                     data-testid="button-dodaj-muallima-grupi">
+                     <Plus className="h-4 w-4" /> {t("Dodaj muallima grupi")}
+                   </button>
+                 )}
                </div>
-             )}
+               <p className="mt-1 text-xs text-muted-foreground">{t("Muallimi mogu raditi s istom grupom učenika.")}</p>
+               <div className="mt-3 flex flex-wrap gap-2">
+                 <span className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-900" data-testid="muallim-odgovorni">
+                   {t("Odgovorni muallim")}: {muallimiZaGrupe.find(m => m.userId === grupa.muallimId)?.displayName ?? grupa.muallimDisplayName ?? t("Muallim")}
+                 </span>
+                 {sekundarniMuallimi.map(m => (
+                   <span key={m.id} className="flex items-center gap-2 rounded-xl bg-primary/5 px-3 py-2 text-sm font-bold" data-testid={`muallim-dodatni-${m.id}`}>
+                     {m.displayName}
+                     {canManageMuallimi && (
+                       <button type="button" aria-label={`${t("Ukloni muallima iz grupe")}: ${m.displayName}`}
+                         data-testid={`button-ukloni-muallima-${m.id}`}
+                         disabled={removingSecMuallimId !== null}
+                         onClick={() => void removeSekundarniMuallim(m.id, m.displayName)}
+                         className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50">
+                         <X className="h-3.5 w-3.5" /> {t("Ukloni iz grupe")}
+                       </button>
+                     )}
+                   </span>
+                 ))}
+               </div>
+               {showAddSecMuallim && canManageMuallimi && sekundarniMuallimi.length < 2 && (
+                 <div className="mt-4 flex flex-wrap items-center gap-2">
+                   <select value={addSecMuallimId} onChange={e => setAddSecMuallimId(e.target.value ? Number(e.target.value) : "")}
+                     aria-label={t("Odaberi muallima")} data-testid="select-dodatni-muallim"
+                     className="min-w-0 flex-1 rounded-xl border border-border bg-white px-3 py-2 text-sm">
+                     <option value="">{t("Odaberi muallima")}</option>
+                     {dostupniMuallimi.map(m => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}
+                   </select>
+                   <Button type="button" disabled={addingSecMuallim || !addSecMuallimId}
+                     onClick={() => void addSekundarniMuallim()} data-testid="button-potvrdi-dodatnog-muallima">
+                     {addingSecMuallim ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Dodaj")}
+                   </Button>
+                 </div>
+               )}
+             </section>
            </section>
          )}
 

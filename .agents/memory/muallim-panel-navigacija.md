@@ -9,6 +9,12 @@ Pretraga, „Moje grupe” i „Mekteb” pripadaju vrhu desnog menija, a ne vel
 
 U učenikovom meniju „Lekcije” prikazuje tri taba za nivoe 1, 2 i 3, s mogućnošću zadavanja zadaće i ocjene direktno iz tog prikaza.
 
+Uz završenu lekciju stoji zelena kvačica prije „Zadaća” i „Ocjena”, prema istom napretku kao na učenikovoj mapi od cvijeta do cvijeta. Ocjena i status zadaće nisu zamjena za završavanje lekcije.
+
+Dodavanje i upravljanje muallimima pripada „Podešavanjima grupe”, ne kartici iznad spiska učenika.
+
+**Why:** Korisnik je izričito tražio zelenu kvačicu uz završenu lekciju i premještanje muallima grupe u podešavanja.
+
 Korisnikov tačan redoslijed učenikovog desnog menija: Pregled, Prisustvo, Lekcije, Kvizovi, Napamet, Zadaća, Ocjene, Statistika vježbi, Učenje u lekcijama, Roditelji, Nalog. U „Roditelji” traži formu za direktnu poruku tom roditelju.
 
 **Why:** Korisnik je izričito naveo ovaj redoslijed i naziv „Nalog” te zatražio slanje poruke iz roditeljskog modula učenika.

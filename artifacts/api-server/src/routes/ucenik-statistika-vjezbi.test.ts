@@ -36,8 +36,13 @@ let mektebId: number;
 let muallimId: number;
 let straniMuallimId: number;
 let ucenikId: number;
+let drugiUcenikId: number;
 let grupaId: number;
 let lekcijaId: number;
+let kanonskaLekcijaId: number;
+let legacyLekcijaId: number;
+let nezavrsenaLekcijaId: number;
+let drugiTipLekcijaId: number;
 let h5pPrilogId: number;
 let nasaVjezbaPrilogId: number;
 let vanjskaVjezbaPrilogId: number;
@@ -47,6 +52,7 @@ let token: string;
 let straniToken: string;
 
 interface Statistika {
+  completedLessonIds: number[];
   h5p: { vjezbe: number; pokusaji: number; prosjekProcenat: number | null; kapiMeda: number; stavke: Array<{ naziv: string; najboljiProcenat: number }> };
   naseVjezbe: { vjezbe: number; zavrseno: number; kapiMeda: number; stavke: Array<{ naziv: string }> };
   etapneVjezbe: { vjezbe: number; pokusaji: number; prosjekProcenat: number | null; stavke: Array<{ id: string; naziv: string; najboljiProcenat: number }> };
@@ -82,6 +88,10 @@ before(async () => {
     parentAcknowledgedAt: new Date(),
   }).returning({ id: usersTable.id });
   ucenikId = ucenik.id;
+  const [drugiUcenik] = await db.insert(usersTable).values({
+    username: `drugi-ucenik.${SUFFIX}`, displayName: `Drugi učenik ${SUFFIX}`, passwordHash: "x", role: "ucenik", isActive: true,
+  }).returning({ id: usersTable.id });
+  drugiUcenikId = drugiUcenik.id;
 
   await db.insert(muallimProfiliTable).values([
     { userId: muallimId, mektebId, isGlavni: false },
@@ -97,6 +107,17 @@ before(async () => {
     nivo: 1, slug: `lekcija-${SUFFIX}`, naslov: `Lekcija ${SUFFIX}`, redoslijed: 9000,
   }).returning({ id: ilmihalLekcijeTable.id });
   lekcijaId = lekcija.id;
+  const dodatneLekcije = await db.insert(ilmihalLekcijeTable).values([
+    { nivo: 1, slug: `kanonska-${SUFFIX}`, naslov: "Kanonska", redoslijed: 9001 },
+    { nivo: 1, slug: `legacy-${SUFFIX}`, naslov: "Legacy", redoslijed: 9002 },
+    { nivo: 1, slug: `nezavrsena-${SUFFIX}`, naslov: "Nezavršena", redoslijed: 9003 },
+    { nivo: 1, slug: `drugi-tip-${SUFFIX}`, naslov: "Drugi tip", redoslijed: 9004 },
+  ]).returning({ id: ilmihalLekcijeTable.id });
+  const [kanonskaLekcija, legacyLekcija, nezavrsenaLekcija, drugiTipLekcija] = dodatneLekcije;
+  kanonskaLekcijaId = kanonskaLekcija.id;
+  legacyLekcijaId = legacyLekcija.id;
+  nezavrsenaLekcijaId = nezavrsenaLekcija.id;
+  drugiTipLekcijaId = drugiTipLekcija.id;
 
   const [h5pPrilog] = await db.insert(prilozi).values({
     lekcijaId, originalName: "vjezba.h5p", kind: "h5p", approved: true,
@@ -134,7 +155,8 @@ before(async () => {
     { studentId: String(ucenikId), medaljonId, brojTacnih: 9, brojPitanja: 10, procenat: 90, polozeno: true, pokusajBr: 2 },
   ]);
   await db.insert(studentProgressTable).values({
-    studentId: String(ucenikId), completedLessons: [lekcijaId, lekcijaId, -1],
+    studentId: String(ucenikId),
+    completedLessons: [lekcijaId, lekcijaId, -1],
   });
   await db.insert(korisnikNapredakTable).values({
     userId: ucenikId, contentType: "ilmihal", contentId: lekcijaId, zavrsen: true,
@@ -181,7 +203,8 @@ after(async () => {
     await db.delete(etapaPolaganjaTable).where(eq(etapaPolaganjaTable.studentId, String(ucenikId)));
     await db.delete(studentMedaljoniTable).where(eq(studentMedaljoniTable.studentId, String(ucenikId)));
     await db.delete(studentProgressTable).where(eq(studentProgressTable.studentId, String(ucenikId)));
-    await db.delete(korisnikNapredakTable).where(eq(korisnikNapredakTable.userId, ucenikId));
+    if (drugiUcenikId) await db.delete(studentProgressTable).where(eq(studentProgressTable.studentId, String(drugiUcenikId)));
+    await db.delete(korisnikNapredakTable).where(inArray(korisnikNapredakTable.userId, [ucenikId, drugiUcenikId]));
     await db.delete(kvizRezultatiTable).where(eq(kvizRezultatiTable.userId, ucenikId));
     await db.delete(ocjeneTable).where(eq(ocjeneTable.ucenikId, ucenikId));
     await db.delete(priustvoTable).where(eq(priustvoTable.ucenikId, ucenikId));
@@ -190,8 +213,9 @@ after(async () => {
   const prilogIds = [h5pPrilogId, nasaVjezbaPrilogId, vanjskaVjezbaPrilogId].filter(Boolean);
   if (prilogIds.length) await db.delete(prilozi).where(inArray(prilozi.id, prilogIds));
   if (medaljonId) await db.delete(medaljoniTable).where(eq(medaljoniTable.id, medaljonId));
-  if (lekcijaId) await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lekcijaId));
-  const userIds = [muallimId, straniMuallimId, ucenikId].filter(Boolean);
+  const lekcijaIds = [lekcijaId, kanonskaLekcijaId, legacyLekcijaId, nezavrsenaLekcijaId, drugiTipLekcijaId].filter(Boolean);
+  if (lekcijaIds.length) await db.delete(ilmihalLekcijeTable).where(inArray(ilmihalLekcijeTable.id, lekcijaIds));
+  const userIds = [muallimId, straniMuallimId, ucenikId, drugiUcenikId].filter(Boolean);
   if (userIds.length) {
     await db.delete(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, userIds));
     await db.delete(muallimProfiliTable).where(inArray(muallimProfiliTable.userId, userIds));
@@ -231,6 +255,45 @@ test("naše vježbe se razdvajaju od vanjskih alata", async () => {
   assert.equal(stat.naseVjezbe.stavke[0].naziv, "Osmosmjerka: abdest");
   assert.equal(stat.vanjskeVjezbe.zavrseno, 1);
   assert.equal(stat.vanjskeVjezbe.kapiMeda, 2);
+});
+
+test("statistika vraća spojene, deduplicirane i učeniku scoped završene lekcije", async () => {
+  await db.update(studentProgressTable).set({
+    completedLessons: [lekcijaId, lekcijaId, -1, kanonskaLekcijaId, "123"] as unknown as number[],
+  }).where(eq(studentProgressTable.studentId, String(ucenikId)));
+  const temporaryNapredak = await db.insert(korisnikNapredakTable).values([
+    { userId: ucenikId, contentType: "ilmihal", contentId: legacyLekcijaId, zavrsen: true },
+    { userId: ucenikId, contentType: "ilmihal", contentId: nezavrsenaLekcijaId, zavrsen: false },
+    { userId: ucenikId, contentType: "drugi-tip", contentId: drugiTipLekcijaId, zavrsen: true },
+    { userId: drugiUcenikId, contentType: "ilmihal", contentId: drugiTipLekcijaId, zavrsen: true },
+  ]).returning({ id: korisnikNapredakTable.id });
+  await db.insert(studentProgressTable).values({
+    studentId: String(drugiUcenikId), completedLessons: [drugiTipLekcijaId],
+  });
+
+  try {
+    const odgovor = await fetch(`${baseUrl}/api/muallim/ucenik/${ucenikId}/statistika-vjezbi`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.equal(odgovor.status, 200);
+    const stat = await odgovor.json() as Statistika;
+
+    assert.deepEqual(
+      [...stat.completedLessonIds].sort((a, b) => a - b),
+      [-1, lekcijaId, kanonskaLekcijaId, legacyLekcijaId].sort((a, b) => a - b),
+    );
+    assert.equal(new Set(stat.completedLessonIds).size, stat.completedLessonIds.length);
+    assert.ok(!stat.completedLessonIds.includes(nezavrsenaLekcijaId));
+    assert.ok(!stat.completedLessonIds.includes(drugiTipLekcijaId));
+  } finally {
+    await db.delete(korisnikNapredakTable).where(inArray(
+      korisnikNapredakTable.id, temporaryNapredak.map(row => row.id),
+    ));
+    await db.delete(studentProgressTable).where(eq(studentProgressTable.studentId, String(drugiUcenikId)));
+    await db.update(studentProgressTable).set({
+      completedLessons: [lekcijaId, lekcijaId, -1],
+    }).where(eq(studentProgressTable.studentId, String(ucenikId)));
+  }
 });
 
 test("etapni kviz se broji jednom, sa najboljim rezultatom i ishodom", async () => {
