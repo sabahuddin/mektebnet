@@ -19,6 +19,7 @@ import RoditeljiTab from "./roditelji-tab";
 import PitanjaPrijedloziTab from "./pitanja-prijedlozi-tab";
 import BiltenTab from "./bilten-tab";
 import { Button } from "@/components/ui/button";
+import { LinkifiedText } from "@/components/linkified-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
@@ -3471,7 +3472,7 @@ export default function MuallimPanel() {
                                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{t("Cijela grupa")}</span>
                                     )}
                                   </div>
-                                  {z.opis && <p className="text-sm text-muted-foreground mt-1">{z.opis}</p>}
+                                  {z.opis && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words"><LinkifiedText text={z.opis} /></p>}
                                   <div className="flex items-center gap-4 mt-2 flex-wrap">
                                     {z.rokDo && (
                                       <span className="text-xs text-muted-foreground flex items-center gap-1">

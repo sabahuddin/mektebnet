@@ -13,6 +13,7 @@ import {
   User, ChevronDown, Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LinkifiedText } from "@/components/linkified-text";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/context/language";
 import { goBackOr } from "@/lib/back-navigation";
@@ -1561,7 +1562,7 @@ export default function GrupaPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <p className="font-extrabold text-sm text-foreground">{z.naslov}</p>
-                          {z.opis && <p className="text-xs text-muted-foreground mt-1">{z.opis}</p>}
+                          {z.opis && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap break-words"><LinkifiedText text={z.opis} /></p>}
                         </div>
                         {z.ocjena != null || z.ocjenaOpisna
                           ? <span className="rounded-full bg-emerald-100 text-emerald-700 px-2 py-1 text-xs font-extrabold">

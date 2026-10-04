@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Layout } from "@/components/layout";
+import { LinkifiedText } from "@/components/linkified-text";
 import { goBackOr } from "@/lib/back-navigation";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
@@ -176,7 +177,7 @@ function ZadacaCard({ z, index, expired }: { z: ZadacaRoditelj; index: number; e
               <span className="text-xs text-muted-foreground bg-muted/60 rounded-full px-2 py-0.5 font-medium">{z.grupaNaziv}</span>
             )}
           </div>
-          {z.opis && <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">{z.opis}</p>}
+          {z.opis && <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap break-words"><LinkifiedText text={z.opis} /></p>}
           <div className="flex items-center gap-4 flex-wrap">
             {z.rokDo && (
               <span className={`text-xs flex items-center gap-1 ${expired ? "text-red-600 font-bold" : "text-muted-foreground"}`}>

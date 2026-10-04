@@ -10,6 +10,7 @@ import { CalendarCheck, Star, Link2, Loader2, CheckCircle2, XCircle, AlertCircle
 import { PushToggle } from "@/components/push-toggle";
 import { SelamSetting } from "@/components/selam-setting";
 import { Button } from "@/components/ui/button";
+import { LinkifiedText } from "@/components/linkified-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -767,7 +768,7 @@ function DijeteContent({
                               <BookOpen className="w-3 h-3 shrink-0" /> {z.lekcijaNaslov}
                             </div>
                           )}
-                          {z.opis && <div className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{z.opis}</div>}
+                          {z.opis && <div className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap break-words"><LinkifiedText text={z.opis} /></div>}
                           {z.grupaNaziv && (
                             <div className="text-[11px] text-muted-foreground/80 mt-0.5">{z.grupaNaziv}</div>
                           )}

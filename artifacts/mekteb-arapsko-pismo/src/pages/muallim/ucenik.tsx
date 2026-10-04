@@ -7,6 +7,7 @@ import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/language";
 import { ArrowLeft, User, CalendarCheck, Star, PlusCircle, Loader2, ClipboardList, Award, KeyRound, FileText, Copy, Check, Sparkles, Users, UserPlus, Search, X, Clock, BookOpen, CheckCircle2, AlertCircle, Medal, Trash2, TrendingUp, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LinkifiedText } from "@/components/linkified-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1307,7 +1308,7 @@ export default function UcenikPage() {
                                 </span>
                               </div>
                               {z.opis && (
-                                <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-2 pl-12">{z.opis}</p>
+                                <p className="text-sm text-foreground/80 whitespace-pre-wrap break-words mt-2 pl-12"><LinkifiedText text={z.opis} /></p>
                               )}
                               {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
                                 <div className="flex flex-wrap items-center gap-2 mt-3 pl-12">

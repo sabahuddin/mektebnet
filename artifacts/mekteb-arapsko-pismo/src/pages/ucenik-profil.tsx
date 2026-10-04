@@ -14,6 +14,7 @@ import {
   FileText, Clock, AlertCircle, Medal, Lock, CheckCircle2, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LinkifiedText } from "@/components/linkified-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -1270,7 +1271,7 @@ export default function UcenikProfilPage() {
                             </span>
                           </div>
                           {z.opis && (
-                            <p className="text-sm text-foreground/80 whitespace-pre-wrap break-words mt-3 sm:pl-12">{z.opis}</p>
+                            <p className="text-sm text-foreground/80 whitespace-pre-wrap break-words mt-3 sm:pl-12"><LinkifiedText text={z.opis} /></p>
                           )}
                           {(isDone || (z.prolongCount ?? 0) > 0 || (z.kapiMeda ?? 0) > 0 || (z.ocjena ?? null) !== null) && (
                             <div className="flex flex-wrap items-center gap-2 mt-3 sm:pl-12">
