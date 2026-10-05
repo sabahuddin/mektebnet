@@ -6381,7 +6381,7 @@ router.put("/grupe/:id/podgrupe", async (req, res) => {
 
 router.post("/zadace", async (req, res) => {
   try {
-    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds, tipDodjele, podgrupaId } = req.body;
+    const { grupaId, naslov, opis, rokDo, lekcijaNaslov, lekcijaSlug, lekcijaTip, ucenikIds, tipDodjele, podgrupaId, dodatneGrupeIds } = req.body;
     const quranPageMatch = typeof lekcijaSlug === "string" ? /^kuran-stranica-([1-9]\d*)$/.exec(lekcijaSlug) : null;
     const quranPage = quranPageMatch && Number(quranPageMatch[1]) <= 604 ? Number(quranPageMatch[1]) : null;
     if (Array.isArray(req.body?.priloziIds) && req.body.priloziIds.length > 0) {
@@ -6390,6 +6390,19 @@ router.post("/zadace", async (req, res) => {
     }
     // naslov više nije obavezan — nova UX koristi lekciju kao naziv zadaće.
     if (!grupaId) { res.status(400).json({ error: "grupaId je obavezan" }); return; }
+    if (!Number.isSafeInteger(grupaId) || grupaId <= 0) {
+      res.status(400).json({ error: "Neispravna grupa" }); return;
+    }
+    if (dodatneGrupeIds !== undefined && (!Array.isArray(dodatneGrupeIds)
+      || dodatneGrupeIds.length > 100
+      || dodatneGrupeIds.some((id: unknown) => !Number.isSafeInteger(id) || Number(id) <= 0))) {
+      res.status(400).json({ error: "Neispravan izbor dodatnih grupa" }); return;
+    }
+    if (dodatneGrupeIds?.length && (tipDodjele !== "svi" || podgrupaId != null
+      || (ucenikIds !== undefined && (!Array.isArray(ucenikIds) || ucenikIds.length > 0)))) {
+      res.status(400).json({ error: "Dodjela drugim grupama dostupna je samo za zadaću za sve učenike" }); return;
+    }
+    const ciljneGrupeIds = [...new Set<number>([grupaId, ...(dodatneGrupeIds ?? [])])];
     const individualna = tipDodjele === undefined
       ? Array.isArray(ucenikIds) && ucenikIds.length > 0
       : tipDodjele === "pojedinacno";
@@ -6410,6 +6423,11 @@ router.post("/zadace", async (req, res) => {
 
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+    for (const dodatnaGrupaId of ciljneGrupeIds.slice(1)) {
+      if (!await verifyGrupaAccess(dodatnaGrupaId, req.user!.userId, req.user!.role)) {
+        res.status(403).json({ error: "Nemate pristup jednoj od odabranih grupa" }); return;
+      }
+    }
     if (tipDodjele === "podgrupa" && (!Number.isSafeInteger(podgrupaId) || podgrupaId <= 0)) {
       res.status(400).json({ error: "Odaberi ispravnu podgrupu" }); return;
     }
@@ -6471,7 +6489,14 @@ router.post("/zadace", async (req, res) => {
       }
     }
 
-    const nova = await db.transaction(async (tx) => {
+    const kreiraneZadace = await db.transaction(async (tx) => {
+      const lockedGroups = await tx.select({ id: grupeTable.id }).from(grupeTable)
+        .where(and(
+          inArray(grupeTable.id, ciljneGrupeIds),
+          sql`COALESCE(is_archived, false) = false`,
+          sql`COALESCE(is_active, true) = true`,
+        )).for("share");
+      if (lockedGroups.length !== ciljneGrupeIds.length) throw new Error("INVALID_TARGET_GROUPS");
       if (tipDodjele === "podgrupa") {
         await tx.execute(sql`SELECT id FROM grupe WHERE id = ${grupaId} FOR SHARE`);
         const [currentSubgroup] = await tx.select({ id: podgrupeTable.id }).from(podgrupeTable)
@@ -6490,23 +6515,24 @@ router.post("/zadace", async (req, res) => {
           ))).map(row => row.ucenikId);
         if (!validUcenikIds.length) throw new Error("EMPTY_SUBGROUP");
       }
-      const [created] = await tx.insert(zadaceTable).values({
-        grupaId, muallimId: req.user!.userId, naslov: naslovFinal, opis: opis || null,
+      const created = await tx.insert(zadaceTable).values(ciljneGrupeIds.map(ciljnaGrupaId => ({
+        grupaId: ciljnaGrupaId, muallimId: req.user!.userId, naslov: naslovFinal, opis: opis || null,
         rokDo: rokDo || null, lekcijaNaslov: lekcijaNaslov || null, lekcijaSlug: canonicalSlug,
         lekcijaTip: quranPage ? "kuran" : canonicalSlug ? "ilmihal" : (lekcijaTip || null),
         podgrupaId: tipDodjele === "podgrupa" ? podgrupaId : null,
         isTargeted: individualna || tipDodjele === "podgrupa",
-      }).returning();
-      if (validUcenikIds.length) await tx.insert(zadaceUceniciTable).values(validUcenikIds.map(ucenikId => ({ zadacaId: created.id, ucenikId })));
+      }))).returning();
+      if (validUcenikIds.length) await tx.insert(zadaceUceniciTable).values(validUcenikIds.map(ucenikId => ({ zadacaId: created[0].id, ucenikId })));
       return created;
     });
 
+    for (const nova of kreiraneZadace) {
     // Push notifikacija — ciljanim učenicima ili cijeloj grupi (default).
     const notifyIds = nova.isTargeted
       ? validUcenikIds
       : (await db.select({ userId: ucenikProfiliTable.userId })
           .from(ucenikProfiliTable)
-          .where(eq(ucenikProfiliTable.grupaId, grupaId))).map(u => u.userId);
+          .where(eq(ucenikProfiliTable.grupaId, nova.grupaId))).map(u => u.userId);
     if (notifyIds.length > 0) {
       const opisPreview = opis && typeof opis === "string" && opis.trim()
         ? (opis.trim().length > 80 ? opis.trim().slice(0, 80) + "…" : opis.trim())
@@ -6540,9 +6566,19 @@ router.post("/zadace", async (req, res) => {
         }
       })().catch(err => console.error("[zadaca-notify-roditelj] background notify failed", err));
     }
+    }
 
-    res.status(201).json({ ...nova, ucenikIds: validUcenikIds, prilozi: await getHomeworkAttachments([nova.id]).then(m => m.get(nova.id) || []) });
+    const nova = kreiraneZadace.find(z => z.grupaId === grupaId)!;
+    res.status(201).json({
+      ...nova, ucenikIds: validUcenikIds,
+      prilozi: await getHomeworkAttachments([nova.id]).then(m => m.get(nova.id) || []),
+      dodatneZadace: kreiraneZadace.filter(z => z.grupaId !== grupaId).map(z => ({ ...z, ucenikIds: [], prilozi: [] })),
+    });
   } catch (err) {
+    if (err instanceof Error && err.message === "INVALID_TARGET_GROUPS") {
+      res.status(409).json({ error: "Odabrane grupe više nisu aktivne. Osvježite izbor grupa." });
+      return;
+    }
     if (err instanceof Error && (err.message === "INVALID_SUBGROUP" || err.message === "EMPTY_SUBGROUP")) {
       res.status(400).json({ error: err.message === "INVALID_SUBGROUP" ? "Podgrupa ne pripada ovoj grupi" : "Podgrupa nema aktivnih učenika" });
       return;

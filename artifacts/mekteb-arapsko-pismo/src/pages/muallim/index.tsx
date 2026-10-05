@@ -20,6 +20,7 @@ import PitanjaPrijedloziTab from "./pitanja-prijedlozi-tab";
 import BiltenTab from "./bilten-tab";
 import { Button } from "@/components/ui/button";
 import { LinkifiedText } from "@/components/linkified-text";
+import { HomeworkGroupPicker } from "@/components/homework-group-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { LekcijaPicker } from "@/components/LekcijaPicker";
@@ -327,6 +328,7 @@ interface Zadaca {
   isActive: boolean;
   createdAt: string;
   ucenikIds?: number[];
+  isTargeted?: boolean;
   podgrupaId?: number | null;
   zavrsenih?: number;
   ocijenjenih?: number;
@@ -655,6 +657,12 @@ export default function MuallimPanel() {
   const [planGrupaId, setPlanGrupaId] = useState<number | null>(null);
 
   const [zadGrupaId, setZadGrupaId] = useState<number | null>(null);
+  const [zadDodatneGrupeIds, setZadDodatneGrupeIds] = useState<Set<number>>(new Set());
+  const [zadacaZaKopiranje, setZadacaZaKopiranje] = useState<Zadaca | null>(null);
+  useEffect(() => {
+    setZadDodatneGrupeIds(new Set());
+    setZadacaZaKopiranje(null);
+  }, [zadGrupaId]);
   const [zadace, setZadace] = useState<Zadaca[]>([]);
   const [zadLoading, setZadLoading] = useState(false);
   const [zadPodgrupe, setZadPodgrupe] = useState<Podgrupa[]>([]);
@@ -1053,6 +1061,10 @@ export default function MuallimPanel() {
 
   async function saveZadaca() {
     if (!token || !zadGrupaId) return;
+    if (zadacaZaKopiranje && zadDodatneGrupeIds.size === 0) {
+      toast({ title: t("Odaberi najmanje jednu drugu grupu"), variant: "destructive" });
+      return;
+    }
     // Lekcija je naziv zadaće; ako nema lekcije, opis je obavezan.
     if (!zadLekcija.trim() && !zadOpis.trim()) {
       toast({ title: t("Odaberi lekciju ili upiši opis"), variant: "destructive" });
@@ -1077,8 +1089,11 @@ export default function MuallimPanel() {
         ? dostupneLekcije.find(l => l.slug === zadLekcijaSlug)?.izvorniNaslov ?? zadLekcija
         : zadLekcija;
       const payload = {
-        grupaId: zadGrupaId,
-        naslov: izvorniNaslov.trim() || zadOpis.trim().slice(0, 80),
+        grupaId: zadacaZaKopiranje ? Array.from(zadDodatneGrupeIds)[0] : zadGrupaId,
+        dodatneGrupeIds: !editingZadaca && zadDodjela === "svi"
+          ? Array.from(zadDodatneGrupeIds).slice(zadacaZaKopiranje ? 1 : 0)
+          : [],
+        naslov: izvorniNaslov.trim() || zadacaZaKopiranje?.naslov || zadOpis.trim().slice(0, 80),
         opis: zadOpis.trim() || null,
         rokDo: zadRokDo || null,
         lekcijaNaslov: izvorniNaslov || null,
@@ -1088,7 +1103,7 @@ export default function MuallimPanel() {
          podgrupaId: zadDodjela === "podgrupa" ? zadPodgrupaId : null,
          ucenikIds: zadDodjela === "pojedinacno" ? Array.from(zadUcenikIds) : [],
       };
-      const saved = await apiRequest<Zadaca>(
+      const saved = await apiRequest<Zadaca & { dodatneZadace?: Zadaca[] }>(
         editingZadaca ? "PUT" : "POST",
         editingZadaca ? `/muallim/zadace/${editingZadaca.id}` : "/muallim/zadace",
         payload,
@@ -1096,19 +1111,28 @@ export default function MuallimPanel() {
       );
       setZadace(prev => editingZadaca
         ? prev.map(z => z.id === saved.id ? saved : z)
-        : [saved, ...prev]);
+        : saved.grupaId === zadGrupaId ? [saved, ...prev] : prev);
       setZadOpis(""); setZadRokDo(""); setZadLekcija(""); setZadLekcijaSlug(""); setZadUcenikIds(new Set()); setZadPodgrupaId(null);
       setZadDodjela("svi");
       setEditingZadaca(null);
+      setZadacaZaKopiranje(null);
+      setZadDodatneGrupeIds(new Set());
       setShowZadForm(false);
       setZadTipTab(saved.ucenikIds?.length ? "pojedinacno" : "svi");
       setZadSubTab("utoku");
-      toast({ title: editingZadaca ? t("Zadaća ažurirana") : t("Zadaća dodana!") });
-    } catch { toast({ title: t("Greška"), variant: "destructive" }); }
+      toast({
+        title: editingZadaca ? t("Zadaća ažurirana") : t("Zadaća dodana!"),
+        description: !editingZadaca && (zadacaZaKopiranje || saved.dodatneZadace?.length)
+          ? t("Broj grupa kojima je dodijeljena zadaća: {broj}", { broj: String(1 + (saved.dodatneZadace?.length ?? 0)) })
+          : undefined,
+      });
+    } catch (error) { toast({ title: t("Greška"), description: error instanceof Error ? error.message : undefined, variant: "destructive" }); }
     finally { setSavingZadaca(false); }
   }
 
   function openEditZadaca(zadaca: Zadaca) {
+    setZadacaZaKopiranje(null);
+    setZadDodatneGrupeIds(new Set());
     setEditingZadaca(zadaca);
     setZadLekcija(zadaca.lekcijaNaslov || "");
     setZadLekcijaSlug(zadaca.lekcijaSlug || "");
@@ -1120,6 +1144,16 @@ export default function MuallimPanel() {
     setZadTipTab(zadaca.ucenikIds?.length ? "pojedinacno" : "svi");
     setZadSubTab("nova");
     setShowZadForm(true);
+  }
+
+  function openCopyZadaca(zadaca: Zadaca) {
+    openEditZadaca(zadaca);
+    setEditingZadaca(null);
+    setZadacaZaKopiranje(zadaca);
+    setZadDodjela("svi");
+    setZadUcenikIds(new Set());
+    setZadPodgrupaId(null);
+    setZadTipTab("svi");
   }
 
   async function deleteZadaca(id: number) {
@@ -3214,6 +3248,8 @@ export default function MuallimPanel() {
                                   setZadTipTab(tab.id);
                                    setZadDodjela(tab.id);
                                   setEditingZadaca(null);
+                                  setZadacaZaKopiranje(null);
+                                  setZadDodatneGrupeIds(new Set());
                                   setShowZadForm(false);
                                   setZadSubTab("utoku");
                                   if (tab.id === "svi") setZadUcenikIds(new Set());
@@ -3235,6 +3271,8 @@ export default function MuallimPanel() {
                           const opening = zadSubTab !== "nova";
                           if (opening) {
                             setEditingZadaca(null);
+                            setZadacaZaKopiranje(null);
+                            setZadDodatneGrupeIds(new Set());
                             setZadRokDo("");
                             setZadDodjela("svi");
                             setZadPodgrupaId(null);
@@ -3255,10 +3293,10 @@ export default function MuallimPanel() {
                         className="bg-white border border-border/50 rounded-2xl p-4 sm:p-5">
                         <h4 className="font-extrabold text-foreground mb-4 flex items-center gap-2">
                           {editingZadaca ? <Pencil className="w-4 h-4 text-primary" /> : <Plus className="w-4 h-4 text-primary" />}
-                          {editingZadaca ? t("Uredi zadaću") : t("Nova zadaća")}
+                          {zadacaZaKopiranje ? t("Dodaj zadaću drugim grupama") : editingZadaca ? t("Uredi zadaću") : t("Nova zadaća")}
                         </h4>
                         <div className="grid sm:grid-cols-2 gap-4">
-                           <div className="sm:col-span-2">
+                           <div className={`sm:col-span-2 ${zadacaZaKopiranje ? "hidden" : ""}`}>
                              <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Dodjela zadaće")}</label>
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                <button
@@ -3288,7 +3326,7 @@ export default function MuallimPanel() {
                                 </button>
                              </div>
                            </div>
-                           {zadDodjela === "svi" && (
+                            {zadDodjela === "svi" && !zadacaZaKopiranje && (
                             <div className="sm:col-span-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
                               {t("Ova zadaća bit će dodijeljena svim aktivnim učenicima odabrane grupe.")}
                             </div>
@@ -3327,6 +3365,16 @@ export default function MuallimPanel() {
                                  </>
                                )}
                              </div>
+                           )}
+                           {zadDodjela === "svi" && !editingZadaca && grupe.some(g => g.id !== zadGrupaId && !g.isArchived) && (
+                             <HomeworkGroupPicker
+                               groups={grupe.filter(g => g.id !== zadGrupaId && !g.isArchived)}
+                               selectedIds={zadDodatneGrupeIds}
+                               onChange={setZadDodatneGrupeIds}
+                               disabled={savingZadaca}
+                               currentGroupName={grupe.find(g => g.id === zadGrupaId)?.naziv}
+                               copyOnly={Boolean(zadacaZaKopiranje)}
+                             />
                            )}
                           <div className="sm:col-span-2">
                             <label className="text-sm font-bold text-muted-foreground block mb-1">{t("Lekcija")}</label>
@@ -3415,7 +3463,7 @@ export default function MuallimPanel() {
                           <button onClick={() => { setShowZadForm(false); setEditingZadaca(null); setZadSubTab("utoku"); setZadUcenikIds(new Set()); setZadPodgrupaId(null); setZadOpis(""); setZadRokDo(""); setZadLekcija(""); setZadLekcijaSlug(""); }} className="w-full text-muted-foreground hover:text-foreground text-sm font-medium px-4 py-2 sm:w-auto">
                             {t("Otkaži")}
                           </button>
-                          <Button onClick={saveZadaca} disabled={savingZadaca || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2) || (zadDodjela === "podgrupa" && (zadPodgrupaId == null || zadPodgrupeLoading || !zadPodgrupe.some(podgrupa => podgrupa.id === zadPodgrupaId) || (editingZadaca?.podgrupaId !== zadPodgrupaId && (zadPodgrupe.find(podgrupa => podgrupa.id === zadPodgrupaId)?.ucenikIds.length ?? 0) === 0)))} className="w-full rounded-xl font-bold sm:w-auto">
+                          <Button onClick={saveZadaca} disabled={savingZadaca || (zadacaZaKopiranje != null && zadDodatneGrupeIds.size === 0) || (!zadLekcija.trim() && !zadOpis.trim()) || (zadDodjela === "pojedinacno" && zadUcenikIds.size < 2) || (zadDodjela === "podgrupa" && (zadPodgrupaId == null || zadPodgrupeLoading || !zadPodgrupe.some(podgrupa => podgrupa.id === zadPodgrupaId) || (editingZadaca?.podgrupaId !== zadPodgrupaId && (zadPodgrupe.find(podgrupa => podgrupa.id === zadPodgrupaId)?.ucenikIds.length ?? 0) === 0)))} className="w-full rounded-xl font-bold sm:w-auto">
                             {savingZadaca ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> {editingZadaca ? t("Sačuvaj izmjene") : t("Sačuvaj")}</>}
                           </Button>
                         </div>
@@ -3503,6 +3551,13 @@ export default function MuallimPanel() {
                                     className="rounded-xl font-bold flex items-center gap-1.5">
                                     <Eye className="w-4 h-4" /> {t("Pregled")}
                                   </Button>
+                                  {!z.isTargeted && !z.ucenikIds?.length && !z.podgrupaId && grupe.some(g => g.id !== zadGrupaId && !g.isArchived) && (
+                                    <Button onClick={() => openCopyZadaca(z)} variant="outline" size="sm"
+                                      className="rounded-xl font-bold flex items-center gap-1.5"
+                                      data-testid={`homework-copy-${z.id}`}>
+                                      <Users className="w-4 h-4" /> {t("Dodaj drugim grupama")}
+                                    </Button>
+                                  )}
                                    <Button onClick={() => openEditZadaca(z)} variant="outline" size="sm"
                                      className="rounded-xl font-bold flex items-center gap-1.5" title={t("Uredi zadaću")}>
                                      <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">{t("Uredi")}</span>
