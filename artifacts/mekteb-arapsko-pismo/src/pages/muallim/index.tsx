@@ -1420,20 +1420,8 @@ export default function MuallimPanel() {
     if (!token) return;
     setExportingExcel(true);
     try {
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
-      const res = await fetch(`${API_BASE}/muallim/grupa/${grupaId}/izvjestaj-excel`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Export failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const disposition = res.headers.get("content-disposition");
-      const filename = disposition?.match(/filename="(.+)"/)?.[1] || `izvjestaj_${grupaId}.xlsx`;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const { downloadGroupExcel } = await import("@/lib/group-report-download");
+      await downloadGroupExcel(grupaId, token);
       toast({ title: t("Excel izvještaj preuzet!") });
     } catch {
       toast({ title: t("Greška pri preuzimanju"), variant: "destructive" });

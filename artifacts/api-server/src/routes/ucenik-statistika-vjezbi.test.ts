@@ -27,6 +27,8 @@ import {
 import app from "../app.js";
 import { signToken } from "../middlewares/auth.js";
 import type { GroupStatisticsDetails } from "../lib/group-statistics-details.js";
+import { sanitizeExcelCell, type ReportSection } from "../lib/group-statistics-report.js";
+import * as XLSX from "xlsx";
 
 const SUFFIX = `stat-vjezbi-${Date.now()}`;
 
@@ -438,6 +440,16 @@ test("arhivirani učenik nije u detaljima, aktivan bez aktivnosti ima prazne sek
     assert.deepEqual(result.detaljiUcenika.find(d => d.id === ids[0]), {
       id: ids[0], lekcije: [], kvizovi: [], ocjene: [], etape: [], medaljoni: [],
     });
+    const reportRes = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/izvjestaj-statistika`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.equal(reportRes.status, 200);
+    const report = await reportRes.json() as { ucenici: Array<{ id: number }>; sections: ReportSection[] };
+    assert.deepEqual(report.ucenici.map(u => u.id).sort((a, b) => a - b), [ucenikId, ids[0]].sort((a, b) => a - b));
+    const archiveOnly = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/izvjestaj-statistika?ucenici=${ids[1]}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    assert.deepEqual(((await archiveOnly.json()) as { ucenici: unknown[] }).ucenici, []);
   } finally {
     if (ids.length) {
       await db.delete(studentProgressTable).where(inArray(studentProgressTable.studentId, ids.map(String)));
@@ -445,6 +457,88 @@ test("arhivirani učenik nije u detaljima, aktivan bez aktivnosti ima prazne sek
       await db.delete(usersTable).where(inArray(usersTable.id, ids));
     }
   }
+});
+
+test("štampa i stvarni XLSX imaju istih šest sekcija, sažetke i sve detalje", async () => {
+  const headers = { Authorization: `Bearer ${token}` };
+  const response = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/izvjestaj-statistika`, { headers });
+  assert.equal(response.status, 200);
+  const report = await response.json() as { naslov: string; period: string; sections: ReportSection[] };
+  assert.deepEqual(report.sections.map(s => s.id), ["prisustvo", "lekcije", "vjezbe", "kvizovi", "ocjene", "etape"]);
+  const section = (id: string) => report.sections.find(s => s.id === id)!;
+  assert.equal(section("prisustvo").summary.find(m => m.label === "Prisustvo grupe")!.value, "50%");
+  assert.deepEqual(section("kvizovi").tables[0].rows[0].slice(1), [2, 1, "70%", 14]);
+  assert.deepEqual(section("ocjene").tables[0].rows[0].slice(1), [5, 1, 1]);
+  assert.equal(section("ocjene").tables[2].rows.length, 1);
+  assert.equal(section("ocjene").tables[3].rows[0][3], "Urađeno");
+  assert.deepEqual(section("etape").tables[0].rows[0].slice(1), [1, 1, 1]);
+  assert.equal(section("etape").tables[1].rows[0][4], 2);
+  assert.equal(section("etape").tables[2].rows.length, 1);
+  assert.ok(!JSON.stringify(report).includes("2020-09-01"));
+  assert.deepEqual(section("vjezbe").tables[0].rows[0].slice(1), [1, 1, 2, "75%", 1, 1, "100%"]);
+
+  const excel = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/izvjestaj-excel`, { headers });
+  assert.equal(excel.status, 200);
+  assert.match(excel.headers.get("content-type")!, /spreadsheetml/);
+  assert.match(excel.headers.get("content-disposition")!, /filename\*=UTF-8''/);
+  const workbook = XLSX.read(Buffer.from(await excel.arrayBuffer()), { type: "buffer" });
+  assert.deepEqual(workbook.SheetNames, ["Zbirni izvještaj", ...report.sections.map(s => s.title)]);
+  for (const s of report.sections) {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[s.title], { header: 1, blankrows: true, defval: null }) as Array<Array<string | number | null>>;
+    const expected = [[report.period], [s.title], ...s.summary.map(m => [m.label, m.value]), [],
+      ...s.tables.flatMap(t => [[t.title], t.headers, ...t.rows, []])];
+    // XLSX omits trailing null cells and empty trailing rows.
+    const normalize = (data: Array<Array<string | number | null>>) => data.map(row => {
+      const r = row.map(v => sanitizeExcelCell(v));
+      while (r.length && r[r.length - 1] == null) r.pop();
+      return r;
+    }).filter(row => row.length);
+    assert.deepEqual(normalize(rows), normalize(expected), s.title);
+  }
+});
+
+test("izbor učenika/sekcija i period ostaju isti u štampi i Excelu, učenje se ne resetuje", async () => {
+  const headers = { Authorization: `Bearer ${token}` };
+  const year = new Date().getUTCMonth() >= 7 ? new Date().getUTCFullYear() : new Date().getUTCFullYear() - 1;
+  const query = `ucenici=${ucenikId}&od=${year}-08-01&do=${year}-08-01`;
+  const response = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/izvjestaj-statistika?${query}`, { headers });
+  assert.equal(response.status, 200);
+  const report = await response.json() as { sections: ReportSection[] };
+  const sections = new Map(report.sections.map(s => [s.id, s]));
+  assert.equal(sections.get("ocjene")!.tables[2].rows.length, 0);
+  assert.equal(sections.get("prisustvo")!.tables[1].rows.length, 0);
+  assert.equal(sections.get("kvizovi")!.tables[1].rows.length, 2);
+  assert.equal(sections.get("lekcije")!.tables[1].rows.length, 1);
+  assert.equal(sections.get("etape")!.tables[2].rows.length, 1);
+  const selectedExcel = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/izvjestaj-excel?${query}&sekcije=lekcije,etape`, { headers });
+  assert.equal(selectedExcel.status, 200);
+  const wb = XLSX.read(Buffer.from(await selectedExcel.arrayBuffer()), { type: "buffer" });
+  assert.deepEqual(wb.SheetNames, ["Zbirni izvještaj", "Lekcije", "Etape i medaljoni"]);
+  for (const filter of ["ucenici=", `ucenici=${straniMuallimId}`]) {
+    const empty = await fetch(`${baseUrl}/api/muallim/grupa/${grupaId}/izvjestaj-statistika?${filter}`, { headers });
+    assert.equal(empty.status, 200);
+    assert.deepEqual(((await empty.json()) as { ucenici: unknown[] }).ucenici, []);
+  }
+});
+
+test("oba izvještaja štite pristup i odbijaju neispravne filtere", async () => {
+  for (const route of ["izvjestaj-statistika", "izvjestaj-excel"]) {
+    const base = `${baseUrl}/api/muallim/grupa/${grupaId}/${route}`;
+    assert.equal((await fetch(base, { headers: { Authorization: `Bearer ${straniToken}` } })).status, 403);
+    assert.equal((await fetch(base)).status, 401);
+    for (const filter of ["ucenici=abc", "sekcije=zvjezdice", "od=2026-02-30", "od=2026-10-01&do=2026-09-01"]) {
+      assert.equal((await fetch(`${base}?${filter}`, { headers: { Authorization: `Bearer ${token}` } })).status, 400);
+    }
+  }
+});
+
+test("Excel štiti svaki tekstualni podatak od formula, a brojevi ostaju brojevi", () => {
+  for (const value of ["=1+1", "+123", "-1+1", "@SUM(A1)", "\tformula", "\rformula"]) {
+    assert.equal(sanitizeExcelCell(value), "'" + value);
+  }
+  assert.equal(sanitizeExcelCell("Normalan naziv"), "Normalan naziv");
+  assert.equal(sanitizeExcelCell(50), 50);
+  assert.equal(sanitizeExcelCell(null), null);
 });
 
 test("tuđi učenik nije dostupan", async () => {

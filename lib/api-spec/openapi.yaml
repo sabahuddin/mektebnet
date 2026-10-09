@@ -21,6 +21,63 @@ tags:
     description: H5P interaktivne vježbe (server-side scoring)
 
 paths:
+  /muallim/grupa/{id}/izvjestaj-statistika:
+    get:
+      operationId: getGroupStatisticsReport
+      summary: Svih šest sekcija statistike autorizovane grupe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/GroupReportStudents"
+        - $ref: "#/components/parameters/GroupReportFrom"
+        - $ref: "#/components/parameters/GroupReportTo"
+        - $ref: "#/components/parameters/GroupReportSections"
+      responses:
+        "200":
+          description: Tekuća mektebska godina za prisustvo i ocjene, kumulativno učenje
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupStatisticsReport"
+        "400":
+          description: Neispravan ID grupe
+        "403":
+          description: Pristup grupi nije dozvoljen
+        "500":
+          description: Izvještaj nije moguće učitati
+
+  /muallim/grupa/{id}/izvjestaj-excel:
+    get:
+      operationId: downloadGroupStatisticsExcel
+      summary: Excel sa grupnim sažetkom i šest radnih listova
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: "#/components/parameters/GroupReportStudents"
+        - $ref: "#/components/parameters/GroupReportFrom"
+        - $ref: "#/components/parameters/GroupReportTo"
+        - $ref: "#/components/parameters/GroupReportSections"
+      responses:
+        "200":
+          description: Excel izvještaj
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Neispravan ID grupe
+        "403":
+          description: Pristup grupi nije dozvoljen
+        "500":
+          description: Izvještaj nije moguće izvesti
+
   /healthz:
     get:
       operationId: healthCheck
@@ -201,7 +258,101 @@ paths:
                 $ref: "#/components/schemas/H5pAttemptsResponse"
 
 components:
+  parameters:
+    GroupReportStudents:
+      name: ucenici
+      in: query
+      description: IDs razdvojeni zarezom; izostavljeno znači svi aktivni, prazno znači niko
+      schema:
+        type: string
+    GroupReportFrom:
+      name: od
+      in: query
+      description: Dodatno sužava samo prisustvo i ocjene u tekućoj mektebskoj godini
+      schema:
+        type: string
+        format: date
+    GroupReportTo:
+      name: do
+      in: query
+      description: Završni datum samo za prisustvo i ocjene
+      schema:
+        type: string
+        format: date
+    GroupReportSections:
+      name: sekcije
+      in: query
+      description: IDs sekcija razdvojeni zarezom; izostavljeno znači svih šest
+      schema:
+        type: string
   schemas:
+    GroupReportStudent:
+      type: object
+      required: [id, ime]
+      properties:
+        id:
+          type: integer
+        ime:
+          type: string
+    GroupReportCell:
+      type: [string, number, "null"]
+    GroupReportMetric:
+      type: object
+      required: [label, value]
+      properties:
+        label:
+          type: string
+        value:
+          $ref: "#/components/schemas/GroupReportCell"
+    GroupReportTable:
+      type: object
+      required: [title, headers, rows]
+      properties:
+        title:
+          type: string
+        headers:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            type: array
+            items:
+              $ref: "#/components/schemas/GroupReportCell"
+    GroupReportSection:
+      type: object
+      required: [id, title, summary, tables]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        summary:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupReportMetric"
+        tables:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupReportTable"
+    GroupStatisticsReport:
+      type: object
+      required: [naslov, period, sections, ucenici]
+      properties:
+        naslov:
+          type: string
+        period:
+          type: string
+        ucenici:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupReportStudent"
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupReportSection"
+
     HealthStatus:
       type: object
       properties:

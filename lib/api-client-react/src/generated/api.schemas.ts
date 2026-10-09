@@ -5,6 +5,41 @@
  * Mekteb - Arapsko pismo API
  * OpenAPI spec version: 0.1.0
  */
+export interface GroupReportStudent {
+  id: number;
+  ime: string;
+}
+
+/**
+ * @nullable
+ */
+export type GroupReportCell = string | number | null;
+
+export interface GroupReportMetric {
+  label: string;
+  value: GroupReportCell | null;
+}
+
+export interface GroupReportTable {
+  title: string;
+  headers: string[];
+  rows: (GroupReportCell | null)[][];
+}
+
+export interface GroupReportSection {
+  id: string;
+  title: string;
+  summary: GroupReportMetric[];
+  tables: GroupReportTable[];
+}
+
+export interface GroupStatisticsReport {
+  naslov: string;
+  period: string;
+  ucenici: GroupReportStudent[];
+  sections: GroupReportSection[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -199,3 +234,61 @@ export interface H5pAttemptsResponse {
   /** Anti-cheat multiplier koji se primjenjuje na sljedeći pokušaj (1.0 / 0.5 / 0) */
   nextMultiplier: number;
 }
+
+/**
+ * IDs razdvojeni zarezom; izostavljeno znači svi aktivni, prazno znači niko
+ */
+export type GroupReportStudentsParameter = string;
+
+/**
+ * Dodatno sužava samo prisustvo i ocjene u tekućoj mektebskoj godini
+ */
+export type GroupReportFromParameter = string;
+
+/**
+ * Završni datum samo za prisustvo i ocjene
+ */
+export type GroupReportToParameter = string;
+
+/**
+ * IDs sekcija razdvojeni zarezom; izostavljeno znači svih šest
+ */
+export type GroupReportSectionsParameter = string;
+
+export type GetGroupStatisticsReportParams = {
+  /**
+   * IDs razdvojeni zarezom; izostavljeno znači svi aktivni, prazno znači niko
+   */
+  ucenici?: GroupReportStudentsParameter;
+  /**
+   * Dodatno sužava samo prisustvo i ocjene u tekućoj mektebskoj godini
+   */
+  od?: GroupReportFromParameter;
+  /**
+   * Završni datum samo za prisustvo i ocjene
+   */
+  do?: GroupReportToParameter;
+  /**
+   * IDs sekcija razdvojeni zarezom; izostavljeno znači svih šest
+   */
+  sekcije?: GroupReportSectionsParameter;
+};
+
+export type DownloadGroupStatisticsExcelParams = {
+  /**
+   * IDs razdvojeni zarezom; izostavljeno znači svi aktivni, prazno znači niko
+   */
+  ucenici?: GroupReportStudentsParameter;
+  /**
+   * Dodatno sužava samo prisustvo i ocjene u tekućoj mektebskoj godini
+   */
+  od?: GroupReportFromParameter;
+  /**
+   * Završni datum samo za prisustvo i ocjene
+   */
+  do?: GroupReportToParameter;
+  /**
+   * IDs sekcija razdvojeni zarezom; izostavljeno znači svih šest
+   */
+  sekcije?: GroupReportSectionsParameter;
+};

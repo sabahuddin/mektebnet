@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { getQuranVrijeme } from "../lib/quran-vrijeme.js";
 import { getGroupStatisticsDetails } from "../lib/group-statistics-details.js";
+import { buildGroupStatisticsReport, groupReportWorkbook, sanitizeExcelCell } from "../lib/group-statistics-report.js";
 import {
   usersTable,
   muallimProfiliTable,
@@ -4479,9 +4480,36 @@ function prazanZbirVjezbi() {
   };
 }
 
-async function getGrupaFullStats(grupaId: number, includeLearningDetails = false) {
-  const profili = await db.select().from(ucenikProfiliTable)
+interface GroupReportFilters { studentIds?: number[]; from?: string; to?: string; sections?: string[] }
+
+function parseGroupReportFilters(query: Record<string, unknown>): GroupReportFilters {
+  const filters: GroupReportFilters = {};
+  if (query.sekcije !== undefined) {
+    const valid = ["prisustvo", "lekcije", "vjezbe", "kvizovi", "ocjene", "etape"];
+    if (typeof query.sekcije !== "string") throw new Error("Neispravan izbor sekcija");
+    filters.sections = query.sekcije === "" ? [] : [...new Set(query.sekcije.split(","))];
+    if (filters.sections.some(section => !valid.includes(section))) throw new Error("Neispravan izbor sekcija");
+  }
+  if (query.ucenici !== undefined) {
+    if (typeof query.ucenici !== "string" || (query.ucenici !== "" && !/^\d+(,\d+)*$/.test(query.ucenici))) throw new Error("Neispravan izbor učenika");
+    filters.studentIds = query.ucenici === "" ? [] : [...new Set(query.ucenici.split(",").map(Number))];
+    if (filters.studentIds.some(id => !Number.isSafeInteger(id) || id <= 0)) throw new Error("Neispravan izbor učenika");
+  }
+  for (const [key, field] of [["od", "from"], ["do", "to"]] as const) {
+    if (query[key] === undefined || query[key] === "") continue;
+    const value = query[key];
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)
+      || Number.isNaN(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) throw new Error("Neispravan datum");
+    filters[field] = value;
+  }
+  if (filters.from && filters.to && filters.from > filters.to) throw new Error("Početni datum je nakon završnog");
+  return filters;
+}
+
+async function getGrupaFullStats(grupaId: number, includeLearningDetails = false, filters: GroupReportFilters = {}) {
+  const profiliRaw = await db.select().from(ucenikProfiliTable)
     .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+  const profili = profiliRaw.filter(p => !filters.studentIds || filters.studentIds.includes(p.userId));
   if (profili.length === 0) return { ucenici: [] as any[], detaljiUcenika: [], ukupnoCasova: 0, svaDatumi: [], mjesecniPregled: [], grupaPrisustvoPct: null, grupaProsjekOcjena: null, aktivnihProslejSedmice: 0, ukupnoKvizova: 0, ukupnoBodovaGrupa: 0, prosjekBodovaGrupa: 0, prisustvoPoDatumu: [] as any[], zvjezdicePozitivne: 0, zvjezdiceNegativne: 0 };
 
   const ucenikIds = profili.map(p => p.userId);
@@ -4492,7 +4520,8 @@ async function getGrupaFullStats(grupaId: number, includeLearningDetails = false
   const svoPrisustvoRaw = await db.select().from(priustvoTable)
     .where(eq(priustvoTable.grupaId, grupaId));
   const svoPrisustvo = svoPrisustvoRaw.filter(p =>
-    ucenikIds.includes(p.ucenikId) && isFromCurrentSchoolYear(p.datum),
+    ucenikIds.includes(p.ucenikId) && isFromCurrentSchoolYear(p.datum)
+      && (!filters.from || p.datum >= filters.from) && (!filters.to || p.datum <= filters.to),
   );
   const sveOcjeneRaw = await db.select().from(ocjeneTable)
     .where(and(
@@ -4500,7 +4529,8 @@ async function getGrupaFullStats(grupaId: number, includeLearningDetails = false
       ukupneOcjeneFilter,
     ));
   const sveOcjene = sveOcjeneRaw.filter(o =>
-    ucenikIds.includes(o.ucenikId) && isFromCurrentSchoolYear(o.datum),
+    ucenikIds.includes(o.ucenikId) && isFromCurrentSchoolYear(o.datum)
+      && (!filters.from || o.datum >= filters.from) && (!filters.to || o.datum <= filters.to),
   );
   const kvizRezultati = ucenikIds.length > 0
     ? await db.select().from(kvizRezultatiTable)
@@ -4652,18 +4682,13 @@ router.get("/grupa/:id/statistika", async (req, res) => {
 // Isti pogled kao na profilu učenika, ali za cijelu grupu: koliko je svako
 // dijete uradilo naših vježbi, H5P vježbi, etapnih vježbi i etapnih kvizova, i
 // s kojim uspjehom. Vraća i zbir grupe, da muallim odmah vidi gdje se stalo.
-router.get("/grupa/:id/statistika-vjezbi", async (req, res) => {
-  try {
-    const grupaId = parseInt(req.params.id);
-    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
-    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
-
-    const profili = await db.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
+async function getGrupaVjezbeStats(grupaId: number, studentIds?: number[]) {
+    const profiliRaw = await db.select({ userId: ucenikProfiliTable.userId }).from(ucenikProfiliTable)
       .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+    const profili = profiliRaw.filter(p => !studentIds || studentIds.includes(p.userId));
     const ucenikIds = profili.map(p => p.userId);
     if (ucenikIds.length === 0) {
-      res.json({ ucenici: [], ukupno: prazanZbirVjezbi() });
-      return;
+      return { ucenici: [], ukupno: prazanZbirVjezbi() };
     }
 
     const ucenikIdsTekst = ucenikIds.map(String);
@@ -4737,7 +4762,7 @@ router.get("/grupa/:id/statistika-vjezbi", async (req, res) => {
       etapePoUcenikuIMedaljonu.set(kljuc, redovi);
     }
 
-    res.json({
+    return {
       ucenici,
       ukupno: {
         naseVjezbe: sveNase.length,
@@ -4750,7 +4775,15 @@ router.get("/grupa/:id/statistika-vjezbi", async (req, res) => {
         etapeUkupno: ucenici.reduce((zbir, u) => zbir + u.etapeUkupno, 0),
         etapeProsjek: prosjek([...etapePoUcenikuIMedaljonu.values()].map(procenti => Math.max(...procenti))),
       },
-    });
+    };
+}
+
+router.get("/grupa/:id/statistika-vjezbi", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+    res.json(await getGrupaVjezbeStats(grupaId));
   } catch (err) {
     console.error("Grupa statistika vjezbi error:", err);
     res.status(500).json({ error: "Greška servera" });
@@ -5779,110 +5812,49 @@ router.get("/ucenik/:id/statistika-vjezbi", async (req, res) => {
   }
 });
 
-function sanitizeExcelCell(val: any): any {
-  if (typeof val !== "string") return val;
-  if (/^[=+\-@\t\r]/.test(val)) return "'" + val;
-  return val;
+async function getGrupaStatisticsReport(grupaId: number, naziv: string, filters: GroupReportFilters = {}) {
+  const [stats, exercises, interactive] = await Promise.all([
+    getGrupaFullStats(grupaId, true, filters),
+    getGrupaVjezbeStats(grupaId, filters.studentIds),
+    getGrupaInteraktivniStats(grupaId, filters.studentIds),
+  ]);
+  return {
+    naslov: `Grupa: ${naziv}`,
+    period: `Prisustvo i ocjene: od ${filters.from && filters.from > currentSchoolYearResetDate() ? filters.from : currentSchoolYearResetDate()}${filters.to ? ` do ${filters.to}` : ""} (tekuća mektebska godina). Učenje: kumulativni napredak.`,
+    ucenici: stats.ucenici.map(u => ({ id: u.id, ime: u.ime })),
+    sections: buildGroupStatisticsReport(stats, exercises, interactive).filter(section => !filters.sections || filters.sections.includes(section.id)),
+  };
 }
+
+router.get("/grupa/:id/izvjestaj-statistika", async (req, res) => {
+  try {
+    const grupaId = Number(req.params.id);
+    if (!Number.isSafeInteger(grupaId) || grupaId <= 0) { res.status(400).json({ error: "Neispravan ID grupe" }); return; }
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+    let filters: GroupReportFilters;
+    try { filters = parseGroupReportFilters(req.query); }
+    catch (err) { res.status(400).json({ error: (err as Error).message }); return; }
+    res.json(await getGrupaStatisticsReport(grupaId, grupa.naziv, filters));
+  } catch (err) {
+    req.log.error({ err }, "Group statistics report failed");
+    res.status(500).json({ error: "Greška pri učitavanju izvještaja" });
+  }
+});
 
 router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
   try {
     const XLSX = await import("xlsx");
-    const grupaId = parseInt(req.params.id);
+    const grupaId = Number(req.params.id);
+    if (!Number.isSafeInteger(grupaId) || grupaId <= 0) { res.status(400).json({ error: "Neispravan ID grupe" }); return; }
     const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
     if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
 
-    const stats = await getGrupaFullStats(grupaId);
-    const wb = XLSX.utils.book_new();
-
-    const prisustvoRows: any[] = [];
-    const headerRow: string[] = ["Učenik", ...stats.svaDatumi.map(key => {
-      const [datum, cas] = key.split("#");
-      return `${datum} (${cas}. čas)`;
-    }), "Prisutan", "Odsutan", "Zakasnio", "Opravdan", "Ukupno", "%"];
-    prisustvoRows.push(headerRow);
-    for (const u of stats.ucenici) {
-      const row: any[] = [sanitizeExcelCell(u.ime)];
-      for (const d of stats.svaDatumi) {
-        const st = u.prisustvoPoDatumu[d];
-        row.push(st === "prisutan" ? "P" : st === "odsutan" ? "O" : st === "zakasnio" ? "Z" : st === "opravdan" ? "OP" : "");
-      }
-      row.push(u.prisutanCount, u.odsutanCount, u.zakasnioCount, u.opravdanCount, u.ukupnoPrisustvo, u.prisustvoPct !== null ? `${u.prisustvoPct}%` : "—");
-      prisustvoRows.push(row);
-    }
-    if (stats.prisustvoPoDatumu.length > 0) {
-      const totalRow: any[] = ["UKUPNO GRUPA"];
-      for (const d of stats.prisustvoPoDatumu) {
-        totalRow.push(`${d.prisutan}/${d.ukupno}`);
-      }
-      const tp = (stats.ucenici as any[]).reduce((a, u) => a + u.prisutanCount, 0);
-      const to = (stats.ucenici as any[]).reduce((a, u) => a + u.odsutanCount, 0);
-      const tz = (stats.ucenici as any[]).reduce((a, u) => a + u.zakasnioCount, 0);
-      const top = (stats.ucenici as any[]).reduce((a, u) => a + u.opravdanCount, 0);
-      const tt = (stats.ucenici as any[]).reduce((a, u) => a + u.ukupnoPrisustvo, 0);
-      totalRow.push(tp, to, tz, top, tt, stats.grupaPrisustvoPct !== null ? `${stats.grupaPrisustvoPct}%` : "—");
-      prisustvoRows.push(totalRow);
-    }
-    const ws1 = XLSX.utils.aoa_to_sheet(prisustvoRows);
-    ws1["!cols"] = [{ wch: 20 }, ...stats.svaDatumi.map(() => ({ wch: 12 })), { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 6 }];
-    XLSX.utils.book_append_sheet(wb, ws1, "Prisustvo");
-
-    const mjesecniRows: any[] = [["Mjesec", "Prisutan", "Odsutan", "Zakasnio", "Opravdan", "Ukupno", "%"]];
-    const MJESEC_NAZIVI: Record<string, string> = { "01": "Januar", "02": "Februar", "03": "Mart", "04": "April", "05": "Maj", "06": "Juni", "07": "Juli", "08": "August", "09": "Septembar", "10": "Oktobar", "11": "Novembar", "12": "Decembar" };
-    for (const m of stats.mjesecniPregled) {
-      const parts = m.mjesec.split("-");
-      const naziv = `${MJESEC_NAZIVI[parts[1]] || parts[1]} ${parts[0]}`;
-      mjesecniRows.push([naziv, m.prisutan, m.odsutan, m.zakasnio, m.opravdan, m.ukupno, m.pct !== null ? `${m.pct}%` : "—"]);
-    }
-    const ws1b = XLSX.utils.aoa_to_sheet(mjesecniRows);
-    ws1b["!cols"] = [{ wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 6 }];
-    XLSX.utils.book_append_sheet(wb, ws1b, "Prisustvo po mjesecu");
-
-    const sveOcjeneExcel = await db.select().from(ocjeneTable).where(and(
-      eq(ocjeneTable.grupaId, grupaId),
-      ukupneOcjeneFilter,
-    ));
-    const activeIds = new Set(stats.ucenici.map(u => u.id));
-    const ocjeneRows: any[] = [["Učenik", "Datum", "Predmet", "Ocjena", "Lekcija", "Napomena"]];
-    for (const u of stats.ucenici) {
-      const uocjene = sveOcjeneExcel.filter(o => o.ucenikId === u.id && activeIds.has(o.ucenikId)).sort((a, b) => b.datum.localeCompare(a.datum));
-      for (const o of uocjene) {
-        ocjeneRows.push([sanitizeExcelCell(u.ime), o.datum, sanitizeExcelCell(o.predmet || "Nije određeno"), o.ocjena, sanitizeExcelCell(o.lekcijaNaziv || ""), sanitizeExcelCell(o.napomena || "")]);
-      }
-    }
-    const ws2 = XLSX.utils.aoa_to_sheet(ocjeneRows);
-    ws2["!cols"] = [{ wch: 20 }, { wch: 12 }, { wch: 14 }, { wch: 8 }, { wch: 30 }, { wch: 30 }];
-    XLSX.utils.book_append_sheet(wb, ws2, "Ocjene");
-
-    const summaryRows: any[] = [
-      ["IZVJEŠTAJ GRUPE", sanitizeExcelCell((grupa as any).naziv || "")],
-      [],
-      ["Ukupno učenika", stats.ucenici.length],
-      ["Ukupno časova", stats.ukupnoCasova],
-      ["Prisustvo grupe (%)", stats.grupaPrisustvoPct !== null ? `${stats.grupaPrisustvoPct}%` : "—"],
-      ["Prosječna ocjena grupe", stats.grupaProsjekOcjena || "—"],
-      ["Ukupno kvizova", stats.ukupnoKvizova],
-      ["Ukupno bodova", stats.ukupnoBodovaGrupa],
-      [],
-      ["Učenik", "Prisustvo %", "Prisutan", "Odsutan", "Zakasnio", "Opravdan", "Prosj. ocjena", "Br. ocjena", "Kvizova", "Bodova"],
-    ];
-    for (const u of stats.ucenici) {
-      summaryRows.push([
-        sanitizeExcelCell(u.ime),
-        u.prisustvoPct !== null ? `${u.prisustvoPct}%` : "—",
-        u.prisutanCount,
-        u.odsutanCount,
-        u.zakasnioCount,
-        u.opravdanCount,
-        u.ukupnaProsjecna || "—",
-        u.brojOcjena,
-        u.kvizCount,
-        u.ukupnoBodova,
-      ]);
-    }
-    const ws3 = XLSX.utils.aoa_to_sheet(summaryRows);
-    ws3["!cols"] = [{ wch: 22 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
-    XLSX.utils.book_append_sheet(wb, ws3, "Zbirni izvještaj");
+    let filters: GroupReportFilters;
+    try { filters = parseGroupReportFilters(req.query); }
+    catch (err) { res.status(400).json({ error: (err as Error).message }); return; }
+    const report = await getGrupaStatisticsReport(grupaId, grupa.naziv, filters);
+    const wb = await groupReportWorkbook(report);
 
     const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
     const safeNaziv = ((grupa as any).naziv || "grupa").replace(/[^a-zA-Z0-9\u00C0-\u024F\u0100-\u017F_\- ]/g, "").trim().substring(0, 50);
@@ -5891,7 +5863,7 @@ router.get("/grupa/:id/izvjestaj-excel", async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="izvjestaj.xlsx"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.send(Buffer.from(buf));
   } catch (err) {
-    console.error("Excel export error:", err);
+    req.log.error({ err }, "Excel export failed");
     res.status(500).json({ error: "Greška servera" });
   }
 });
@@ -8195,18 +8167,14 @@ function aggregateInteraktivnePokusaje(rows: Array<typeof interaktivniBlokPokusa
 // GET /api/muallim/grupa/:id/interaktivni-blokovi
 // Privatni pedagoški pregled: pitanja koja zaslužuju dodatno objašnjenje i
 // zbir po svakom učeniku. Ne vraća bodove, zvjezdice ni javnu rang-listu.
-router.get("/grupa/:id/interaktivni-blokovi", async (req, res) => {
-  try {
-    const grupaId = parseInt(req.params.id);
-    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
-    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
-
-    const profili = await db.select({ userId: ucenikProfiliTable.userId })
+async function getGrupaInteraktivniStats(grupaId: number, studentIds?: number[]) {
+    const profiliRaw = await db.select({ userId: ucenikProfiliTable.userId })
       .from(ucenikProfiliTable)
       .where(and(eq(ucenikProfiliTable.grupaId, grupaId), eq(ucenikProfiliTable.isArchived, false)));
+    const profili = profiliRaw.filter(p => !studentIds || studentIds.includes(p.userId));
     const ucenikIds = profili.map(p => p.userId);
     if (ucenikIds.length === 0) {
-      res.json({ ukupnoUcenika: 0, ukupnoPokusaja: 0, prosjekTacnosti: null, pitanja: [], ucenici: [] }); return;
+      return { ukupnoUcenika: 0, ukupnoPokusaja: 0, prosjekTacnosti: null, pitanja: [], ucenici: [] };
     }
 
     const [pokusaji, ucenici] = await Promise.all([
@@ -8237,13 +8205,21 @@ router.get("/grupa/:id/interaktivni-blokovi", async (req, res) => {
       };
     }).sort((a, b) => a.displayName.localeCompare(b.displayName, "bs"));
 
-    res.json({
+    return {
       ukupnoUcenika: ucenikIds.length,
       ukupnoPokusaja: pokusaji.length,
       prosjekTacnosti: pokusaji.length ? Math.round((pokusaji.filter(p => p.tacno).length / pokusaji.length) * 100) : null,
       pitanja,
       ucenici: uceniciPregled,
-    });
+    };
+}
+
+router.get("/grupa/:id/interaktivni-blokovi", async (req, res) => {
+  try {
+    const grupaId = parseInt(req.params.id);
+    const grupa = await verifyGrupaAccess(grupaId, req.user!.userId, req.user!.role);
+    if (!grupa) { res.status(403).json({ error: "Nije vaša grupa" }); return; }
+    res.json(await getGrupaInteraktivniStats(grupaId));
   } catch (err) {
     req.log.error({ err }, "GET /muallim/grupa/:id/interaktivni-blokovi failed");
     res.status(500).json({ error: "Greška pri učitavanju pregleda učenja" });

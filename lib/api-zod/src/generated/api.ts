@@ -8,6 +8,98 @@
 import * as zod from "zod";
 
 /**
+ * @summary Svih šest sekcija statistike autorizovane grupe
+ */
+export const GetGroupStatisticsReportParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetGroupStatisticsReportQueryParams = zod.object({
+  ucenici: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "IDs razdvojeni zarezom; izostavljeno znači svi aktivni, prazno znači niko",
+    ),
+  od: zod
+    .date()
+    .optional()
+    .describe(
+      "Dodatno sužava samo prisustvo i ocjene u tekućoj mektebskoj godini",
+    ),
+  do: zod
+    .date()
+    .optional()
+    .describe("Završni datum samo za prisustvo i ocjene"),
+  sekcije: zod.coerce
+    .string()
+    .optional()
+    .describe("IDs sekcija razdvojeni zarezom; izostavljeno znači svih šest"),
+});
+
+export const GetGroupStatisticsReportResponse = zod.object({
+  naslov: zod.string(),
+  period: zod.string(),
+  ucenici: zod.array(
+    zod.object({
+      id: zod.number(),
+      ime: zod.string(),
+    }),
+  ),
+  sections: zod.array(
+    zod.object({
+      id: zod.string(),
+      title: zod.string(),
+      summary: zod.array(
+        zod.object({
+          label: zod.string(),
+          value: zod.union([zod.string(), zod.number()]).nullable(),
+        }),
+      ),
+      tables: zod.array(
+        zod.object({
+          title: zod.string(),
+          headers: zod.array(zod.string()),
+          rows: zod.array(
+            zod.array(zod.union([zod.string(), zod.number()]).nullable()),
+          ),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * @summary Excel sa grupnim sažetkom i šest radnih listova
+ */
+export const DownloadGroupStatisticsExcelParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DownloadGroupStatisticsExcelQueryParams = zod.object({
+  ucenici: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "IDs razdvojeni zarezom; izostavljeno znači svi aktivni, prazno znači niko",
+    ),
+  od: zod
+    .date()
+    .optional()
+    .describe(
+      "Dodatno sužava samo prisustvo i ocjene u tekućoj mektebskoj godini",
+    ),
+  do: zod
+    .date()
+    .optional()
+    .describe("Završni datum samo za prisustvo i ocjene"),
+  sekcije: zod.coerce
+    .string()
+    .optional()
+    .describe("IDs sekcija razdvojeni zarezom; izostavljeno znači svih šest"),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

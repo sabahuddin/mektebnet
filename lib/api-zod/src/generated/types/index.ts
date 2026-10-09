@@ -7,11 +7,23 @@
  */
 
 export * from "./badge";
+export * from "./downloadGroupStatisticsExcelParams";
 export * from "./errorResponse";
 export * from "./exerciseConfig";
 export * from "./exerciseConfigType";
 export * from "./exerciseSessionRequest";
 export * from "./exerciseSessionResult";
+export * from "./getGroupStatisticsReportParams";
+export * from "./groupReportCell";
+export * from "./groupReportFromParameter";
+export * from "./groupReportMetric";
+export * from "./groupReportSection";
+export * from "./groupReportSectionsParameter";
+export * from "./groupReportStudent";
+export * from "./groupReportStudentsParameter";
+export * from "./groupReportTable";
+export * from "./groupReportToParameter";
+export * from "./groupStatisticsReport";
 export * from "./h5pAttempt";
 export * from "./h5pAttemptsResponse";
 export * from "./h5pResultRequest";

@@ -17,9 +17,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  DownloadGroupStatisticsExcelParams,
   ErrorResponse,
   ExerciseSessionRequest,
   ExerciseSessionResult,
+  GetGroupStatisticsReportParams,
+  GroupStatisticsReport,
   H5pAttemptsResponse,
   H5pResultRequest,
   H5pResultResponse,
@@ -40,6 +43,244 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * @summary Svih šest sekcija statistike autorizovane grupe
+ */
+export const getGetGroupStatisticsReportUrl = (
+  id: number,
+  params?: GetGroupStatisticsReportParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/muallim/grupa/${id}/izvjestaj-statistika?${stringifiedParams}`
+    : `/api/muallim/grupa/${id}/izvjestaj-statistika`;
+};
+
+export const getGroupStatisticsReport = async (
+  id: number,
+  params?: GetGroupStatisticsReportParams,
+  options?: RequestInit,
+): Promise<GroupStatisticsReport> => {
+  return customFetch<GroupStatisticsReport>(
+    getGetGroupStatisticsReportUrl(id, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetGroupStatisticsReportQueryKey = (
+  id: number,
+  params?: GetGroupStatisticsReportParams,
+) => {
+  return [
+    `/api/muallim/grupa/${id}/izvjestaj-statistika`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetGroupStatisticsReportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGroupStatisticsReport>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  params?: GetGroupStatisticsReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGroupStatisticsReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetGroupStatisticsReportQueryKey(id, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGroupStatisticsReport>>
+  > = ({ signal }) =>
+    getGroupStatisticsReport(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGroupStatisticsReport>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGroupStatisticsReportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGroupStatisticsReport>>
+>;
+export type GetGroupStatisticsReportQueryError = ErrorType<void>;
+
+/**
+ * @summary Svih šest sekcija statistike autorizovane grupe
+ */
+
+export function useGetGroupStatisticsReport<
+  TData = Awaited<ReturnType<typeof getGroupStatisticsReport>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  params?: GetGroupStatisticsReportParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGroupStatisticsReport>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGroupStatisticsReportQueryOptions(
+    id,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Excel sa grupnim sažetkom i šest radnih listova
+ */
+export const getDownloadGroupStatisticsExcelUrl = (
+  id: number,
+  params?: DownloadGroupStatisticsExcelParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/muallim/grupa/${id}/izvjestaj-excel?${stringifiedParams}`
+    : `/api/muallim/grupa/${id}/izvjestaj-excel`;
+};
+
+export const downloadGroupStatisticsExcel = async (
+  id: number,
+  params?: DownloadGroupStatisticsExcelParams,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getDownloadGroupStatisticsExcelUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadGroupStatisticsExcelQueryKey = (
+  id: number,
+  params?: DownloadGroupStatisticsExcelParams,
+) => {
+  return [
+    `/api/muallim/grupa/${id}/izvjestaj-excel`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getDownloadGroupStatisticsExcelQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadGroupStatisticsExcel>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  params?: DownloadGroupStatisticsExcelParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof downloadGroupStatisticsExcel>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getDownloadGroupStatisticsExcelQueryKey(id, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof downloadGroupStatisticsExcel>>
+  > = ({ signal }) =>
+    downloadGroupStatisticsExcel(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadGroupStatisticsExcel>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type DownloadGroupStatisticsExcelQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadGroupStatisticsExcel>>
+>;
+export type DownloadGroupStatisticsExcelQueryError = ErrorType<void>;
+
+/**
+ * @summary Excel sa grupnim sažetkom i šest radnih listova
+ */
+
+export function useDownloadGroupStatisticsExcel<
+  TData = Awaited<ReturnType<typeof downloadGroupStatisticsExcel>>,
+  TError = ErrorType<void>,
+>(
+  id: number,
+  params?: DownloadGroupStatisticsExcelParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof downloadGroupStatisticsExcel>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getDownloadGroupStatisticsExcelQueryOptions(
+    id,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 /**
  * @summary Health check
