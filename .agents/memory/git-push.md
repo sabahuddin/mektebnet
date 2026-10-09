@@ -52,3 +52,10 @@ Ako ista grana dobije mnogo novih commitova dok se lokalno radi, puni privremeni
 **Why:** Puni checkout hiljada fajlova može isteći, dok jedna velika serija API poziva može prekinuti izvršavanje; udaljena grana se u međuvremenu može promijeniti.
 
 **How to apply:** Ne prepisuj udaljeni fajl lokalnim cijelim sadržajem. Spajaj samo putanje koje su zaista izmijenjene, čuvaj udaljeni `base_tree`, prije pomjeranja refa ponovo uporedi udaljeni SHA i koristi isključivo fast-forward.
+
+## Svježina provjere nakon push-a
+Ponovljen GET glavne grane kroz integraciju može vratiti staru referencu i nakon uspješnog PATCH-a.
+
+**Why:** Nakon pomjeranja grane obični GET prijavio je stari SHA; provjera s jedinstvenim query parametrom vratila je novi commit i potvrdila sve blobove.
+
+**How to apply:** Za završnu provjeru koristi `Cache-Control: no-cache` i jedinstveni query parametar na GET reference, pa provjeri ciljani tree. Ne ponavljaj push samo zato što obični GET vrati stari SHA.
