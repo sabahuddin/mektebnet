@@ -967,7 +967,7 @@ router.get("/pending-prilozi", async (req, res) => {
       .leftJoin(usersTable, eq(usersTable.id, prilozi.uploadedByUserId))
       .leftJoin(muallimProfiliTable, eq(muallimProfiliTable.userId, usersTable.id))
       .leftJoin(mektebiTable, eq(mektebiTable.id, muallimProfiliTable.mektebId))
-      .where(eq(prilozi.approved, false))
+      .where(and(eq(prilozi.approved, false), eq(prilozi.rejected, false)))
       .orderBy(desc(prilozi.createdAt));
     res.json(pending);
   } catch (e: any) {
@@ -985,19 +985,16 @@ router.put("/prilozi/:id/approve", async (req, res) => {
     const { approve } = (req.body || {}) as { approve?: boolean };
     if (typeof approve !== "boolean") return res.status(400).json({ error: "Nedostaje 'approve' boolean" });
     if (approve) {
-      const [updated] = await db.update(prilozi).set({ approved: true }).where(eq(prilozi.id, id)).returning();
+      const [updated] = await db.update(prilozi).set({ approved: true, rejected: false }).where(eq(prilozi.id, id)).returning();
       if (!updated) return res.status(404).json({ error: "Prilog nije pronađen" });
       res.json(updated);
     } else {
-      // Odbij = obriši prilog
-      const [file] = await db.select().from(prilozi).where(eq(prilozi.id, id));
+      // Odbijanje dijeljenja zadržava autorov zapis i fajlove.
+      // approved=false već ograničava listu, download i static/H5P pristup na autora/admina.
+      const [file] = await db.update(prilozi).set({ approved: false, rejected: true })
+        .where(eq(prilozi.id, id)).returning({ id: prilozi.id });
       if (!file) return res.status(404).json({ error: "Prilog nije pronađen" });
-      if (file.kind !== "url" && file.storedName && file.storedName !== "h5p/pending") {
-        const fp = path.join(uploadsDir, file.storedName);
-        try { if (fs.existsSync(fp)) { if (file.kind === "h5p") fs.rmSync(fp, { recursive: true, force: true }); else fs.unlinkSync(fp); } } catch {}
-      }
-      await db.delete(prilozi).where(eq(prilozi.id, id));
-      res.json({ ok: true, deleted: true });
+      res.json({ ok: true, rejected: true });
     }
   } catch (e: any) {
     res.status(500).json({ error: e.message });

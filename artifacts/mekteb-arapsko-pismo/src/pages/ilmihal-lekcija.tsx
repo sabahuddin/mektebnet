@@ -59,6 +59,7 @@ interface Prilog {
   externalUrl?: string | null;
   h5pPath?: string | null;
   approved?: boolean;
+  rejected?: boolean;
   /** Kapi meda koje učenik dobija klikom "Završio sam" — samo embed (0/3/5/10). */
   hasanatReward?: number;
 }
@@ -2867,9 +2868,9 @@ function PriloziSection({
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-base text-amber-900 break-words">{a.originalName}</p>
                             </div>
-                            {isAdmin && a.approved === false && (
+                            {a.approved === false && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-800 border border-amber-400 flex-shrink-0">
-                                {t("Čeka odobrenje")}
+                                {a.rejected ? t("Odbijeno za dijeljenje") : t("Čeka odobrenje")}
                               </span>
                             )}
                             <ExternalLink className="w-5 h-5 text-amber-700 flex-shrink-0 self-end sm:self-auto" />
@@ -2921,9 +2922,9 @@ function PriloziSection({
                               <p className="font-semibold text-base text-gray-800 break-words">
                                 {isH5p ? displayH5pName(a.originalName) : a.originalName}
                               </p>
-                              {isAdmin && a.approved === false && (
+                              {a.approved === false && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 flex-shrink-0">
-                                  {t("Čeka odobrenje")}
+                                  {a.rejected ? t("Odbijeno za dijeljenje") : t("Čeka odobrenje")}
                                 </span>
                               )}
                             </div>

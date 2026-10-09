@@ -452,6 +452,7 @@ export const prilozi = pgTable("prilozi", {
   kind: varchar("kind", { length: 20 }).notNull().default("file"),
   externalUrl: text("external_url"),
   approved: boolean("approved").notNull().default(false),
+  rejected: boolean("rejected").notNull().default(false),
   uploadedByRole: varchar("uploaded_by_role", { length: 20 }),
   uploadedByUserId: integer("uploaded_by_user_id"),
   hasanatReward: integer("hasanat_reward").notNull().default(0),

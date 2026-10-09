@@ -460,7 +460,11 @@ function PendingPrilozi({ token }: { token: string }) {
     setProcessingId(id);
     try {
       await apiRequest("PUT", `/admin/prilozi/${id}/approve`, { approve }, token);
-      toast({ title: approve ? t("Odobreno") : t("Odbijeno"), description: approve ? t("Materijal je sada vidljiv učenicima.") : t("Materijal je obrisan.") });
+      const prilog = pending.find(p => p.id === id);
+      const isExercise = prilog?.kind === "h5p" || prilog?.kind === "embed";
+      toast({ title: approve ? t("Odobreno") : t("Odbijeno"), description: approve
+        ? (isExercise ? t("Vježba je sada dostupna učenicima.") : t("Materijal je odobren za nastavničku pripremu."))
+        : t("Prilog je sačuvan i ostaje dostupan autoru, ali nije dostupan drugima.") });
       setPending(prev => prev.filter(p => p.id !== id));
     } catch (err: any) {
       toast({ title: t("Greška"), description: err.message, variant: "destructive" });

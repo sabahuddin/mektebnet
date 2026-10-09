@@ -688,6 +688,7 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
             externalUrl: a.externalUrl,
             url,
             approved: a.approved,
+            rejected: a.rejected,
             hasanatReward: a.hasanatReward,
             redoslijed: a.redoslijed,
             createdAt: a.createdAt,

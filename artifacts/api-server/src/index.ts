@@ -630,6 +630,7 @@ async function runResidualSchema() {
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS kind varchar(20) NOT NULL DEFAULT 'file';`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS external_url text;`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS approved boolean NOT NULL DEFAULT false;`);
+    await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS rejected boolean NOT NULL DEFAULT false;`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS uploaded_by_role varchar(20);`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS uploaded_by_user_id integer;`);
     await db.execute(sql`ALTER TABLE prilozi ADD COLUMN IF NOT EXISTS redoslijed integer NOT NULL DEFAULT 0;`);
