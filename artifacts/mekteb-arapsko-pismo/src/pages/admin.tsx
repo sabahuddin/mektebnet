@@ -463,8 +463,10 @@ function PendingPrilozi({ token }: { token: string }) {
       const prilog = pending.find(p => p.id === id);
       const isExercise = prilog?.kind === "h5p" || prilog?.kind === "embed";
       toast({ title: approve ? t("Odobreno") : t("Odbijeno"), description: approve
-        ? (isExercise ? t("Vježba je sada dostupna učenicima.") : t("Materijal je odobren za nastavničku pripremu."))
-        : t("Prilog je sačuvan i ostaje dostupan autoru, ali nije dostupan drugima.") });
+        ? (isExercise ? t("Vježba je odobrena za dijeljenje s drugima.") : t("Materijal je odobren za nastavničku pripremu."))
+        : (isExercise
+          ? t("Vježba ostaje autoru i njegovim učenicima uz dostupnu lekciju. Dijeljenje s drugima je odbijeno.")
+          : t("Prilog je sačuvan i ostaje dostupan autoru, ali nije dostupan drugima.")) });
       setPending(prev => prev.filter(p => p.id !== id));
     } catch (err: any) {
       toast({ title: t("Greška"), description: err.message, variant: "destructive" });

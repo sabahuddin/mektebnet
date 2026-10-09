@@ -2717,6 +2717,11 @@ function PriloziSection({
                        ? t(".h5p arhiva (max 50MB) ili vanjska vježba: LearningApps, Wordwall, Wayground, Kahoot")
                        : t("Vanjska vježba: LearningApps, Wordwall, Wayground, Kahoot")}
                   </p>
+                  {user?.role === "muallim" && (
+                    <p className="mt-2 text-sm text-blue-800">
+                      {t("Vaše vježbe dostupne su vašim učenicima uz dostupnu lekciju. Admin odobrava samo dijeljenje s drugima.")}
+                    </p>
+                  )}
                   {showEmbedForm && (
                     <div className="mt-3 p-3 bg-white rounded-xl border border-amber-200 flex flex-col gap-2">
                       <p className="text-xs text-amber-700 font-semibold">
@@ -2868,9 +2873,9 @@ function PriloziSection({
                             <div className="flex-1 min-w-0">
                               <p className="font-bold text-base text-amber-900 break-words">{a.originalName}</p>
                             </div>
-                            {a.approved === false && (
+                            {canManage && a.approved === false && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-800 border border-amber-400 flex-shrink-0">
-                                {a.rejected ? t("Odbijeno za dijeljenje") : t("Čeka odobrenje")}
+                                {a.rejected ? t("Dijeljenje s drugima odbijeno") : t("Čeka odobrenje za dijeljenje")}
                               </span>
                             )}
                             <ExternalLink className="w-5 h-5 text-amber-700 flex-shrink-0 self-end sm:self-auto" />
@@ -2922,9 +2927,10 @@ function PriloziSection({
                               <p className="font-semibold text-base text-gray-800 break-words">
                                 {isH5p ? displayH5pName(a.originalName) : a.originalName}
                               </p>
-                              {a.approved === false && (
+                              {canManage && a.approved === false && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300 flex-shrink-0">
-                                  {a.rejected ? t("Odbijeno za dijeljenje") : t("Čeka odobrenje")}
+                                  {a.rejected ? t("Odbijeno za dijeljenje") : a.kind === "h5p"
+                                    ? t("Čeka odobrenje za dijeljenje") : t("Čeka odobrenje")}
                                 </span>
                               )}
                             </div>

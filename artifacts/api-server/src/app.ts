@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import { and, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { prilozi } from "@workspace/db/schema";
+import { canUseLessonExercise } from "./lib/lesson-attachment-access.js";
 import { isTokenAllowedForH5p } from "./middlewares/auth.js";
 import { JWT_SECRET } from "./lib/jwt-secret.js";
 import { normalizeBosnianDashes } from "./lib/normalize-json";
@@ -153,7 +154,7 @@ async function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
   }
   try {
     if (await isTokenAllowedForH5p(token)) {
-      if (pendingAttachment?.approved === false) {
+      if (pendingAttachment && (isH5pPath || pendingAttachment.approved === false)) {
         let payload: { userId?: number; role?: string };
         try {
           payload = jwt.verify(token, JWT_SECRET) as { userId?: number; role?: string };
@@ -161,7 +162,12 @@ async function requireH5pAuth(req: Request, res: Response, next: NextFunction) {
           res.status(401).json({ error: "Nevažeća sesija — prijavite se ponovo" });
           return;
         }
-        if (payload.role !== "admin" && payload.userId !== pendingAttachment.uploadedByUserId) {
+        const allowed = pendingAttachment.kind === "h5p"
+          ? (typeof payload.userId === "number" && typeof payload.role === "string"
+            && await canUseLessonExercise({ userId: payload.userId, role: payload.role }, pendingAttachment))
+          : payload.role === "admin"
+            || (payload.role === "muallim" && payload.userId === pendingAttachment.uploadedByUserId);
+        if (!allowed) {
           res.status(404).json({ error: "Fajl nije pronađen" });
           return;
         }

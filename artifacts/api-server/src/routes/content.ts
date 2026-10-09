@@ -42,6 +42,7 @@ import {
   type InteractiveQuestion,
 } from "../lib/interactive-translatable.js";
 import { canReadLesson } from "../lib/lesson-visibility.js";
+import { canSeeLessonAttachment } from "../lib/lesson-attachment-access.js";
 
 const router = Router();
 
@@ -654,21 +655,16 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
           );
         }
 
-        const isAdmin = decoded.role === "admin";
-        const isMuallim = decoded.role === "muallim";
-        const myId = typeof decoded.userId === "number" ? decoded.userId : null;
         const all = await db.select().from(prilozi).where(eq(prilozi.lekcijaId, lekcija.id)).orderBy(asc(prilozi.redoslijed), desc(prilozi.createdAt));
         // Vidljivost:
         // - admin vidi sve (i odobrene i one koje čekaju)
         // - muallim vidi sve odobrene + svoje neodobrene (one koje je sam dodao)
-        // - studenti/roditelji vide samo odobrene interaktivne materijale.
-        //   file/url materijali mogu biti privatno dodijeljeni uz zadaću i
-        //   nikad se ne izlažu preko općeg lesson-content endpointa.
-        const visible = isAdmin
-          ? all
-          : isMuallim
-            ? all.filter(a => a.approved || (myId !== null && a.uploadedByUserId === myId))
-            : all.filter(a => a.approved && (a.kind === "h5p" || a.kind === "embed"));
+        // - učenici vide i vježbe vlastitog muallima uz dostupnu lekciju.
+        // - ostali vide samo javno odobrene vježbe.
+        // - file/url su nastavnički materijali, ne učenički sadržaj.
+        const visible = all.filter(a => canSeeLessonAttachment(
+          decoded, a, studentProfile?.muallimId,
+        ));
         result.prilozi = visible.map(a => {
           let url: string;
           if (a.kind === "url" || a.kind === "embed") url = a.externalUrl || "";

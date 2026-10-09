@@ -4,6 +4,7 @@ import { studentProgressTable, exerciseSessionsTable, embedCompletionsTable, pri
 import { and, eq, sql } from "drizzle-orm";
 import { evaluateAndPersistBadges } from "../lib/badges.js";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
+import { canUseLessonExercise } from "../lib/lesson-attachment-access.js";
 
 const router: IRouter = Router();
 
@@ -299,7 +300,7 @@ router.post("/exercises/session", async (req, res) => {
 // korisnik mogao claim-ovati hasanate za tuđi račun (IDOR).
 //
 // Server NE može verifikovati tačnost (eksterni iframe), pa samo provjerava:
-//   1) prilog postoji, kind='embed', approved=true
+//   1) prilog postoji, kind='embed', odobren javno ili vježba učenikovog muallima uz dostupnu lekciju
 //   2) (student_id, prilozi_id) još nije u embed_completions (anti-double-claim)
 //   3) hasanat_reward > 0
 //
@@ -324,8 +325,8 @@ router.post(
       if (prilog.kind !== "embed") {
         return res.status(400).json({ error: "bad_request", message: "Samo embed vježbe" });
       }
-      if (!prilog.approved) {
-        return res.status(403).json({ error: "not_approved", message: "Vježba nije odobrena" });
+      if (!await canUseLessonExercise(req.user!, prilog)) {
+        return res.status(403).json({ error: "not_available", message: "Vježba nije dostupna" });
       }
       const reward = Number(prilog.hasanatReward) || 0;
       if (reward <= 0) {

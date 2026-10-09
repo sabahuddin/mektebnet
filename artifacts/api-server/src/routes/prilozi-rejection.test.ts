@@ -4,7 +4,8 @@ import type { Server } from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { eq, inArray } from "drizzle-orm";
-import { db, ilmihalLekcijeTable, muallimProfiliTable, prilozi, usersTable } from "@workspace/db";
+import { db, ilmihalLekcijeTable, muallimProfiliTable, ucenikProfiliTable, prilozi, usersTable,
+  h5pPokusajiTable, embedCompletionsTable, studentProgressTable } from "@workspace/db";
 import app from "../app.js";
 import { bootstrapDrizzleMigrations, runDrizzleMigrate } from "../lib/drizzle-migrate.js";
 import { signToken } from "../middlewares/auth.js";
@@ -34,7 +35,7 @@ function request(url: string, role?: string, method = "GET", body?: unknown) {
 before(async () => {
   await bootstrapDrizzleMigrations();
   await runDrizzleMigrate();
-  for (const [key, role] of [["owner", "muallim"], ["other", "muallim"], ["student", "ucenik"], ["admin", "admin"]] as const) {
+  for (const [key, role] of [["owner", "muallim"], ["other", "muallim"], ["student", "ucenik"], ["admin", "admin"], ["ownStudent", "ucenik"]] as const) {
     const [user] = await db.insert(usersTable).values({
       username: `${suffix}.${key}`, displayName: key, role, passwordHash: "x", isActive: true,
       termsAcceptedAt: new Date(), privacyAcknowledgedAt: new Date(), administratorDeclarationAcceptedAt: new Date(),
@@ -42,6 +43,7 @@ before(async () => {
     userIds.push(user.id);
     tokens[key] = signToken({ userId: user.id, username: `${suffix}.${key}`, displayName: key, role });
     if (role === "muallim") await db.insert(muallimProfiliTable).values({ userId: user.id });
+    if (key === "ownStudent") await db.insert(ucenikProfiliTable).values({ userId: user.id, muallimId: userIds[0] });
   }
   const [lesson] = await db.insert(ilmihalLekcijeTable).values({
     slug: suffix, naslov: suffix, nivo: 1, redoslijed: 9900,
@@ -72,9 +74,15 @@ before(async () => {
 
 after(async () => {
   if (server) await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-  if (ids.length) await db.delete(prilozi).where(inArray(prilozi.id, ids));
+  if (ids.length) {
+    await db.delete(h5pPokusajiTable).where(inArray(h5pPokusajiTable.priloziId, ids));
+    await db.delete(embedCompletionsTable).where(inArray(embedCompletionsTable.priloziId, ids));
+    await db.delete(prilozi).where(inArray(prilozi.id, ids));
+  }
   if (lessonId) await db.delete(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, lessonId));
   if (userIds.length) {
+    await db.delete(studentProgressTable).where(inArray(studentProgressTable.studentId, userIds.map(String)));
+    await db.delete(ucenikProfiliTable).where(inArray(ucenikProfiliTable.userId, userIds));
     await db.delete(muallimProfiliTable).where(inArray(muallimProfiliTable.userId, userIds));
     await db.delete(usersTable).where(inArray(usersTable.id, userIds));
   }
@@ -132,4 +140,52 @@ test("a later admin approval clears rejection and restores the approved visibili
   assert.equal(row.rejected, false);
   const detail = await (await request(`/api/content/ilmihal/${suffix}`, "student")).json() as { prilozi: { id: number }[] };
   assert.deepEqual(detail.prilozi.map((p: { id: number }) => p.id), [ids[3]]);
+});
+
+test("a published lesson includes the author's private exercises, assets and rewards for their students only", async () => {
+  await db.update(prilozi).set({ approved: false, rejected: false }).where(inArray(prilozi.id, ids));
+  await db.update(prilozi).set({ hasanatReward: 3 }).where(eq(prilozi.id, ids[3]));
+  await db.update(ilmihalLekcijeTable).set({
+    dostupnost: "autorovi_ucenici", autorMuallimId: userIds[0], isPublished: false, statusOdobrenja: "nacrt",
+  }).where(eq(ilmihalLekcijeTable.id, lessonId));
+  const assetUrl = `/api/uploads/${h5pDir}/h5p.json`;
+  assert.equal((await request(`/api/content/ilmihal/${suffix}`, "ownStudent")).status, 403);
+  assert.equal((await request(assetUrl, "ownStudent")).status, 404);
+  assert.equal((await request(`/api/h5p/attempts/${ids[2]}`, "ownStudent")).status, 404);
+  assert.equal((await request("/api/h5p/result", "ownStudent", "POST", { priloziId: ids[2], score: 1, maxScore: 2 })).status, 404);
+  assert.equal((await request("/api/content/embed/zavrseno", "ownStudent", "POST", { priloziId: ids[3] })).status, 403);
+
+  await db.update(ilmihalLekcijeTable).set({ isPublished: true, statusOdobrenja: "odobreno" }).where(eq(ilmihalLekcijeTable.id, lessonId));
+  const detailResponse = await request(`/api/content/ilmihal/${suffix}`, "ownStudent");
+  assert.equal(detailResponse.status, 200);
+  const detail = await detailResponse.json() as { prilozi: { id: number; approved: boolean }[] };
+  assert.deepEqual(detail.prilozi.map(p => p.id).sort(), [ids[2], ids[3]].sort());
+  assert.ok(detail.prilozi.every(p => !p.approved));
+  assert.equal((await request(assetUrl, "ownStudent")).status, 200);
+  assert.equal((await request(`/api/h5p/attempts/${ids[2]}`, "ownStudent")).status, 200);
+  const result = await request("/api/h5p/result", "ownStudent", "POST", { priloziId: ids[2], score: 1, maxScore: 2 });
+  assert.equal(result.status, 200);
+  assert.ok((await result.json() as { hasanatGained: number }).hasanatGained > 0);
+  const embed = await request("/api/content/embed/zavrseno", "ownStudent", "POST", { priloziId: ids[3] });
+  assert.equal(embed.status, 200);
+  assert.equal((await embed.json() as { hasanatGained: number }).hasanatGained, 3);
+  const duplicate = await (await request("/api/content/embed/zavrseno", "ownStudent", "POST", { priloziId: ids[3] })).json() as { alreadyClaimed: boolean; hasanatGained: number };
+  assert.equal(duplicate.alreadyClaimed, true);
+  assert.equal(duplicate.hasanatGained, 0);
+  for (const role of ["student", "other"]) {
+    assert.equal((await request(assetUrl, role)).status, 404);
+    assert.equal((await request(`/api/h5p/attempts/${ids[2]}`, role)).status, 404);
+  }
+  assert.equal((await request("/api/h5p/result", "student", "POST", { priloziId: ids[2], score: 1, maxScore: 2 })).status, 404);
+  assert.equal((await request("/api/content/embed/zavrseno", "student", "POST", { priloziId: ids[3] })).status, 403);
+  for (const id of [ids[2], ids[3]]) {
+    assert.equal((await request(`/api/admin/prilozi/${id}/approve`, "admin", "PUT", { approve: false })).status, 200);
+  }
+  assert.equal((await request(assetUrl, "ownStudent")).status, 200, "rejecting global sharing must not revoke private student access");
+  for (const id of [ids[2], ids[3]]) {
+    assert.equal((await request(`/api/admin/prilozi/${id}/approve`, "admin", "PUT", { approve: true })).status, 200);
+  }
+  assert.equal((await request(assetUrl, "student")).status, 404, "approval of an exercise must not bypass the private lesson");
+  await db.update(ilmihalLekcijeTable).set({ dostupnost: "svi" }).where(eq(ilmihalLekcijeTable.id, lessonId));
+  assert.equal((await request(assetUrl, "student")).status, 200);
 });
