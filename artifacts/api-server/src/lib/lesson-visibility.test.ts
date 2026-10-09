@@ -30,3 +30,12 @@ test("javnu odobrenu lekciju vide svi", () => {
   assert.equal(canReadLesson(undefined, publicLesson), true);
   assert.equal(canReadLesson({ userId: 31, role: "ucenik" }, publicLesson, 99), true);
 });
+
+test("nacrt privatne lekcije je dostupan autoru, ne učenicima niti drugom muallimu", () => {
+  const draft = { ...privateLesson, isPublished: false, statusOdobrenja: "nacrt" };
+  assert.equal(canReadLesson({ userId: 12, role: "muallim" }, draft), true);
+  assert.equal(canReadLesson({ userId: 13, role: "muallim" }, draft), false);
+  assert.equal(canReadLesson({ userId: 31, role: "ucenik" }, draft, 12), false);
+  assert.equal(canReadLesson(undefined, draft), false);
+  assert.equal(canReadLesson({ userId: 1, role: "admin" }, draft), true);
+});

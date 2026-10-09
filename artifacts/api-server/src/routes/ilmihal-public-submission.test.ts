@@ -36,6 +36,8 @@ function request(path: string, token?: string, method = "GET", body?: unknown) {
 }
 
 async function cleanup() {
+  await db.execute(sql`DELETE FROM content_prijevodi WHERE tabela = 'ilmihal_lekcije'
+    AND red_id IN (SELECT id FROM ilmihal_lekcije WHERE autor_muallim_id = ${ownerId || 0})`);
   await db.execute(sql`DELETE FROM ilmihal_lekcije WHERE slug LIKE ${`muallim-${ownerId || 0}-%`}`);
   await db.delete(ucenikProfiliTable).where(eq(ucenikProfiliTable.userId, studentId || 0));
   await db.delete(muallimProfiliTable).where(eq(muallimProfiliTable.userId, ownerId || 0));
@@ -90,15 +92,15 @@ after(async () => {
   await db.delete(usersTable).where(sql`username = ${`${suffix}.admin`}`);
 });
 
-test("private creation stays with author/admin until approved for assigned students", async () => {
+test("private draft survives reopening; author publishes only to assigned students", async () => {
   const created = await request("/api/admin/ilmihal", ownerToken, "POST", {
     naslov: `Private ${suffix}`, nivo: 1, contentHtml: "<p>private</p>",
   });
   assert.equal(created.status, 201);
   const lesson = await created.json() as { id: number; slug: string; pendingApproval: boolean };
-  assert.equal(lesson.pendingApproval, true);
+  assert.equal(lesson.pendingApproval, false);
   const draft = await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
-    contentHtml: "<p>private draft updated</p>",
+    contentHtml: "<p>private draft updated</p>", privateAction: "draft",
   });
   assert.equal(draft.status, 200);
   assert.match((await (await request(`/api/content/ilmihal/${lesson.slug}`, ownerToken)).json() as { contentHtml: string }).contentHtml, /private draft updated/);
@@ -113,24 +115,22 @@ test("private creation stays with author/admin until approved for assigned stude
   assert.equal(queue.status, 200);
   const rows = await queue.json() as Array<{ id: number; lekcijaSlug: string; podnesenoZaJavnuObjavu: boolean; predlozioIme: string; mektebNaziv: string; mektebGrad: string }>;
   const item = rows.find((row) => row.lekcijaSlug === lesson.slug);
-  assert.ok(item);
-  assert.equal(item.predlozioIme, "Owner");
-  assert.equal(item.mektebNaziv, `Testni mekteb ${suffix}`);
-  assert.equal(item.mektebGrad, "Sarajevo");
-  assert.equal(item.podnesenoZaJavnuObjavu, false);
-  assert.equal((await request(`/api/admin/izmjene-lekcija/${item.id}/odluka`, adminToken, "PUT", { visibility: "privatno" })).status, 200);
+  assert.equal(item, undefined, "unfinished draft must not enter the public approval queue");
+  assert.equal((await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>private draft updated</p>", privateAction: "publish",
+  })).status, 200);
   assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).status, 200);
   assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, outsiderToken)).status, 403);
   const edit = await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
-    contentHtml: "<p>changed after approval</p>",
+    contentHtml: "<p>changed after approval</p>", privateAction: "draft",
   });
   assert.equal(edit.status, 200);
-  assert.equal((await edit.json() as { pendingApproval: boolean }).pendingApproval, true);
+  assert.equal((await edit.json() as { draft: boolean }).draft, true);
+  assert.match((await (await request(`/api/content/ilmihal/${lesson.slug}`, ownerToken)).json() as { contentHtml: string }).contentHtml, /changed after approval/);
   assert.match((await (await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).json() as { contentHtml: string }).contentHtml, /private draft updated/);
-  const edits = await (await request("/api/admin/izmjene-lekcija", adminToken)).json() as Array<{ id: number; lekcijaId: number }>;
-  const proposal = edits.find((entry) => entry.lekcijaId === lesson.id);
-  assert.ok(proposal && proposal.id > 0);
-  assert.equal((await request(`/api/admin/izmjene-lekcija/${proposal.id}/odluka`, adminToken, "PUT", { approve: true })).status, 200);
+  assert.equal((await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>changed after approval</p>", privateAction: "publish",
+  })).status, 200);
   assert.match((await (await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).json() as { contentHtml: string }).contentHtml, /changed after approval/);
 });
 
@@ -163,35 +163,100 @@ test("admin can create and edit a DODATAK lesson", async () => {
   }
 });
 
+test("translated private drafts stay with their language and preserve the Bosnian original", async () => {
+  const created = await request("/api/admin/ilmihal", ownerToken, "POST", {
+    naslov: `Language ${suffix}`, nivo: 1, contentHtml: "<p>Bosanski izvor</p>",
+  });
+  const lesson = await created.json() as { id: number; slug: string };
+  await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>Bosanski izvor</p>", privateAction: "publish",
+  });
+  await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>English private draft</p>", privateAction: "draft", language: "en",
+  });
+  const readEnglish = async (token: string) => {
+    const response = await fetch(`${baseUrl}/api/content/ilmihal/${lesson.slug}`, {
+      headers: { Authorization: `Bearer ${token}`, "X-Lang": "en" },
+    });
+    assert.equal(response.status, 200);
+    return response.json() as Promise<{ contentHtml: string }>;
+  };
+  assert.match((await readEnglish(ownerToken)).contentHtml, /English private draft/);
+  assert.doesNotMatch((await readEnglish(studentToken)).contentHtml, /English private draft/);
+  assert.equal((await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>English private draft</p>", privateAction: "publish", language: "en",
+  })).status, 200);
+  assert.match((await readEnglish(studentToken)).contentHtml, /English private draft/);
+  const original = await (await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).json() as { contentHtml: string };
+  assert.match(original.contentHtml, /Bosanski izvor/);
+});
+
+test("legacy private proposals remain recoverable and can be privately published", async () => {
+  const created = await request("/api/admin/ilmihal", ownerToken, "POST", {
+    naslov: `Legacy ${suffix}`, nivo: 1, contentHtml: "<p>Previous published content</p>",
+  });
+  const lesson = await created.json() as { id: number; slug: string };
+  await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>Previous published content</p>", privateAction: "publish",
+  });
+  await db.execute(sql`INSERT INTO izmjene_lekcija (lekcija_id, predlozeni_html, predlozio_id, jezik)
+    VALUES (${lesson.id}, '<p>Legacy saved work</p>', ${ownerId}, 'bs')`);
+  const recovered = await (await request(`/api/content/ilmihal/${lesson.slug}`, ownerToken)).json() as { contentHtml: string };
+  assert.match(recovered.contentHtml, /Legacy saved work/);
+  assert.equal((await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: recovered.contentHtml, privateAction: "publish",
+  })).status, 200);
+  const visible = await (await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).json() as { contentHtml: string };
+  assert.match(visible.contentHtml, /Legacy saved work/);
+});
+
 test("explicit submission enters queue and admin approval publishes to everyone", async () => {
   const created = await request("/api/admin/ilmihal", ownerToken, "POST", {
     naslov: `Approve ${suffix}`, nivo: 1, contentHtml: "<p>approve</p>",
     podnesenoZaJavnuObjavu: true,
   });
-  const lesson = await created.json() as { slug: string };
+  const lesson = await created.json() as { id: number; slug: string };
   assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).status, 403);
   assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`)).status, 403);
+  assert.equal((await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>approve</p>", privateAction: "publish",
+  })).status, 200);
+  assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).status, 200);
   const queue = await (await request("/api/admin/izmjene-lekcija", adminToken)).json() as Array<{ id: number; lekcijaSlug: string }>;
   const item = queue.find((row) => row.lekcijaSlug === lesson.slug);
   assert.ok(item);
   assert.equal((await request(`/api/admin/izmjene-lekcija/${item!.id}/odluka`, adminToken, "PUT", { visibility: "javno" })).status, 200);
   assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`)).status, 200);
   assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, outsiderToken)).status, 200);
+  const sharedEdit = await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>public change needs approval</p>",
+  });
+  assert.equal(sharedEdit.status, 200);
+  assert.equal((await sharedEdit.json() as { pendingApproval: boolean }).pendingApproval, true);
+  const sharedRead = await (await request(`/api/content/ilmihal/${lesson.slug}`)).json() as { contentHtml: string };
+  assert.match(sharedRead.contentHtml, /approve/);
+  assert.doesNotMatch(sharedRead.contentHtml, /public change needs approval/);
+  assert.equal((await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>must not bypass approval</p>", privateAction: "publish",
+  })).status, 403);
 });
 
-test("rejected new lesson never becomes visible to students", async () => {
+test("rejecting public sharing preserves an author's private lesson", async () => {
   const created = await request("/api/admin/ilmihal", ownerToken, "POST", {
     naslov: `Reject ${suffix}`, nivo: 1, contentHtml: "<p>reject</p>",
     podnesenoZaJavnuObjavu: true,
   });
-  const lesson = await created.json() as { slug: string };
+  const lesson = await created.json() as { id: number; slug: string };
+  assert.equal((await request(`/api/admin/ilmihal/${lesson.id}`, ownerToken, "PUT", {
+    contentHtml: "<p>reject</p>", privateAction: "publish",
+  })).status, 200);
   const queue = await (await request("/api/admin/izmjene-lekcija", adminToken)).json() as Array<{ id: number; lekcijaSlug: string }>;
   const item = queue.find((row) => row.lekcijaSlug === lesson.slug);
   assert.ok(item);
   assert.equal((await request(`/api/admin/izmjene-lekcija/${item!.id}/odluka`, adminToken, "PUT", { visibility: "odbijeno" })).status, 200);
   const afterQueue = await (await request("/api/admin/izmjene-lekcija", adminToken)).json() as Array<{ lekcijaSlug: string }>;
   assert.equal(afterQueue.some((row) => row.lekcijaSlug === lesson.slug), false);
-  assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, ownerToken)).status, 403);
-  assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).status, 403);
+  assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, ownerToken)).status, 200);
+  assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, studentToken)).status, 200);
   assert.equal((await request(`/api/content/ilmihal/${lesson.slug}`, outsiderToken)).status, 403);
 });

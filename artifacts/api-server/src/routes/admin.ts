@@ -2993,12 +2993,12 @@ router.post("/ilmihal", async (req, res) => {
       kvizPitanja: isMuallim ? null : kviz as any,
       dostupnost: isMuallim ? "autorovi_ucenici" : (dostupnost === "muallimi" ? "muallimi" : "svi"),
       autorMuallimId: isMuallim ? req.user!.userId : null,
-      statusOdobrenja: isMuallim ? "na_cekanju" : "odobreno",
+      statusOdobrenja: isMuallim ? "nacrt" : "odobreno",
       isPublished: !isMuallim,
       podnesenoZaJavnuObjavu: wantsPublicReview,
     }).returning({ id: ilmihalLekcijeTable.id, slug: ilmihalLekcijeTable.slug });
     res.status(isMuallim ? 201 : 200).json({
-      success: true, id: row.id, slug: row.slug, pendingApproval: isMuallim,
+      success: true, id: row.id, slug: row.slug, pendingApproval: false, draft: isMuallim,
     });
   } catch (err) {
     req.log.error({ err }, "POST /ilmihal error");
@@ -3221,8 +3221,18 @@ router.put("/ilmihal/:id", async (req, res) => {
     const editorRole = req.user?.role;
     const [existing] = await db.select().from(ilmihalLekcijeTable).where(eq(ilmihalLekcijeTable.id, id));
     if (!existing) return res.status(404).json({ error: "Lekcija nije pronađena" });
+    const privateAction = req.body?.privateAction;
+    const ownsPrivateLesson = editorRole === "muallim"
+      && existing.autorMuallimId === req.user!.userId
+      && existing.dostupnost === "autorovi_ucenici";
+    if (privateAction !== undefined && (!ownsPrivateLesson
+      || !["draft", "publish"].includes(privateAction) || contentHtml === undefined)) {
+      return res.status(403).json({ error: "Nacrt i privatna objava dostupni su samo autoru vlastite lekcije." });
+    }
     if (editorRole === "muallim" &&
         (existing.statusOdobrenja === "odbijeno" ||
+          (existing.dostupnost === "autorovi_ucenici" && !ownsPrivateLesson) ||
+          (existing.statusOdobrenja === "nacrt" && !ownsPrivateLesson) ||
           (existing.statusOdobrenja === "na_cekanju" && existing.autorMuallimId !== req.user!.userId))) {
       return res.status(403).json({ error: "Nemate pristup ovoj lekciji" });
     }
@@ -3285,12 +3295,14 @@ router.put("/ilmihal/:id", async (req, res) => {
       const { regeneratePripremaInHtml } = await import("../lib/priprema-render.js");
       const normalizedHtml = normalizeSurahNames(regeneratePripremaInHtml(safeHtml));
       if (editorRole === "muallim") {
-        if (existing.autorMuallimId === req.user!.userId
-          && existing.statusOdobrenja === "na_cekanju" && language === "bs") {
-          await db.update(ilmihalLekcijeTable)
-            .set({ contentHtml: normalizedHtml })
-            .where(eq(ilmihalLekcijeTable.id, id));
-          res.json({ success: true, privateLesson: true });
+        if (ownsPrivateLesson) {
+          if (privateAction === "publish" && language !== "bs" && !existing.isPublished) {
+            return res.status(400).json({ error: "Prvo objavite izvorni bosanski sadržaj lekcije." });
+          }
+          const { savePrivateLesson } = await import("../lib/private-lesson-drafts.js");
+          const saved = await savePrivateLesson(id, req.user!.userId, normalizedHtml, language, privateAction === "publish");
+          if (!saved) return res.status(409).json({ error: "Dostupnost lekcije se promijenila. Ponovo otvorite lekciju." });
+          res.json({ success: true, privateLesson: true, draft: privateAction !== "publish", isPublished: privateAction === "publish" || existing.isPublished });
           return;
         }
         await db.execute(sql`

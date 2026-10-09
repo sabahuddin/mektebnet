@@ -112,7 +112,11 @@ interface Lekcija {
   contentHtml: string;
   audioSrc?: string;
   predmet?: string | null;
-  dostupnost?: "svi" | "muallimi";
+  dostupnost?: "svi" | "muallimi" | "autorovi_ucenici";
+  autorMuallimId?: number | null;
+  statusOdobrenja?: string;
+  isPublished?: boolean;
+  hasPrivateDraft?: boolean;
   /** Lista ID-jeva lekcija koje student mora završiti da bi ova bila dostupna. */
   uvjetiIds?: number[];
   kvizPitanja?: LekcijaKvizPitanje[] | null;
@@ -341,11 +345,12 @@ function LekcijeStrip({ lekcije, currentSlug, currentId, completedIds, onNavigat
 // ──────────────────────────────────────────────────
 // Admin content editor modal — split panel (desktop only)
 // ──────────────────────────────────────────────────
-function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
+function AdminLekcijaEditor({ lekcija, token, ownPrivateLesson = false, onClose, onSaved }: {
   lekcija: { id: number; naslov: string; contentHtml: string };
   token: string;
+  ownPrivateLesson?: boolean;
   onClose: () => void;
-  onSaved: (html: string) => void;
+  onSaved: (html: string, privateState?: { isPublished: boolean; draft: boolean }) => void;
 }) {
   const { toast } = useToast();
   const { t, lang } = useLanguage();
@@ -368,17 +373,17 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
     }
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (publish = false) => {
     setIsSaving(true);
     try {
       let saveHtml = html;
       if (mode === "visual" && (window as any).__wysiwygGetFullHtml) {
         saveHtml = (window as any).__wysiwygGetFullHtml();
       }
-      const result = await apiRequest<{ success: boolean; pendingApproval?: boolean }>(
+      const result = await apiRequest<{ success: boolean; pendingApproval?: boolean; privateLesson?: boolean; isPublished?: boolean; draft?: boolean }>(
         "PUT",
         `/admin/ilmihal/${lekcija.id}`,
-        { contentHtml: saveHtml, language: lang },
+        { contentHtml: saveHtml, language: lang, ...(ownPrivateLesson ? { privateAction: publish ? "publish" : "draft" } : {}) },
         token,
       );
       if (result.pendingApproval) {
@@ -390,12 +395,13 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
         onClose();
         return;
       }
-      toast({ title: t("Sačuvano! ✓"), description: t("Sadržaj lekcije uspješno ažuriran") });
+      toast({ title: ownPrivateLesson ? t(publish ? "Objavljeno mojim učenicima" : "Nacrt je sačuvan") : t("Sačuvano! ✓"),
+        description: ownPrivateLesson ? t(publish ? "Vaši učenici sada vide ovu verziju lekcije." : "Možete izaći i nastaviti kasnije. Učenici još ne vide ove izmjene.") : t("Sadržaj lekcije uspješno ažuriran") });
       setIsDirty(false);
-      onSaved(saveHtml);
+      onSaved(saveHtml, result.privateLesson ? { isPublished: !!result.isPublished, draft: !!result.draft } : undefined);
       onClose();
-    } catch {
-      toast({ title: t("Greška pri čuvanju"), description: t("Pokušaj ponovo"), variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: t("Greška pri čuvanju"), description: error?.message || t("Pokušaj ponovo"), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -419,7 +425,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-white">
       <div className="flex md:hidden flex-col items-center justify-center h-full gap-4 p-8 text-center">
         <FilePen className="w-12 h-12 text-amber-500" />
         <h3 className="font-extrabold text-lg text-foreground">{t("Editor dostupan samo na desktopu")}</h3>
@@ -519,7 +525,7 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 px-5 py-3 border-t border-border bg-white shrink-0">
+        <div className="flex flex-wrap items-center justify-end gap-3 px-5 py-3 border-t border-border bg-white shrink-0">
           {isDirty && (
             <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
               {t("Nesačuvano")}
@@ -535,13 +541,19 @@ function AdminLekcijaEditor({ lekcija, token, onClose, onSaved }: {
             {t("Izađi")}
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={() => handleSave(false)}
             disabled={isSaving || !isDirty}
             className="rounded-xl px-6 font-bold flex items-center gap-2"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isSaving ? t("Čuvam...") : t("Sačuvaj")}
+            {isSaving ? t("Čuvam...") : t(ownPrivateLesson ? "Sačuvaj nacrt" : "Sačuvaj")}
           </Button>
+          {ownPrivateLesson && (
+            <Button onClick={() => handleSave(true)} disabled={isSaving}
+              className="rounded-xl font-bold" data-testid="publish-own-lesson">
+              {t("Objavi mojim učenicima")}
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -4146,9 +4158,13 @@ export default function IlmihalLekcijaPage() {
       <AdminLekcijaEditor
         lekcija={{ id: lekcija.id, naslov: lekcija.naslov, contentHtml: lekcija.contentHtml }}
         token={token}
+        ownPrivateLesson={user?.role === "muallim" && lekcija.autorMuallimId === user.id && lekcija.dostupnost === "autorovi_ucenici"}
         onClose={() => setShowEditor(false)}
-        onSaved={html => {
-          setLekcija(prev => prev ? { ...prev, contentHtml: html } : prev);
+        onSaved={(html, privateState) => {
+          setLekcija(prev => prev ? { ...prev, contentHtml: html, ...(privateState ? {
+            isPublished: privateState.isPublished, hasPrivateDraft: privateState.draft,
+            statusOdobrenja: privateState.isPublished ? "odobreno" : "nacrt",
+          } : {}) } : prev);
           setParsed(parseSections(html));
         }}
       />
@@ -4163,6 +4179,23 @@ export default function IlmihalLekcijaPage() {
     </AnimatePresence>
     <Layout>
       <div className="max-w-3xl mx-auto">
+        {user?.role === "muallim" && lekcija?.autorMuallimId === user.id
+          && lekcija.dostupnost === "autorovi_ucenici" && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <strong>{t(lekcija.hasPrivateDraft || !lekcija.isPublished ? "Vaš nacrt lekcije" : "Objavljeno vašim učenicima")}</strong>
+            <p className="mt-1">{t(lekcija.isPublished
+              ? "Učenici vide posljednju objavljenu verziju. Sačuvani nacrt vidite samo vi."
+              : "Ovu lekciju učenici još ne vide. Sačuvajte nacrt ili objavite kada budete spremni.")}</p>
+            <Link href="/ilmihal/sve" className="mt-2 inline-block font-bold underline">{t("Moje lekcije")}</Link>
+          </div>
+        )}
+        {user?.role === "muallim" && lekcija?.autorMuallimId === user.id
+          && lekcija.dostupnost === "svi" && lekcija.hasPrivateDraft && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <strong>{t("Vaš sačuvani rad")}</strong>
+            <p className="mt-1">{t("Lekcija je javno objavljena, ali ovdje vidite svoj sačuvani rad. Učenici vide odobrenu verziju; nove izmjene šalju se adminu na pregled.")}</p>
+          </div>
+        )}
         {/* Upravljanje sadržajem: admin ima sve kontrole, muallim samo editor sadržaja. */}
         {user?.role === "admin" && (
           <div className="flex items-center gap-2 mb-2 justify-end flex-wrap">

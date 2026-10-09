@@ -16,6 +16,9 @@ export function canReadLesson(
   studentMuallimId?: number | null,
 ): boolean {
   if (user?.role === "admin") return lesson.statusOdobrenja !== "odbijeno";
+  if (lesson.dostupnost === "autorovi_ucenici"
+    && lesson.statusOdobrenja !== "odbijeno"
+    && user?.role === "muallim" && lesson.autorMuallimId === user.userId) return true;
   if (lesson.statusOdobrenja === "na_cekanju") {
     return user?.role === "muallim" && lesson.autorMuallimId === user.userId;
   }

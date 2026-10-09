@@ -19,6 +19,8 @@ interface Lekcija {
   uvjetiIds?: number[];
   statusOdobrenja?: string;
   autorMuallimId?: number | null;
+  dostupnost?: string;
+  isPublished?: boolean;
 }
 
 const BEZ_PREDMETA = "__bez__";
@@ -194,8 +196,8 @@ export default function IlmihalSvePage() {
         contentHtml: `<h1>${newTitle.trim()}</h1><p>Unesite sadržaj nove lekcije.</p>`,
       }, token);
       toast({
-        title: t("Lekcija je poslana adminu na odobravanje"),
-        description: t("Dok je na čekanju, samo vi i admin je možete pregledati. Učenicima će biti dostupna tek nakon odobrenja."),
+        title: t("Nacrt lekcije je kreiran"),
+        description: t("Možete sačuvati rad i nastaviti kasnije. Učenici vide lekciju tek kada odaberete „Objavi mojim učenicima“."),
       });
       setLocation(`/ilmihal/${result.slug}`);
     } catch (error: any) {
@@ -245,6 +247,22 @@ export default function IlmihalSvePage() {
           </p>
         </div>
 
+        {isMuallim && (
+          <section className="mb-6 rounded-2xl border border-amber-200 bg-white p-4" data-testid="my-lessons">
+            <h2 className="mb-2 text-lg font-extrabold text-amber-900">{t("Moje lekcije")}</h2>
+            <p className="mb-3 text-sm text-amber-800">{t("Sačuvani rad možete ponovo otvoriti i nastaviti uređivati.")}</p>
+            {lekcije.filter(l => l.autorMuallimId === user?.id).length === 0
+              ? <p className="text-sm text-muted-foreground">{t("Još nemate vlastitih lekcija.")}</p>
+              : <div className="grid gap-2 sm:grid-cols-2">
+                {lekcije.filter(l => l.autorMuallimId === user?.id).map(l => (
+                  <Link key={l.id} href={`/ilmihal/${l.slug}`} className="flex items-center justify-between gap-3 rounded-xl border border-amber-100 p-3 text-sm">
+                    <span className="font-bold text-amber-900">{l.naslov}</span>
+                    <span className="shrink-0 text-xs text-amber-800">{t(!l.isPublished ? "Nacrt" : l.dostupnost === "svi" ? "Javno objavljeno" : "Objavljeno mojim učenicima")}</span>
+                  </Link>
+                ))}
+              </div>}
+          </section>
+        )}
         <div className="max-w-2xl mx-auto mb-8 px-1">
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
@@ -649,7 +667,7 @@ export default function IlmihalSvePage() {
                                     className="mt-0.5"
                                   />
                                   <span>
-                                    <strong>{t("Samo za mene")}</strong> — {t("dostupno meni i mojim učenicima, bez admin pregleda")}
+                                    <strong>{t("Samo za moje učenike")}</strong> – {t("nakon vaše privatne objave, bez javnog dijeljenja")}
                                   </span>
                                 </label>
                                 <label className="flex cursor-pointer items-start gap-2 text-xs text-amber-900 sm:col-span-2">
@@ -661,13 +679,13 @@ export default function IlmihalSvePage() {
                                     className="mt-0.5"
                                   />
                                   <span>
-                                    <strong>{t("Slažem se da bude podijeljeno s drugim")}</strong> — {t("odmah meni i mojim učenicima, nakon odobrenja svim muallimima i učenicima")}
+                                    <strong>{t("Slažem se da bude podijeljeno s drugim")}</strong> – {t("nakon vaše privatne objave vašim učenicima, nakon admin odobrenja svima")}
                                   </span>
                                 </label>
                                 <p className="text-xs text-amber-800 sm:col-span-2">
                                    {publicReview
-                                     ? t("Lekcija je odmah dostupna vama i vašim učenicima i čeka admin odobrenje za javnu objavu.")
-                                     : t("Lekcija je privatna za vas i vaše učenike i neće biti poslana na admin pregled.")}
+                                     ? t("Počinjete nacrtom. Kada objavite svojim učenicima, lekcija se šalje i adminu na pregled za javnu objavu.")
+                                     : t("Počinjete nacrtom. Objavljujete svojim učenicima kada budete spremni; javna objava nije zatražena.")}
                                 </p>
                               </div>
                             )}

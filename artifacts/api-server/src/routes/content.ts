@@ -697,6 +697,18 @@ router.get("/ilmihal/:slug", optionalAuth, async (req, res) => {
     }
 
     await overlayOne(result, "ilmihal_lekcije", getLang(req));
+    if (req.user?.role === "muallim" && lekcija.autorMuallimId === req.user.userId) {
+      const draft = await db.execute(sql`
+        SELECT predlozeni_html FROM izmjene_lekcija
+        WHERE lekcija_id = ${lekcija.id} AND predlozio_id = ${req.user.userId}
+          AND jezik = ${getLang(req)} AND status IN ('nacrt', 'na_cekanju')
+        ORDER BY created_at DESC, id DESC LIMIT 1
+      `);
+      if (typeof draft.rows[0]?.predlozeni_html === "string") {
+        result.contentHtml = draft.rows[0].predlozeni_html;
+        (result as any).hasPrivateDraft = true;
+      }
+    }
     result.contentHtml = regeneratePripremaInHtml(String(result.contentHtml || ""));
     // Prilozi i napredak ovise o prijavljenom korisniku. Njihov odgovor ne
     // smije ostati u pregledničkom ili posredničkom cacheu pod javnim URL-om.

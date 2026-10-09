@@ -1045,7 +1045,7 @@ function getSectionStyle(sectionId: string) {
 }
 
 const editorExtensions = [
-  StarterKit.configure({ heading: { levels: [2, 3, 4] } }),
+  StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
   CustomImage.configure({ inline: false, allowBase64: false }),
   TextAlign.configure({ types: ["heading", "paragraph"] }),
   Highlight.configure({ multicolor: true }),

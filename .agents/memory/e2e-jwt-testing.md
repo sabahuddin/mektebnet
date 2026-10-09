@@ -8,7 +8,7 @@ Dev DB često nema aktivnog glavnog muallima (register-mekteb pravi `is_active=f
 **Rješenje:** ručno potpiši HS256 JWT u code_execution i šalji `Authorization: Bearer`.
 - Payload shape je `{ userId, username, role, displayName }` (vidi middlewares/auth.ts JwtPayload).
 - `requireAuth` provjerava `users.is_active` (30s cache) — privremeno `UPDATE users SET is_active=true` za test korisnika, pa vrati nazad.
-- code_execution sandbox NEMA `process.env` — koristi JWT_SECRET fallback literal iz auth.ts (nije u secrets listi, znači koristi se default).
+- code_execution sandbox NEMA `process.env`. Nemoj koristiti stari hardkodirani JWT fallback: sada ga nema. Generiši test token u workspace shellu preko aplikacijskog `signToken`, koji koristi istu konfiguraciju kao pokrenuti backend, bez čitanja ili prikazivanja tajne.
 - `jsonwebtoken` se ne resolva iz root-a u code_execution, ali radi via bash: `node -e "const jwt = require('/home/runner/workspace/artifacts/api-server/node_modules/jsonwebtoken'); console.log(jwt.sign(...))"`. Tada token proslijedi curl-u.
 
 **Why:** brže i pouzdanije od mučenja s registracijom/aktivacijom; dev DB mutacije su OK (prod je odvojen).
