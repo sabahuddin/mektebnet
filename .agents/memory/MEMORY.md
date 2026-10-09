@@ -91,3 +91,4 @@
 - [iPad horizontalno pomjeranje](ipad-horizontal-scroll.md) — zaključaj horizontalni pomak korijena na html i body; gustu navigaciju skloni prije širine iPada, bez zabrane lokalnog scrolla.
 - [Odvojena grupna statistika](grupna-statistika-odvojene-sekcije.md) — šest detaljnih sekcija; završene etape i osvojeni medaljoni zajedno, ne samo zbirna tabela prisustva.
 - [Muallim panel navigacija](muallim-panel-navigacija.md) — pretraga i izbor pregleda desno; Panel grupe vraća na početak; učenikove Lekcije imaju tri nivoa i direktne akcije.
+- [Administratorski pregled igrica](admin-igrice-pregled.md) — admin može isprobati sve igrice, ali bez učeničkih nagrada i takmičenja.

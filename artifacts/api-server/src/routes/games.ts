@@ -249,7 +249,7 @@ async function expireStaleSaceSessions(userId: number): Promise<void> {
 }
 
 // GET /api/games/credits — koliko vremena ima i koliko je potrošio.
-router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
+router.get("/credits", requireAuth, requireRole("ucenik", "admin"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     // Auto-expire stare running sesije i ovdje (ne samo u /start) — UI ne smije
@@ -263,8 +263,9 @@ router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, 
       getTotalMed(userId),
       getSecondsSpent(userId),
     ]);
-    const secondsAllowed = computeAllowedSeconds(totalHasanat);
-    const secondsRemaining = Math.max(0, secondsAllowed - secondsSpent);
+    const isPreview = req.user!.role === "admin";
+    const secondsAllowed = isPreview ? MAX_SESSION_DURATION_SEC : computeAllowedSeconds(totalHasanat);
+    const secondsRemaining = isPreview ? MAX_SESSION_DURATION_SEC : Math.max(0, secondsAllowed - secondsSpent);
 
     // Provjera ima li running sesija
     const active = await exec<{ id: number; game_id: string; started_at: string }>(sql`
@@ -297,7 +298,7 @@ router.get("/credits", requireAuth, requireRole("ucenik"), async (req: Request, 
 });
 
 // POST /api/games/start { gameId } — kreira sesiju.
-router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
+router.post("/start", requireAuth, requireRole("ucenik", "admin"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     if (!checkRate(userId)) {
@@ -359,8 +360,9 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
       getTotalHasanat(userId),
       getSecondsSpent(userId),
     ]);
-    const secondsAllowed = computeAllowedSeconds(totalHasanat);
-    const secondsRemaining = Math.max(0, secondsAllowed - secondsSpent);
+    const isPreview = req.user!.role === "admin";
+    const secondsAllowed = isPreview ? MAX_SESSION_DURATION_SEC : computeAllowedSeconds(totalHasanat);
+    const secondsRemaining = isPreview ? MAX_SESSION_DURATION_SEC : Math.max(0, secondsAllowed - secondsSpent);
     if (secondsRemaining <= 0) {
       res.status(403).json({
         error: "no_credit",
@@ -467,7 +469,7 @@ router.post("/start", requireAuth, requireRole("ucenik"), async (req: Request, r
 // POST /api/games/end
 //   - quiz:   { sessionId, answers: [{ questionId, optionIndex }] } → server računa score
 //   - memory: { sessionId, score }                                  → klijentski score sa cheatCap
-router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
+router.post("/end", requireAuth, requireRole("ucenik", "admin"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     if (!checkRate(userId)) {
@@ -626,7 +628,7 @@ router.post("/end", requireAuth, requireRole("ucenik"), async (req: Request, res
     // 1:1, ali to je bilo previše brzo — znanje (lekcije/kvizovi) sada daje
     // 30 / 2-po-pitanju kapi meda, a igrice ~10× sporije aferima. DB kolona
     // i dalje se zove total_med radi DB stabilnosti, ali UI je "Aferimi".
-    const aferimEarned = score > 0 ? Math.floor(score / 10) : 0;
+    const aferimEarned = req.user!.role === "ucenik" && score > 0 ? Math.floor(score / 10) : 0;
     if (aferimEarned > 0) {
       const studentIdStr = String(userId);
       try {
@@ -706,7 +708,7 @@ async function getUserScopeIds(userId: number): Promise<{ grupaId: number | null
   };
 }
 
-router.get("/leaderboard", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
+router.get("/leaderboard", requireAuth, requireRole("ucenik", "admin"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     const scope = (String(req.query.scope || "global") as LbScope);
@@ -971,7 +973,7 @@ router.get("/personal-stats", requireAuth, async (req: Request, res: Response) =
 // iz random selekcije za istog učenika. Ako kategorija ima ≤ N aktivnih pitanja,
 // fallback (vidi niže) ignorira historiju kako se igra ne bi blokirala.
 const MEDENA_RECENT_EXCLUDE = 10;
-router.get("/medena/pitanja", requireAuth, requireRole("ucenik"), async (req: Request, res: Response) => {
+router.get("/medena/pitanja", requireAuth, requireRole("ucenik", "admin"), async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
     type Output = {

@@ -24,7 +24,7 @@ export default function IgricePage() {
       </Layout>
     );
   }
-  if (user.role !== "ucenik") {
+  if (user.role !== "ucenik" && user.role !== "admin") {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-igrice">
@@ -57,7 +57,12 @@ export default function IgricePage() {
       </div>
 
       {/* Vremenski budžet */}
-      <Card className="p-6 mb-8 bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
+      {user.role === "admin" ? (
+        <Card className="p-4 mb-8 border-primary/20" data-testid="admin-game-preview">
+          {t("Administratorski pregled igrica – bez trošenja vremena učenika i bez dodjele nagrada.")}
+          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        </Card>
+      ) : <Card className="p-6 mb-8 bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-amber-400 text-white rounded-2xl flex items-center justify-center shadow-inner">
@@ -113,7 +118,7 @@ export default function IgricePage() {
         {error && (
           <p className="mt-3 text-sm text-red-600 font-medium">{t("Greška pri učitavanju ({error}).", { error: String(error) })}</p>
         )}
-      </Card>
+      </Card>}
 
       {noCredit && (
         <Card className="p-5 mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">

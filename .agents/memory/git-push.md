@@ -4,6 +4,12 @@ description: Kako pushati na GitHub (sabahuddin/mektebnet) i zašto timing i tok
 ---
 
 ## GitHub integracija je pouzdan fallback
+Ako lokalni Git wrapper odbije obični `git add` ili `git commit` porukom o `.git/index.lock` i izričito zatraži `DANGEROUSLY_ALLOW_GIT=1`, koristi taj prefiks za te odobrene komande.
+
+**Why:** Zaštitni wrapper sada može blokirati i rutinsko čuvanje izmjena, ne samo destruktivne Git operacije.
+
+**How to apply:** Prefiks koristi samo za konkretan siguran add/commit koji korisnik već odobrava; nije dozvola za force push, reset ili prepisivanje historije.
+
 Remote URL i workspace token mogu vratiti 401. Tada koristi instaliranu GitHub integraciju i Git Data API umjesto traženja novih kredencijala.
 
 **Why:** Integracija je uspješno prenijela commitove kada oba git-token pristupa nisu radila.

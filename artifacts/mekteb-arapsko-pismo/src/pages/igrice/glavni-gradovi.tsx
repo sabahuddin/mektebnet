@@ -188,7 +188,7 @@ export default function GlavniGradovi() {
       </Layout>
     );
   }
-  if (user.role !== "ucenik") {
+  if (user.role !== "ucenik" && user.role !== "admin") {
     return (
       <Layout>
         <Card className="p-8 text-center bg-muted/30 border-dashed" data-testid="role-guard-glavni-gradovi">
